@@ -2,14 +2,27 @@ import React from 'react';
 import { BrowserRouter as Router, Route, Routes, Link, Navigate, NavLink } from 'react-router-dom';
 import ContentPlatform from './ContentPlatform';
 import ApiTester from './ApiTester';
+import Login from './components/Login';
+import Register from './components/Register';
+import Profile from './components/Profile';
+import AuthNav from './components/AuthNav';
+import PrivateRoute from './components/PrivateRoute';
+import api from './api';
 import './App.css';
 
 function App() {
+  // null 체크 추가
+  const isAuthenticated = api.auth?.isAuthenticated?.() || false;
+  const currentUser = api.auth?.getCurrentUser?.() || null;
+
   return (
     <Router>
       <div className="App">
         <header className="App-header">
-          <h1>콘텐츠 통합 플랫폼</h1>
+          <div className="header-top">
+            <h1>콘텐츠 통합 플랫폼</h1>
+            <AuthNav />
+          </div>
           <nav>
             <NavLink to="/" end className={({ isActive }) => isActive ? 'active' : ''}>
               홈
@@ -35,11 +48,22 @@ function App() {
             <NavLink to="/api-test" className={({ isActive }) => isActive ? 'active' : ''}>
               API 테스트
             </NavLink>
+            {currentUser && (
+              <NavLink to="/profile" className={({ isActive }) => isActive ? 'active' : ''}>
+                내 프로필
+              </NavLink>
+            )}
           </nav>
         </header>
         <Routes>
           <Route path="/" element={
             <main className="home-container">
+              <div className="welcome-banner">
+                {isAuthenticated && currentUser ? 
+                  <h2>환영합니다, {currentUser.username}님!</h2> :
+                  <h2>콘텐츠 큐레이션 서비스에 오신 것을 환영합니다</h2>
+                }
+              </div>
               <div className="category-links">
                 <Link to="/contents" className="category-card">
                   <h2>통합 콘텐츠</h2>
@@ -67,6 +91,13 @@ function App() {
                 </Link>
               </div>
             </main>
+          } />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/profile" element={
+            <PrivateRoute>
+              <Profile />
+            </PrivateRoute>
           } />
           <Route path="/contents" element={<ContentPlatform />} />
           <Route path="/movies" element={<ContentPlatform activeTab="movies" />} />
