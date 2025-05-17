@@ -566,3 +566,66 @@
 .error {
   color: #e74c3c;
 }
+
+/* 필요한 CSS 클래스 확장 */
+
+.webtoons-grid, .novels-grid, .netflix-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.webtoon-card, .novel-card, .netflix-card {
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.webtoon-card:hover, .novel-card:hover, .netflix-card:hover {
+  transform: translateY(-5px);
+}
+
+.webtoon-info, .novel-info, .netflix-info {
+  padding: 15px;
+}
+
+.webtoon-info h3, .novel-info h3, .netflix-info h3 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.creator, .author {
+  font-size: 14px;
+  margin: 5px 0;
+}
+
+.webtoon-meta .summary,
+.novel-meta .genre,
+.novel-meta .status,
+.netflix-meta .type,
+.netflix-meta .year,
+.maturity-rating,
+.creator-info {
+  font-size: 14px;
+  color: #666;
+  margin: 5px 0;
+}
+
+.description {
+  margin-top: 10px;
+  font-size: 14px;
+  color: #444;
+}
+
+.website-link.netflix {
+  background-color: #e50914;
+}
+
+.website-link.netflix:hover {
+  background-color: #b0060f;
+}
