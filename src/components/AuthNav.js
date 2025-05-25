@@ -1,32 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api';
+import { useAuth } from '../contexts/AuthContext';
 import '../Auth.css';
 
 const AuthNav = () => {
-  const [currentUser, setCurrentUser] = useState(undefined);
-  
-  useEffect(() => {
-    try {
-      const user = api.auth?.getCurrentUser?.();
-      if (user) {
-        setCurrentUser(user);
-      }
-    } catch (error) {
-      console.error('사용자 정보 로딩 오류:', error);
-    }
-  }, []);
-  
-  const logOut = () => {
-    try {
-      api.auth?.logout?.();
-      setCurrentUser(undefined);
-      window.location.reload();
-    } catch (error) {
-      console.error('로그아웃 오류:', error);
-    }
+  const { currentUser, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    // 페이지 새로고침 제거 - Context가 상태를 관리하므로 불필요
   };
-  
+
   return (
     <div className="auth-nav">
       {currentUser ? (
@@ -34,7 +18,7 @@ const AuthNav = () => {
           <Link to="/profile" className="auth-nav-link">
             {currentUser.username}
           </Link>
-          <button onClick={logOut} className="auth-nav-button">
+          <button onClick={handleLogout} className="auth-nav-button">
             로그아웃
           </button>
         </div>

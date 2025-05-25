@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes, Link, Navigate, NavLink } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ContentPlatform from './ContentPlatform';
 import ApiTester from './ApiTester';
 import Login from './components/Login';
@@ -7,13 +8,12 @@ import Register from './components/Register';
 import Profile from './components/Profile';
 import AuthNav from './components/AuthNav';
 import PrivateRoute from './components/PrivateRoute';
-import api from './api';
+import RecommendationPage from './components/recommendation/RecommendationPage';
+import UserDashboard from './components/recommendation/UserDashboard';
 import './App.css';
 
-function App() {
-  // null 체크 추가
-  const isAuthenticated = api.auth?.isAuthenticated?.() || false;
-  const currentUser = api.auth?.getCurrentUser?.() || null;
+const AppContent = () => {
+  const { isAuthenticated, currentUser } = useAuth();
 
   return (
     <Router>
@@ -49,9 +49,17 @@ function App() {
               API 테스트
             </NavLink>
             {currentUser && (
-              <NavLink to="/profile" className={({ isActive }) => isActive ? 'active' : ''}>
-                내 프로필
-              </NavLink>
+              <>
+                <NavLink to="/profile" className={({ isActive }) => isActive ? 'active' : ''}>
+                  내 프로필
+                </NavLink>
+                <NavLink to="/recommendations" className={({ isActive }) => isActive ? 'active' : ''}>
+                  맞춤 추천
+                </NavLink>
+                <NavLink to="/dashboard" className={({ isActive }) => isActive ? 'active' : ''}>
+                  대시보드
+                </NavLink>
+              </>
             )}
           </nav>
         </header>
@@ -59,7 +67,7 @@ function App() {
           <Route path="/" element={
             <main className="home-container">
               <div className="welcome-banner">
-                {isAuthenticated && currentUser ? 
+                {isAuthenticated && currentUser ?
                   <h2>환영합니다, {currentUser.username}님!</h2> :
                   <h2>콘텐츠 큐레이션 서비스에 오신 것을 환영합니다</h2>
                 }
@@ -106,6 +114,12 @@ function App() {
           <Route path="/novels" element={<ContentPlatform activeTab="novels" />} />
           <Route path="/netflix" element={<ContentPlatform activeTab="netflix" />} />
           <Route path="/api-test" element={<ApiTester />} />
+          <Route path="/recommendations" element={<RecommendationPage />} />
+          <Route path="/dashboard" element={
+            <PrivateRoute>
+              <UserDashboard username={currentUser?.username} />
+            </PrivateRoute>
+          } />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <footer className="App-footer">
@@ -113,6 +127,14 @@ function App() {
         </footer>
       </div>
     </Router>
+  );
+};
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

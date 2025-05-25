@@ -322,6 +322,149 @@ const api = {
       console.error('넷플릭스 검색 데이터를 가져오는 중 오류 발생:', error);
       throw error;
     }
+  },
+
+  // 추천 시스템 API
+  recommendations: {
+    // 전통적인 추천 가져오기
+    getTraditionalRecommendations: async (username) => {
+      try {
+        console.log(`전통적인 추천 API 호출 중... username: ${username}`);
+        const response = await axiosInstance.get(`/recommendations/traditional/${username}`);
+        console.log('전통적인 추천 API 응답:', response);
+        return response.data;
+      } catch (error) {
+        console.error('전통적인 추천 데이터를 가져오는 중 오류 발생:', error);
+        throw error;
+      }
+    },
+
+    // LLM 추천 요청
+    getLLMRecommendations: async (username, prompt) => {
+      try {
+        console.log(`LLM 추천 API 호출 중... username: ${username}, prompt: ${prompt}`);
+        const response = await axiosInstance.post(`/recommendations/llm/${username}`, { prompt });
+        console.log('LLM 추천 API 응답:', response);
+        return response.data;
+      } catch (error) {
+        console.error('LLM 추천 데이터를 가져오는 중 오류 발생:', error);
+        throw error;
+      }
+    },
+
+    // LLM 추천 히스토리
+    getLLMHistory: async (username) => {
+      try {
+        const response = await axiosInstance.get(`/recommendations/llm/${username}/history`);
+        return response.data;
+      } catch (error) {
+        console.error('LLM 추천 히스토리를 가져오는 중 오류 발생:', error);
+        throw error;
+      }
+    },
+
+    // 사용자 선호도 설정
+    setUserPreferences: async (username, preferences) => {
+      try {
+        console.log('사용자 선호도 설정 API 호출 중...', preferences);
+        const response = await axiosInstance.post(`/recommendations/preferences/${username}`, preferences);
+        console.log('사용자 선호도 설정 API 응답:', response);
+        return response.data;
+      } catch (error) {
+        console.error('사용자 선호도 설정 중 오류 발생:', error);
+        throw error;
+      }
+    },
+
+    // 사용자 선호도 조회
+    getUserPreferences: async (username) => {
+      try {
+        const response = await axiosInstance.get(`/recommendations/preferences/${username}`);
+        return response.data;
+      } catch (error) {
+        console.error('사용자 선호도를 가져오는 중 오류 발생:', error);
+        throw error;
+      }
+    },
+
+    // 콘텐츠 평가
+    rateContent: async (username, ratingData) => {
+      try {
+        console.log('콘텐츠 평가 API 호출 중...', ratingData);
+        const response = await axiosInstance.post(`/recommendations/ratings/${username}`, ratingData);
+        console.log('콘텐츠 평가 API 응답:', response);
+        return response.data;
+      } catch (error) {
+        console.error('콘텐츠 평가 중 오류 발생:', error);
+        throw error;
+      }
+    },
+
+    // 사용자 평가 목록 조회
+    getUserRatings: async (username) => {
+      try {
+        const response = await axiosInstance.get(`/recommendations/ratings/${username}`);
+        return response.data;
+      } catch (error) {
+        console.error('사용자 평가 목록을 가져오는 중 오류 발생:', error);
+        throw error;
+      }
+    },
+
+    // 좋아요 목록 조회
+    getUserLikedContent: async (username) => {
+      try {
+        const response = await axiosInstance.get(`/recommendations/ratings/${username}/liked`);
+        return response.data;
+      } catch (error) {
+        console.error('좋아요 목록을 가져오는 중 오류 발생:', error);
+        throw error;
+      }
+    },
+
+    // 위시리스트 조회
+    getUserWishlist: async (username) => {
+      try {
+        const response = await axiosInstance.get(`/recommendations/ratings/${username}/wishlist`);
+        return response.data;
+      } catch (error) {
+        console.error('위시리스트를 가져오는 중 오류 발생:', error);
+        throw error;
+      }
+    },
+
+    // 콘텐츠 평균 평점 조회
+    getContentAverageRating: async (contentType, contentId) => {
+      try {
+        const response = await axiosInstance.get(`/recommendations/ratings/average/${contentType}/${contentId}`);
+        return response.data;
+      } catch (error) {
+        console.error('콘텐츠 평균 평점을 가져오는 중 오류 발생:', error);
+        throw error;
+      }
+    },
+
+    // 특정 콘텐츠에 대한 사용자 평가 조회
+    getUserContentRating: async (username, contentType, contentId) => {
+      try {
+        const response = await axiosInstance.get(`/recommendations/ratings/${username}/${contentType}/${contentId}`);
+        return response.data;
+      } catch (error) {
+        console.error('사용자 콘텐츠 평가를 가져오는 중 오류 발생:', error);
+        throw error;
+      }
+    },
+
+    // 평가 삭제
+    deleteContentRating: async (username, contentType, contentId) => {
+      try {
+        const response = await axiosInstance.delete(`/recommendations/ratings/${username}/${contentType}/${contentId}`);
+        return response.data;
+      } catch (error) {
+        console.error('콘텐츠 평가 삭제 중 오류 발생:', error);
+        throw error;
+      }
+    }
   }
 };
 

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 import api from './api';
+import { Star, Heart, Bookmark } from 'lucide-react';
 
 const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
   const [movies, setMovies] = useState([]);
@@ -12,7 +13,11 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [contentFilter, setContentFilter] = useState('all'); // 넷플릭스 콘텐츠 필터링을 위한 상태
+  const [contentFilter, setContentFilter] = useState('all');
+
+  // 사용자 정보 가져오기
+  const currentUser = api.auth?.getCurrentUser?.();
+  const isAuthenticated = api.auth?.isAuthenticated?.() || false;
 
   // 초기 activeTab prop이 변경될 때 상태 업데이트
   useEffect(() => {
@@ -99,6 +104,196 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
     fetchData();
   }, []);
 
+  // 평가 컴포넌트
+  const RatingComponent = ({ contentType, contentId, contentTitle }) => {
+    const [userRating, setUserRating] = useState(null);
+    const [averageRating, setAverageRating] = useState(0);
+    const [isLiked, setIsLiked] = useState(false);
+    const [isWishlist, setIsWishlist] = useState(false);
+    const [hoveredRating, setHoveredRating] = useState(0);
+    const [loading, setLoading] = useState(false);
+
+    const loadUserRating = useCallback(async () => {
+      if (!isAuthenticated || !currentUser || !contentId) return;
+      
+      try {
+        const rating = await api.recommendations.getUserContentRating(currentUser.username, contentType, contentId);
+        if (rating) {
+          setUserRating(rating.rating);
+          setIsLiked(rating.isLiked || false);
+          setIsWishlist(rating.isWishlist || false);
+        }
+      } catch (error) {
+        // 평가가 없는 경우는 정상
+        console.log('사용자 평가 없음');
+      }
+    }, [contentType, contentId, currentUser?.username, isAuthenticated]);
+
+    const loadAverageRating = useCallback(async () => {
+      if (!contentId) return;
+      
+      try {
+        const result = await api.recommendations.getContentAverageRating(contentType, contentId);
+        setAverageRating(result.averageRating || 0);
+      } catch (error) {
+        console.error('평균 평점 로드 오류:', error);
+      }
+    }, [contentType, contentId]);
+
+    useEffect(() => {
+      if (contentId) {
+        loadAverageRating();
+        if (isAuthenticated) {
+          loadUserRating();
+        }
+      }
+    }, [contentId, isAuthenticated, loadAverageRating, loadUserRating]);
+
+    const handleRating = async (rating) => {
+      if (!isAuthenticated || !currentUser || loading) {
+        alert('로그인이 필요합니다.');
+        return;
+      }
+      
+      setLoading(true);
+      try {
+        await api.recommendations.rateContent(currentUser.username, {
+          contentType,
+          contentId,
+          contentTitle,
+          rating,
+          isLiked: rating >= 4,
+          isWatched: true
+        });
+        
+        setUserRating(rating);
+        setIsLiked(rating >= 4);
+        await loadAverageRating(); // 평균 평점 새로고침
+      } catch (error) {
+        console.error('평가 저장 오류:', error);
+        alert('평가 저장 중 오류가 발생했습니다.');
+      }
+      setLoading(false);
+    };
+
+    const handleWishlist = async () => {
+      if (!isAuthenticated || !currentUser || loading) {
+        alert('로그인이 필요합니다.');
+        return;
+      }
+      
+      setLoading(true);
+      try {
+        await api.recommendations.rateContent(currentUser.username, {
+          contentType,
+          contentId,
+          contentTitle,
+          isWishlist: !isWishlist
+        });
+        
+        setIsWishlist(!isWishlist);
+      } catch (error) {
+        console.error('위시리스트 저장 오류:', error);
+        alert('위시리스트 저장 중 오류가 발생했습니다.');
+      }
+      setLoading(false);
+    };
+
+    if (!isAuthenticated) {
+      return (
+        <div className="rating-component" style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between', 
+          marginTop: '10px',
+          fontSize: '14px',
+          color: '#666'
+        }}>
+          <span>평점: {averageRating.toFixed(1)}</span>
+          <a href="/login" style={{ color: '#007bff', textDecoration: 'none' }}>
+            로그인하여 평가하세요
+          </a>
+        </div>
+      );
+    }
+
+    return (
+      <div className="rating-component" style={{ marginTop: '10px' }}>
+        {/* 평균 평점과 위시리스트 버튼 */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          marginBottom: '8px',
+          fontSize: '14px'
+        }}>
+          <span style={{ color: '#666' }}>평균: {averageRating.toFixed(1)}</span>
+          <button
+            onClick={handleWishlist}
+            disabled={loading}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '4px',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              color: isWishlist ? '#007bff' : '#ccc',
+              transition: 'color 0.2s'
+            }}
+            title={isWishlist ? '위시리스트에서 제거' : '위시리스트에 추가'}
+          >
+            <Bookmark size={16} fill={isWishlist ? 'currentColor' : 'none'} />
+          </button>
+        </div>
+
+        {/* 사용자 평점 */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between' 
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <Star
+                key={star}
+                size={16}
+                style={{
+                  cursor: 'pointer',
+                  color: (hoveredRating || userRating) >= star ? '#ffc107' : '#e9ecef',
+                  fill: (hoveredRating || userRating) >= star ? '#ffc107' : 'none',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={() => setHoveredRating(star)}
+                onMouseLeave={() => setHoveredRating(0)}
+                onClick={() => handleRating(star)}
+              />
+            ))}
+          </div>
+          
+          {isLiked && (
+            <Heart 
+              size={16} 
+              style={{ color: '#dc3545', fill: '#dc3545' }} 
+              title="좋아하는 콘텐츠"
+            />
+          )}
+        </div>
+        
+        {userRating && (
+          <div style={{ 
+            fontSize: '12px', 
+            color: '#666', 
+            marginTop: '4px' 
+          }}>
+            내 평점: {userRating}점
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // 검색 필터링
   const filteredMovies = movies && movies.length ? movies.filter(movie => 
     movie.title && movie.title.toLowerCase().includes(searchTerm.toLowerCase())
@@ -155,156 +350,6 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
           />
         </div>
       </header>
-
-      {/* 디버그 정보 */}
-      <div className="debug-info" style={{padding: '20px', background: '#f8f9fa', margin: '20px 0', border: '1px solid #ddd', borderRadius: '5px'}}>
-        <h3>디버그 정보</h3>
-        <div style={{display: 'flex', flexWrap: 'wrap', gap: '20px'}}>
-          <div style={{flex: 1, minWidth: '300px'}}>
-            <h4>API 상태</h4>
-            <ul style={{listStyle: 'none', padding: 0}}>
-              <li><strong>로딩 상태:</strong> {loading ? '로딩 중' : '완료'}</li>
-              <li><strong>오류:</strong> {error ? error : '없음'}</li>
-              <li><strong>영화 데이터:</strong> {movies ? movies.length : 0}개</li>
-              <li><strong>게임 데이터:</strong> {steamGames ? steamGames.length : 0}개</li>
-              <li><strong>웹툰 데이터:</strong> {webtoons ? webtoons.length : 0}개</li>
-              <li><strong>웹소설 데이터:</strong> {novels ? novels.length : 0}개</li>
-              <li><strong>넷플릭스 데이터:</strong> {netflixContent ? netflixContent.length : 0}개</li>
-              <li><strong>현재 탭:</strong> {activeTab}</li>
-            </ul>
-            <div style={{display: 'flex', gap: '10px', marginTop: '10px', flexWrap: 'wrap'}}>
-              <button 
-                onClick={() => console.log('Movies:', movies)}
-                style={{padding: '5px 10px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px'}}
-              >
-                영화 데이터 로그
-              </button>
-              <button 
-                onClick={() => console.log('Games:', steamGames)}
-                style={{padding: '5px 10px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px'}}
-              >
-                게임 데이터 로그
-              </button>
-              <button 
-                onClick={() => console.log('Webtoons:', webtoons)}
-                style={{padding: '5px 10px', backgroundColor: '#17a2b8', color: 'white', border: 'none', borderRadius: '4px'}}
-              >
-                웹툰 데이터 로그
-              </button>
-              <button 
-                onClick={() => console.log('Novels:', novels)}
-                style={{padding: '5px 10px', backgroundColor: '#6f42c1', color: 'white', border: 'none', borderRadius: '4px'}}
-              >
-                웹소설 데이터 로그
-              </button>
-              <button 
-                onClick={() => console.log('Netflix:', netflixContent)}
-                style={{padding: '5px 10px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px'}}
-              >
-                넷플릭스 데이터 로그
-              </button>
-              <button 
-                onClick={() => window.location.reload()}
-                style={{padding: '5px 10px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px'}}
-              >
-                새로고침
-              </button>
-            </div>
-          </div>
-          
-          <div style={{flex: 1, minWidth: '300px'}}>
-            <h4>API 요청 정보</h4>
-            <p><strong>영화 API URL:</strong> http://localhost:8080/api/movies</p>
-            <p><strong>게임 API URL:</strong> http://localhost:8080/api/steam-games</p>
-            <p><strong>웹툰 API URL:</strong> http://localhost:8080/api/webtoons</p>
-            <p><strong>웹소설 API URL:</strong> http://localhost:8080/api/novels</p>
-            <p><strong>넷플릭스 API URL:</strong> http://localhost:8080/api/netflix-content</p>
-            <p><strong>조회 시간:</strong> {new Date().toLocaleTimeString()}</p>
-            
-            <div style={{marginTop: '15px'}}>
-              <h4>수동 API 테스트</h4>
-              <p>브라우저에서 직접 API 호출:</p>
-              <div style={{display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
-                <a 
-                  href="http://localhost:8080/api/movies" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'inline-block',
-                    padding: '5px 10px',
-                    backgroundColor: '#17a2b8',
-                    color: 'white',
-                    textDecoration: 'none',
-                    borderRadius: '4px'
-                  }}
-                >
-                  영화 API 열기
-                </a>
-                <a 
-                  href="http://localhost:8080/api/steam-games" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'inline-block',
-                    padding: '5px 10px',
-                    backgroundColor: '#17a2b8',
-                    color: 'white',
-                    textDecoration: 'none',
-                    borderRadius: '4px'
-                  }}
-                >
-                  게임 API 열기
-                </a>
-                <a 
-                  href="http://localhost:8080/api/webtoons" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'inline-block',
-                    padding: '5px 10px',
-                    backgroundColor: '#17a2b8',
-                    color: 'white',
-                    textDecoration: 'none',
-                    borderRadius: '4px'
-                  }}
-                >
-                  웹툰 API 열기
-                </a>
-                <a 
-                  href="http://localhost:8080/api/novels" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'inline-block',
-                    padding: '5px 10px',
-                    backgroundColor: '#17a2b8',
-                    color: 'white',
-                    textDecoration: 'none',
-                    borderRadius: '4px'
-                  }}
-                >
-                  웹소설 API 열기
-                </a>
-                <a 
-                  href="http://localhost:8080/api/netflix-content" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'inline-block',
-                    padding: '5px 10px',
-                    backgroundColor: '#17a2b8',
-                    color: 'white',
-                    textDecoration: 'none',
-                    borderRadius: '4px'
-                  }}
-                >
-                  넷플릭스 API 열기
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <div className="tab-container">
         <button 
@@ -411,6 +456,13 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
                     </div>
                     <p className="country">{movie.country || ''}</p>
                     <p className="running-time">{movie.runningTime || movie.running_time ? `${movie.runningTime || movie.running_time}분` : ''}</p>
+                    
+                    {/* 평가 컴포넌트 추가 */}
+                    <RatingComponent 
+                      contentType="movie"
+                      contentId={movie.id}
+                      contentTitle={movie.title}
+                    />
                   </div>
                 </div>
               ))
@@ -457,6 +509,13 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
                         웹사이트 방문
                       </a>
                     )}
+                    
+                    {/* 평가 컴포넌트 추가 */}
+                    <RatingComponent 
+                      contentType="game"
+                      contentId={game.id}
+                      contentTitle={game.title}
+                    />
                   </div>
                 </div>
               ))
@@ -487,6 +546,13 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
                         웹툰 보기
                       </a>
                     )}
+                    
+                    {/* 평가 컴포넌트 추가 */}
+                    <RatingComponent 
+                      contentType="webtoon"
+                      contentId={webtoon.id}
+                      contentTitle={webtoon.title}
+                    />
                   </div>
                 </div>
               ))
@@ -534,6 +600,13 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
                         소설 읽기
                       </a>
                     )}
+                    
+                    {/* 평가 컴포넌트 추가 */}
+                    <RatingComponent 
+                      contentType="novel"
+                      contentId={novel.id}
+                      contentTitle={novel.title}
+                    />
                   </div>
                 </div>
               ))
@@ -575,6 +648,13 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
                         넷플릭스에서 보기
                       </a>
                     )}
+                    
+                    {/* 평가 컴포넌트 추가 */}
+                    <RatingComponent 
+                      contentType="ott"
+                      contentId={content.content_id}
+                      contentTitle={content.title}
+                    />
                   </div>
                 </div>
               ))
