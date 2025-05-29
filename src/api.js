@@ -324,6 +324,33 @@ const api = {
     }
   },
 
+  signupWithPreferences: async (userData) => {
+    try {
+      console.log('선호도 포함 회원가입 API 호출 중...', userData);
+      const response = await axiosInstance.post('/auth/signup', {
+        username: userData.username,
+        email: userData.email,
+        password: userData.password,
+        preferences: userData.preferences
+      });
+      console.log('선호도 포함 회원가입 API 응답:', response);
+      
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify({
+          username: userData.username,
+          email: userData.email,
+          hasPreferences: userData.preferences ? true : false,
+          roles: response.data.roles || []
+        }));
+      }
+      return response.data;
+    } catch (error) {
+      console.error('선호도 포함 회원가입 중 오류 발생:', error);
+      throw error;
+    }
+  },
+
   // 추천 시스템 API
   recommendations: {
     // 전통적인 추천 가져오기
@@ -462,6 +489,44 @@ const api = {
         return response.data;
       } catch (error) {
         console.error('콘텐츠 평가 삭제 중 오류 발생:', error);
+        throw error;
+      }
+    },
+
+    getInitialRecommendations: async (username) => {
+      try {
+        console.log(`초기 추천 API 호출 중... username: ${username}`);
+        const response = await axiosInstance.get(`/recommendations/initial/${username}`);
+        console.log('초기 추천 API 응답:', response);
+        return response.data;
+      } catch (error) {
+        console.error('초기 추천 데이터를 가져오는 중 오류 발생:', error);
+        throw error;
+      }
+    },
+  
+    // 장르 목록 조회
+    getGenres: async () => {
+      try {
+        console.log('장르 목록 API 호출 중...');
+        const response = await axiosInstance.get('/recommendations/genres');
+        console.log('장르 목록 API 응답:', response);
+        return response.data;
+      } catch (error) {
+        console.error('장르 목록을 가져오는 중 오류 발생:', error);
+        throw error;
+      }
+    },
+  
+    // 콘텐츠 타입 목록 조회
+    getContentTypes: async () => {
+      try {
+        console.log('콘텐츠 타입 목록 API 호출 중...');
+        const response = await axiosInstance.get('/recommendations/content-types');
+        console.log('콘텐츠 타입 목록 API 응답:', response);
+        return response.data;
+      } catch (error) {
+        console.error('콘텐츠 타입 목록을 가져오는 중 오류 발생:', error);
         throw error;
       }
     }

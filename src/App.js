@@ -10,6 +10,7 @@ import AuthNav from './components/AuthNav';
 import PrivateRoute from './components/PrivateRoute';
 import RecommendationPage from './components/recommendation/RecommendationPage';
 import UserDashboard from './components/recommendation/UserDashboard';
+<Route path="/recommendations" element={<RecommendationPage />} />
 import './App.css';
 
 const AppContent = () => {

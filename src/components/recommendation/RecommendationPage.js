@@ -1,257 +1,437 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import ContentCard from './ContentCard';
+import PreferenceModal from './PreferenceModal';
+import RatingComponent from './RatingComponent';
+import AIChat from './AIChat';
+import UserDashboard from './UserDashboard';
 import api from '../../api';
+import './RecommendationPage.css';
 
 const RecommendationPage = () => {
+  const { user, currentUser, isAuthenticated } = useAuth();
+  
+  // user 또는 currentUser 중 존재하는 것 사용
+  const activeUser = user || currentUser;
+  
   const [recommendations, setRecommendations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [selectedType, setSelectedType] = useState('all');
-
-  const currentUser = api.auth?.getCurrentUser?.();
-  const isAuthenticated = api.auth?.isAuthenticated?.() || false;
+  const [loading, setLoading] = useState(false);
+  const [selectedTab, setSelectedTab] = useState('initial');
+  const [showPreferences, setShowPreferences] = useState(false);
+  const [showAIChat, setShowAIChat] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
+  const [contentTypes, setContentTypes] = useState([]);
+  const [genres, setGenres] = useState([]);
+  const [userPreferences, setUserPreferences] = useState(null);
+  const [error, setError] = useState('');
+  const [initialLoadCompleted, setInitialLoadCompleted] = useState(false);
 
   useEffect(() => {
-    loadRecommendations();
-  }, [selectedType]);
-
-  const loadRecommendations = async () => {
-    if (!isAuthenticated || !currentUser) {
-      setLoading(false);
-      return;
+    if (activeUser && activeUser.username && !initialLoadCompleted) {
+      loadInitialData();
+      setInitialLoadCompleted(true);
     }
+  }, [activeUser, initialLoadCompleted]);
 
+  const loadInitialData = async () => {
+    console.log('초기 데이터 로드 시작:', activeUser);
+    setLoading(true);
+    setError('');
+    
     try {
-      setLoading(true);
-      setError(null);
+      // 병렬로 기본 데이터 로드
+      const [loadedContentTypes, loadedGenres] = await Promise.all([
+        api.recommendations.getContentTypes(),
+        api.recommendations.getGenres()
+      ]);
       
-      // 실제 추천 API 호출 시도
-      try {
-        const response = await api.recommendations.getTraditionalRecommendations(currentUser.username);
-        setRecommendations(response || []);
-      } catch (apiError) {
-        console.log('추천 API 호출 실패, 임시 데이터 사용');
-        // API가 없거나 에러인 경우 임시 데이터 사용
-        const mockData = generateMockRecommendations();
-        setRecommendations(mockData);
-      }
+      console.log('로드된 콘텐츠 타입:', loadedContentTypes);
+      console.log('로드된 장르:', loadedGenres);
+      
+      setContentTypes(Array.isArray(loadedContentTypes) ? loadedContentTypes : []);
+      setGenres(Array.isArray(loadedGenres) ? loadedGenres : []);
+      
+      // 사용자 선호도 로드
+      await loadUserPreferences();
+      
+      // 초기 추천 로드
+      await loadRecommendations('initial');
     } catch (error) {
-      console.error('추천 데이터 로딩 실패:', error);
-      setError('추천 데이터를 불러오는 중 오류가 발생했습니다.');
+      console.error('초기 데이터 로드 실패:', error);
+      setError('데이터를 불러오는 중 오류가 발생했습니다. 페이지를 새로고침해주세요.');
     } finally {
       setLoading(false);
     }
   };
 
-  const generateMockRecommendations = () => {
-    const mockRecommendations = [
-      {
-        id: 1,
-        title: '기생충',
-        type: 'movie',
-        genre: '드라마',
-        rating: 4.8,
-        reason: '사용자가 좋아하는 드라마 장르와 높은 평점 기반 추천',
-        imageUrl: 'https://via.placeholder.com/200x300?text=기생충'
-      },
-      {
-        id: 2,
-        title: '사이버펑크 2077',
-        type: 'game',
-        genre: 'RPG',
-        rating: 4.2,
-        reason: 'RPG 게임을 자주 플레이하는 패턴 기반 추천',
-        imageUrl: 'https://via.placeholder.com/200x300?text=사이버펑크'
-      },
-      {
-        id: 3,
-        title: '신의 탑',
-        type: 'webtoon',
-        genre: '액션',
-        rating: 4.5,
-        reason: '액션 장르 선호도와 높은 사용자 평점 기반',
-        imageUrl: 'https://via.placeholder.com/200x300?text=신의탑'
-      },
-      {
-        id: 4,
-        title: '전지적 독자 시점',
-        type: 'novel',
-        genre: '판타지',
-        rating: 4.7,
-        reason: '판타지 소설 독서 이력 기반 맞춤 추천',
-        imageUrl: 'https://via.placeholder.com/200x300?text=전독시'
-      },
-      {
-        id: 5,
-        title: '오징어 게임',
-        type: 'netflix',
-        genre: '스릴러',
-        rating: 4.6,
-        reason: '스릴러 장르 시청 패턴 분석 결과',
-        imageUrl: 'https://via.placeholder.com/200x300?text=오징어게임'
-      }
-    ];
-
-    if (selectedType === 'all') {
-      return mockRecommendations;
+  const loadUserPreferences = async () => {
+    if (!activeUser || !activeUser.username) {
+      console.warn('사용자 정보가 없어 선호도를 로드할 수 없습니다.');
+      return;
     }
-    return mockRecommendations.filter(item => item.type === selectedType);
+    
+    try {
+      console.log('사용자 선호도 로드 시작:', activeUser.username);
+      const prefs = await api.recommendations.getUserPreferences(activeUser.username);
+      console.log('로드된 사용자 선호도:', prefs);
+      setUserPreferences(prefs);
+    } catch (error) {
+      console.warn('사용자 선호도 로드 실패:', error);
+      // 선호도 로드 실패는 에러로 표시하지 않음 (선택사항이므로)
+    }
   };
 
-  const getTypeLabel = (type) => {
-    const labels = {
-      'movie': '영화',
-      'game': '게임', 
-      'webtoon': '웹툰',
-      'novel': '웹소설',
-      'netflix': '넷플릭스'
+  const loadRecommendations = async (type, prompt = null) => {
+    if (!activeUser || !activeUser.username) {
+      console.error('사용자 정보가 없습니다:', { activeUser });
+      setRecommendations([]);
+      setError('로그인이 필요합니다.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    
+    try {
+      let data = [];
+      console.log(`추천 로드 시작: ${type}, 사용자: ${activeUser.username}`);
+
+      switch (type) {
+        case 'initial':
+          data = await api.recommendations.getInitialRecommendations(activeUser.username);
+          break;
+        case 'traditional':
+          data = await api.recommendations.getTraditionalRecommendations(activeUser.username);
+          break;
+        case 'llm':
+          data = await api.recommendations.getLLMRecommendations(
+            activeUser.username, 
+            prompt || '재미있는 콘텐츠 추천해주세요'
+          );
+          break;
+        default:
+          console.warn('알 수 없는 추천 타입:', type);
+          data = [];
+      }
+
+      console.log(`추천 로드 완료: ${type}`, data);
+
+      // 데이터 처리 및 정규화
+      const normalizedData = normalizeRecommendationData(data);
+      console.log('정규화된 추천 데이터:', normalizedData);
+      
+      setRecommendations(normalizedData);
+      setSelectedTab(type);
+      
+      // 추천이 비어있을 때 사용자에게 안내
+      if (normalizedData.length === 0) {
+        if (type === 'initial') {
+          setError('아직 추천할 콘텐츠가 준비되지 않았습니다. 선호도를 설정해보세요!');
+        } else if (type === 'traditional') {
+          setError('맞춤 추천을 위해 콘텐츠를 평가하거나 선호도를 설정해주세요.');
+        }
+      }
+      
+    } catch (error) {
+      console.error('추천 로드 실패:', error);
+      setError(`추천을 불러오는 중 오류가 발생했습니다: ${error.message}`);
+      setRecommendations([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 백엔드 응답 데이터를 정규화하는 함수
+  const normalizeRecommendationData = (data) => {
+    if (!data) return [];
+    
+    // 이미 배열인 경우
+    if (Array.isArray(data)) {
+      return data.map(item => normalizeContentItem(item));
+    }
+    
+    // 객체인 경우 (백엔드에서 카테고리별로 그룹화된 데이터)
+    if (typeof data === 'object') {
+      const allItems = [];
+      
+      // 모든 카테고리의 아이템들을 하나의 배열로 합침
+      Object.values(data).forEach(categoryItems => {
+        if (Array.isArray(categoryItems)) {
+          categoryItems.forEach(item => {
+            const normalizedItem = normalizeContentItem(item);
+            if (normalizedItem) {
+              allItems.push(normalizedItem);
+            }
+          });
+        }
+      });
+      
+      return allItems;
+    }
+    
+    return [];
+  };
+
+  // 개별 콘텐츠 아이템 정규화
+  const normalizeContentItem = (item) => {
+    if (!item) return null;
+    
+    return {
+      id: item.id || item.contentId || Math.random().toString(36),
+      title: item.title || item.name || item.contentTitle || '제목 없음',
+      contentType: item.contentType || item.type || 'UNKNOWN',
+      creator: item.creator || item.author || item.director,
+      summary: item.summary || item.description || item.plot,
+      imageUrl: item.imageUrl || item.thumbnail || item.thumbnailUrl,
+      rating: item.rating || item.score,
+      genre: item.genre || item.genres,
+      releaseDate: item.releaseDate || item.publishDate,
+      ...item // 원본 데이터도 보존
     };
-    return labels[type] || type;
   };
 
-  if (!isAuthenticated) {
+  const handleRating = async (contentType, contentId, rating, ratingType = 'STAR') => {
+    if (!activeUser || !activeUser.username) {
+      setError('로그인이 필요합니다.');
+      return;
+    }
+
+    try {
+      console.log('콘텐츠 평가 시작:', { contentType, contentId, rating, ratingType });
+      
+      await api.recommendations.rateContent(activeUser.username, {
+        contentType,
+        contentId,
+        rating,
+        ratingType
+      });
+      
+      console.log('평가 완료');
+      
+      // 선호도 다시 로드
+      await loadUserPreferences();
+      
+      // 평가 후 메시지 표시
+      setError(''); // 기존 에러 메시지 제거
+      
+    } catch (error) {
+      console.error('평가 실패:', error);
+      setError('평가 저장에 실패했습니다.');
+    }
+  };
+
+  const handlePreferenceUpdate = async (newPreferences) => {
+    if (!activeUser || !activeUser.username) {
+      setError('로그인이 필요합니다.');
+      return;
+    }
+
+    try {
+      console.log('선호도 업데이트 시작:', newPreferences);
+      
+      await api.recommendations.setUserPreferences(activeUser.username, newPreferences);
+      setUserPreferences(newPreferences);
+      setShowPreferences(false);
+      
+      // 선호도 업데이트 후 맞춤 추천 다시 로드
+      await loadRecommendations('traditional');
+      
+      console.log('선호도 업데이트 완료');
+    } catch (error) {
+      console.error('선호도 업데이트 실패:', error);
+      setError('선호도 저장에 실패했습니다.');
+    }
+  };
+
+  const handleTabChange = (newTab) => {
+    if (newTab !== selectedTab) {
+      setError(''); // 탭 변경 시 에러 메시지 초기화
+      loadRecommendations(newTab);
+    }
+  };
+
+  // 로그인되지 않은 경우
+  if (!isAuthenticated || !activeUser) {
     return (
-      <div style={{ textAlign: 'center', padding: '50px' }}>
-        <h1>맞춤 추천</h1>
-        <p>추천 서비스를 이용하려면 로그인이 필요합니다.</p>
-        <a href="/login" style={{ 
-          display: 'inline-block',
-          padding: '10px 20px',
-          backgroundColor: '#007bff',
-          color: 'white',
-          textDecoration: 'none',
-          borderRadius: '5px',
-          marginTop: '20px'
-        }}>
-          로그인하기
-        </a>
+      <div className="recommendation-page">
+        <div className="login-prompt">
+          <h2>🎯 개인화된 추천을 받아보세요!</h2>
+          <p>로그인하시면 맞춤형 콘텐츠 추천을 받을 수 있습니다.</p>
+          <a href="/login" className="btn btn-primary">로그인하기</a>
+        </div>
       </div>
     );
   }
 
-  if (loading) {
-    return <div style={{ textAlign: 'center', padding: '50px' }}>추천 콘텐츠를 불러오는 중...</div>;
-  }
-
-  if (error) {
-    return <div style={{ textAlign: 'center', padding: '50px', color: 'red' }}>{error}</div>;
-  }
-
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-      <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-        <h1>맞춤 추천</h1>
-        <p>사용자의 취향과 평점 이력을 분석하여 개인화된 콘텐츠를 추천합니다</p>
+    <div className="recommendation-page">
+      {/* 헤더 */}
+      <div className="recommendation-header">
+        <div className="user-info">
+          <h1>🎬 {activeUser.username || '사용자'}님을 위한 추천</h1>
+          <p>당신의 취향에 맞는 최고의 콘텐츠를 찾아드려요</p>
+        </div>
+        
+        <div className="header-actions">
+          <button 
+            className="btn btn-outline"
+            onClick={() => setShowPreferences(true)}
+          >
+            ⚙️ 선호도 설정
+          </button>
+          <button 
+            className="btn btn-outline"
+            onClick={() => setShowAIChat(true)}
+          >
+            🤖 AI 추천 채팅
+          </button>
+          <button 
+            className="btn btn-outline"
+            onClick={() => setShowDashboard(true)}
+          >
+            📊 내 활동
+          </button>
+        </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '30px', gap: '10px' }}>
-        <label style={{ fontWeight: 'bold' }}>콘텐츠 타입:</label>
-        <select 
-          value={selectedType} 
-          onChange={(e) => setSelectedType(e.target.value)}
-          style={{ 
-            padding: '8px 12px',
-            border: '1px solid #ddd',
-            borderRadius: '5px',
-            fontSize: '14px'
-          }}
+      {/* 에러 메시지 */}
+      {error && (
+        <div className="error-banner">
+          <p>{error}</p>
+          <button onClick={() => setError('')}>✕</button>
+        </div>
+      )}
+
+      {/* 디버그 정보 (개발용) */}
+      {process.env.NODE_ENV === 'development' && (
+        <div style={{ 
+          fontSize: '12px', 
+          color: '#666', 
+          marginBottom: '10px',
+          padding: '10px',
+          backgroundColor: '#f5f5f5',
+          borderRadius: '4px'
+        }}>
+          <strong>디버그 정보:</strong> 사용자: {activeUser?.username}, 
+          추천 수: {recommendations.length}, 
+          선호도: {userPreferences ? '설정됨' : '미설정'}
+        </div>
+      )}
+
+      {/* 탭 네비게이션 */}
+      <div className="recommendation-tabs">
+        <button 
+          className={`tab ${selectedTab === 'initial' ? 'active' : ''}`}
+          onClick={() => handleTabChange('initial')}
+          disabled={loading}
         >
-          <option value="all">전체</option>
-          <option value="movie">영화</option>
-          <option value="game">게임</option>
-          <option value="webtoon">웹툰</option>
-          <option value="novel">웹소설</option>
-          <option value="netflix">넷플릭스</option>
-        </select>
+          🌟 첫 추천
+        </button>
+        <button 
+          className={`tab ${selectedTab === 'traditional' ? 'active' : ''}`}
+          onClick={() => handleTabChange('traditional')}
+          disabled={loading}
+        >
+          🎯 맞춤 추천
+        </button>
+        <button 
+          className={`tab ${selectedTab === 'llm' ? 'active' : ''}`}
+          onClick={() => handleTabChange('llm')}
+          disabled={loading}
+        >
+          🧠 AI 추천
+        </button>
       </div>
 
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', 
-        gap: '20px' 
-      }}>
-        {recommendations.length > 0 ? (
-          recommendations.map(item => (
-            <div key={item.id} style={{
-              background: 'white',
-              borderRadius: '10px',
-              boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
-              overflow: 'hidden',
-              transition: 'transform 0.2s, box-shadow 0.2s'
-            }}>
-              <div style={{ position: 'relative', height: '200px', overflow: 'hidden' }}>
-                <img 
-                  src={item.imageUrl} 
-                  alt={item.title}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+      {/* 추천 콘텐츠 */}
+      <div className="recommendation-content">
+        {loading ? (
+          <div className="loading">
+            <div className="spinner"></div>
+            <p>맞춤 추천을 준비중입니다...</p>
+          </div>
+        ) : (
+          <div className="content-grid">
+            {Array.isArray(recommendations) && recommendations.length > 0 ? (
+              recommendations.map((content, index) => (
+                <ContentCard
+                  key={`${content.contentType || 'content'}-${content.id || index}-${index}`}
+                  content={content}
+                  onRate={handleRating}
                 />
-                <div style={{
-                  position: 'absolute',
-                  top: '10px',
-                  right: '10px',
-                  background: 'rgba(0, 0, 0, 0.7)',
-                  color: 'white',
-                  padding: '4px 8px',
-                  borderRadius: '12px',
-                  fontSize: '12px'
-                }}>
-                  {getTypeLabel(item.type)}
-                </div>
-              </div>
-              <div style={{ padding: '20px' }}>
-                <h3 style={{ margin: '0 0 10px 0', fontSize: '1.2em' }}>{item.title}</h3>
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center',
-                  marginBottom: '10px'
-                }}>
-                  <span style={{
-                    background: '#f0f8ff',
-                    color: '#0066cc',
-                    padding: '4px 8px',
-                    borderRadius: '12px',
-                    fontSize: '12px'
-                  }}>
-                    {item.genre}
-                  </span>
-                  <span style={{ color: '#ff6b35', fontWeight: 'bold' }}>
-                    ★ {item.rating}
-                  </span>
-                </div>
-                <p style={{ 
-                  color: '#666',
-                  fontSize: '14px',
-                  lineHeight: '1.4',
-                  marginBottom: '15px'
-                }}>
-                  {item.reason}
-                </p>
-                <button style={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '10px 20px',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold'
-                }}>
-                  자세히 보기
+              ))
+            ) : (
+              <div className="no-recommendations">
+                <h3>😅 추천할 콘텐츠가 없습니다</h3>
+                {selectedTab === 'initial' && (
+                  <div>
+                    <p>아직 콘텐츠가 준비되지 않았습니다.</p>
+                    <p>선호도를 설정하고 맞춤 추천을 받아보세요!</p>
+                  </div>
+                )}
+                {selectedTab === 'traditional' && (
+                  <div>
+                    <p>맞춤 추천을 위해 다음 중 하나를 해보세요:</p>
+                    <ul style={{ textAlign: 'left', margin: '10px 0' }}>
+                      <li>선호도 설정하기</li>
+                      <li>콘텐츠에 별점 주기</li>
+                      <li>좋아하는 콘텐츠 평가하기</li>
+                    </ul>
+                  </div>
+                )}
+                {selectedTab === 'llm' && (
+                  <p>AI 채팅을 통해 원하는 콘텐츠를 설명해보세요!</p>
+                )}
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => {
+                    if (selectedTab === 'llm') {
+                      setShowAIChat(true);
+                    } else {
+                      setShowPreferences(true);
+                    }
+                  }}
+                >
+                  {selectedTab === 'llm' ? 'AI 채팅 시작' : '선호도 설정하기'}
                 </button>
               </div>
-            </div>
-          ))
-        ) : (
-          <div style={{ 
-            gridColumn: '1 / -1',
-            textAlign: 'center',
-            padding: '40px'
-          }}>
-            <p>추천할 콘텐츠가 없습니다.</p>
-            <p>더 많은 콘텐츠에 평점을 남겨보세요!</p>
+            )}
           </div>
         )}
       </div>
+
+      {/* 모달들 */}
+      {showPreferences && (
+        <PreferenceModal
+          user={activeUser}
+          currentPreferences={userPreferences}
+          contentTypes={contentTypes}
+          genres={genres}
+          onSave={handlePreferenceUpdate}
+          onClose={() => setShowPreferences(false)}
+        />
+      )}
+
+      {showAIChat && (
+        <AIChat
+          user={activeUser}
+          onRecommendation={(recommendations) => {
+            if (Array.isArray(recommendations)) {
+              setRecommendations(recommendations);
+              setSelectedTab('llm');
+            }
+            setShowAIChat(false);
+          }}
+          onClose={() => setShowAIChat(false)}
+        />
+      )}
+
+      {showDashboard && (
+        <UserDashboard
+          user={activeUser}
+          onClose={() => setShowDashboard(false)}
+        />
+      )}
     </div>
   );
 };

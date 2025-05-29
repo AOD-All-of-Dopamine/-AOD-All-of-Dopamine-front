@@ -1,0 +1,324 @@
+.content-card {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    min-height: 400px;
+  }
+  
+  .content-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  }
+  
+  /* 카드 헤더 */
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+  
+  .content-type {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .type-icon {
+    font-size: 1.2rem;
+  }
+  
+  .type-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #666;
+    background: rgba(102, 126, 234, 0.1);
+    padding: 4px 12px;
+    border-radius: 15px;
+  }
+  
+  .average-rating {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #ff6b35;
+    background: rgba(255, 107, 53, 0.1);
+    padding: 4px 10px;
+    border-radius: 12px;
+  }
+  
+  /* 카드 이미지 */
+  .card-image {
+    height: 200px;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+  
+  .content-card:hover .card-image img {
+    transform: scale(1.05);
+  }
+  
+  .image-placeholder {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .placeholder-icon {
+    font-size: 3rem;
+    opacity: 0.7;
+  }
+  
+  /* 카드 콘텐츠 */
+  .card-content {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .content-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin: 0;
+    line-height: 1.3;
+  }
+  
+  .content-author,
+  .content-director,
+  .content-developer {
+    font-size: 0.9rem;
+    color: #7f8c8d;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  
+  .content-genres {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 5px 0;
+  }
+  
+  .genre-tag {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+  
+  .genre-more {
+    background: rgba(0, 0, 0, 0.1);
+    color: #666;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+  }
+  
+  .content-description {
+    font-size: 0.95rem;
+    color: #5a6c7d;
+    line-height: 1.5;
+    margin: 10px 0;
+    flex: 1;
+  }
+  
+  .content-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 0.85rem;
+    color: #95a5a6;
+    margin-top: auto;
+  }
+  
+  .content-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  /* 카드 액션 */
+  .card-actions {
+    padding: 15px 20px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+  }
+  
+  .btn-details {
+    background: rgba(102, 126, 234, 0.1);
+    color: #667eea;
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .btn-details:hover {
+    background: rgba(102, 126, 234, 0.2);
+    border-color: rgba(102, 126, 234, 0.5);
+  }
+  
+  /* 상세 정보 */
+  .card-details {
+    padding: 20px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 0.02);
+    animation: slideDown 0.3s ease;
+  }
+  
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      max-height: 0;
+    }
+    to {
+      opacity: 1;
+      max-height: 500px;
+    }
+  }
+  
+  .detail-section {
+    margin-bottom: 20px;
+  }
+  
+  .detail-section h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin: 0 0 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  
+  .detail-section p {
+    font-size: 0.9rem;
+    color: #5a6c7d;
+    line-height: 1.6;
+    margin: 0;
+  }
+  
+  .cast-list,
+  .features-list,
+  .platforms-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .cast-member,
+  .feature-tag,
+  .platform-tag {
+    background: rgba(116, 75, 162, 0.1);
+    color: #764ba2;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border: 1px solid rgba(116, 75, 162, 0.2);
+  }
+  
+  .btn-external {
+    background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-decoration: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .btn-external:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  }
+  
+  /* 반응형 디자인 */
+  @media (max-width: 768px) {
+    .content-card {
+      min-height: 350px;
+    }
+    
+    .card-image {
+      height: 150px;
+    }
+    
+    .card-content {
+      padding: 15px;
+    }
+    
+    .content-title {
+      font-size: 1.1rem;
+    }
+    
+    .card-actions {
+      padding: 12px 15px;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .btn-details {
+      width: 100%;
+      text-align: center;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .card-header {
+      padding: 12px 15px 8px;
+    }
+    
+    .type-label {
+      font-size: 0.8rem;
+      padding: 3px 8px;
+    }
+    
+    .content-meta {
+      flex-direction: column;
+      gap: 5px;
+    }
+    
+    .content-genres {
+      gap: 4px;
+    }
+    
+    .genre-tag {
+      font-size: 0.75rem;
+      padding: 3px 8px;
+    }
+  }

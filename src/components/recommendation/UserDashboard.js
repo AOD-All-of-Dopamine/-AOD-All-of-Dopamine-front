@@ -1,392 +1,365 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api';
+import './UserDashboard.css';
 
-const UserDashboard = ({ username }) => {
-  const [dashboardData, setDashboardData] = useState({
+const UserDashboard = ({ user, onClose }) => {
+  const [activeTab, setActiveTab] = useState('ratings');
+  const [userRatings, setUserRatings] = useState([]);
+  const [likedContent, setLikedContent] = useState([]);
+  const [wishlist, setWishlist] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [stats, setStats] = useState({
     totalRatings: 0,
     averageRating: 0,
     favoriteGenres: [],
-    recentRatings: [],
-    statistics: {
-      movies: 0,
-      games: 0,
-      webtoons: 0,
-      novels: 0,
-      netflix: 0
-    }
+    contentTypeStats: {}
   });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const isAuthenticated = api.auth?.isAuthenticated?.() || false;
-  const currentUser = api.auth?.getCurrentUser?.();
 
   useEffect(() => {
-    if (username && isAuthenticated) {
-      loadDashboardData();
-    } else {
-      setLoading(false);
+    if (user && user.username) {
+      loadUserData();
     }
-  }, [username, isAuthenticated]);
+  }, [user]);
 
-  const loadDashboardData = async () => {
+  const loadUserData = async () => {
+    if (!user || !user.username) {
+      setError('사용자 정보가 없습니다.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    
     try {
-      setLoading(true);
-      setError(null);
-
-      // 실제 API 호출 시도
-      try {
-        // 사용자 평점 데이터 가져오기
-        const ratingsData = await api.recommendations.getUserRatings(username);
-        const likesData = await api.recommendations.getUserLikedContent(username);
-        const wishlistData = await api.recommendations.getUserWishlist(username);
-        
-        // 데이터가 있으면 실제 데이터 사용
-        if (ratingsData && Array.isArray(ratingsData)) {
-          processDashboardData(ratingsData);
-        } else {
-          // 데이터가 없으면 임시 데이터 사용
-          setDashboardData(generateMockDashboardData());
+      const promises = [];
+      
+      // API가 있는 경우에만 호출
+      if (api.recommendations) {
+        if (api.recommendations.getUserRatings) {
+          promises.push(loadUserRatings());
         }
-      } catch (apiError) {
-        console.log('대시보드 API 호출 실패, 임시 데이터 사용');
-        // API가 없거나 에러인 경우 임시 데이터
-        setDashboardData(generateMockDashboardData());
+        if (api.recommendations.getUserLikedContent) {
+          promises.push(loadLikedContent());
+        }
+        if (api.recommendations.getUserWishlist) {
+          promises.push(loadWishlist());
+        }
+      }
+      
+      if (promises.length > 0) {
+        await Promise.allSettled(promises);
+      } else {
+        setError('추천 시스템 API를 사용할 수 없습니다.');
       }
     } catch (error) {
-      console.error('대시보드 데이터 로딩 실패:', error);
-      setError('대시보드 데이터를 불러오는 중 오류가 발생했습니다.');
+      console.error('사용자 데이터 로드 실패:', error);
+      setError('데이터를 불러오는 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
   };
 
-  const processDashboardData = (ratingsData) => {
-    // 실제 데이터 처리 로직
-    const totalRatings = ratingsData.length;
-    const averageRating = ratingsData.reduce((sum, rating) => sum + rating.rating, 0) / totalRatings || 0;
-    
-    // 콘텐츠 타입별 통계
-    const statistics = ratingsData.reduce((acc, rating) => {
-      acc[rating.contentType] = (acc[rating.contentType] || 0) + 1;
-      return acc;
-    }, {});
+  const loadUserRatings = async () => {
+    try {
+      const ratings = await api.recommendations.getUserRatings(user.username);
+      const ratingsArray = Array.isArray(ratings) ? ratings : [];
+      setUserRatings(ratingsArray);
+      calculateStats(ratingsArray);
+    } catch (error) {
+      console.error('평가 데이터 로드 실패:', error);
+      setUserRatings([]);
+    }
+  };
 
-    // 최근 평점 (최대 5개)
-    const recentRatings = ratingsData
-      .sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date))
-      .slice(0, 5);
+  const loadLikedContent = async () => {
+    try {
+      const liked = await api.recommendations.getUserLikedContent(user.username);
+      setLikedContent(Array.isArray(liked) ? liked : []);
+    } catch (error) {
+      console.error('좋아요 데이터 로드 실패:', error);
+      setLikedContent([]);
+    }
+  };
 
-    setDashboardData({
-      totalRatings,
-      averageRating,
-      favoriteGenres: [], // 장르 데이터가 있다면 처리
-      recentRatings,
-      statistics: {
-        movies: statistics.movie || 0,
-        games: statistics.game || 0,
-        webtoons: statistics.webtoon || 0,
-        novels: statistics.novel || 0,
-        netflix: statistics.ott || 0
+  const loadWishlist = async () => {
+    try {
+      const wishlist = await api.recommendations.getUserWishlist(user.username);
+      setWishlist(Array.isArray(wishlist) ? wishlist : []);
+    } catch (error) {
+      console.error('위시리스트 데이터 로드 실패:', error);
+      setWishlist([]);
+    }
+  };
+
+  const calculateStats = (ratings) => {
+    if (!Array.isArray(ratings)) {
+      ratings = [];
+    }
+
+    const totalRatings = ratings.length;
+    const averageRating = totalRatings > 0 
+      ? ratings.reduce((sum, r) => sum + (r.rating || 0), 0) / totalRatings 
+      : 0;
+
+    // 장르 통계
+    const genreCount = {};
+    const contentTypeCount = {};
+
+    ratings.forEach(rating => {
+      // 콘텐츠 타입별 통계
+      if (rating.contentType) {
+        contentTypeCount[rating.contentType] = (contentTypeCount[rating.contentType] || 0) + 1;
       }
+      
+      // 장르 통계
+      if (rating.genres && Array.isArray(rating.genres)) {
+        rating.genres.forEach(genre => {
+          genreCount[genre] = (genreCount[genre] || 0) + 1;
+        });
+      }
+    });
+
+    const favoriteGenres = Object.entries(genreCount)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 5)
+      .map(([genre]) => genre);
+
+    setStats({
+      totalRatings,
+      averageRating: Math.round(averageRating * 10) / 10,
+      favoriteGenres,
+      contentTypeStats: contentTypeCount
     });
   };
 
-  const generateMockDashboardData = () => {
-    return {
-      totalRatings: 47,
-      averageRating: 4.2,
-      favoriteGenres: [
-        { genre: '액션', count: 12 },
-        { genre: '드라마', count: 8 },
-        { genre: '코미디', count: 6 },
-        { genre: '스릴러', count: 5 }
-      ],
-      recentRatings: [
-        { id: 1, title: '기생충', type: 'movie', rating: 5, date: '2025-05-25' },
-        { id: 2, title: '신의 탑', type: 'webtoon', rating: 4, date: '2025-05-24' },
-        { id: 3, title: '사이버펑크 2077', type: 'game', rating: 3, date: '2025-05-23' },
-        { id: 4, title: '전지적 독자 시점', type: 'novel', rating: 5, date: '2025-05-22' },
-        { id: 5, title: '오징어 게임', type: 'netflix', rating: 4, date: '2025-05-21' }
-      ],
-      statistics: {
-        movies: 15,
-        games: 8,
-        webtoons: 12,
-        novels: 7,
-        netflix: 5
-      }
+  const getContentTypeIcon = (type) => {
+    const icons = {
+      'MOVIE': '🎬',
+      'WEBTOON': '📚',
+      'NOVEL': '📖',
+      'GAME': '🎮',
+      'OTT': '📺'
     };
+    return icons[type] || '🎯';
   };
 
-  const getTypeLabel = (type) => {
+  const getContentTypeLabel = (type) => {
     const labels = {
-      'movie': '영화',
-      'game': '게임',
-      'webtoon': '웹툰', 
-      'novel': '웹소설',
-      'netflix': '넷플릭스',
-      'ott': '넷플릭스'
+      'MOVIE': '영화',
+      'WEBTOON': '웹툰',
+      'NOVEL': '웹소설',
+      'GAME': '게임',
+      'OTT': 'OTT'
     };
     return labels[type] || type;
   };
 
-  const renderStarRating = (rating) => {
-    return '★'.repeat(rating) + '☆'.repeat(5 - rating);
+  const renderStars = (rating) => {
+    const stars = [];
+    const numRating = Number(rating) || 0;
+    
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <span key={i} className={`star ${i <= numRating ? 'filled' : ''}`}>
+          ⭐
+        </span>
+      );
+    }
+    return stars;
   };
 
-  if (!isAuthenticated || !currentUser) {
+  const formatDate = (dateString) => {
+    if (!dateString) return '날짜 없음';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('ko-KR');
+    } catch (error) {
+      return '날짜 없음';
+    }
+  };
+
+  const renderRatingsList = (items, showRating = true) => {
+    if (!Array.isArray(items) || items.length === 0) {
+      return (
+        <div className="empty-state">
+          <div className="empty-icon">📭</div>
+          <p>아직 데이터가 없습니다</p>
+          <small>콘텐츠를 평가해보세요!</small>
+        </div>
+      );
+    }
+
     return (
-      <div style={{ textAlign: 'center', padding: '50px' }}>
-        <h1>대시보드</h1>
-        <p>대시보드를 이용하려면 로그인이 필요합니다.</p>
-        <a href="/login" style={{ 
-          display: 'inline-block',
-          padding: '10px 20px',
-          backgroundColor: '#007bff',
-          color: 'white',
-          textDecoration: 'none',
-          borderRadius: '5px',
-          marginTop: '20px'
-        }}>
-          로그인하기
-        </a>
+      <div className="ratings-list">
+        {items.map((item, index) => (
+          <div key={`${item.contentType || 'item'}-${item.contentId || index}-${index}`} className="rating-item">
+            <div className="item-header">
+              <div className="item-type">
+                <span className="type-icon">{getContentTypeIcon(item.contentType)}</span>
+                <span className="type-label">{getContentTypeLabel(item.contentType)}</span>
+              </div>
+              {showRating && item.rating && (
+                <div className="item-rating">
+                  {renderStars(item.rating)}
+                  <span className="rating-value">({item.rating}/5)</span>
+                </div>
+              )}
+            </div>
+            <h4 className="item-title">{item.contentTitle || item.title || '제목 없음'}</h4>
+            {item.author && (
+              <p className="item-author">✍️ {item.author}</p>
+            )}
+            <div className="item-meta">
+              <span className="item-date">📅 {formatDate(item.createdAt || item.ratedAt)}</span>
+              {item.ratingType && item.ratingType !== 'STAR' && (
+                <span className="rating-type">
+                  {item.ratingType === 'LIKE' ? '👍 좋아요' :
+                   item.ratingType === 'WISHLIST' ? '💖 위시리스트' :
+                   item.ratingType === 'COMPLETED' ? '✅ 완료' : ''}
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // 사용자 정보가 없는 경우
+  if (!user || !user.username) {
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="dashboard-modal" onClick={e => e.stopPropagation()}>
+          <div className="modal-header">
+            <h2>📊 사용자 활동</h2>
+            <button className="close-btn" onClick={onClose}>✕</button>
+          </div>
+          <div className="error-content">
+            <p>사용자 정보를 불러올 수 없습니다.</p>
+            <button className="btn btn-primary" onClick={onClose}>닫기</button>
+          </div>
+        </div>
       </div>
     );
   }
 
-  if (loading) {
-    return <div style={{ textAlign: 'center', padding: '50px' }}>대시보드를 불러오는 중...</div>;
-  }
-
-  if (error) {
-    return <div style={{ textAlign: 'center', padding: '50px', color: 'red' }}>{error}</div>;
-  }
-
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-      <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-        <h1>{username}님의 대시보드</h1>
-        <p>콘텐츠 활동 통계와 개인화된 정보를 확인하세요</p>
-      </div>
-
-      {/* 통계 카드 */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-        gap: '20px', 
-        marginBottom: '30px' 
-      }}>
-        <div style={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
-          padding: '25px',
-          borderRadius: '10px',
-          textAlign: 'center',
-          boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)'
-        }}>
-          <h3 style={{ margin: '0 0 10px 0', fontSize: '1em', opacity: 0.9 }}>총 평점 수</h3>
-          <div style={{ fontSize: '2.5em', fontWeight: 'bold', marginBottom: '5px' }}>
-            {dashboardData.totalRatings}
-          </div>
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="dashboard-modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>📊 {user.username}님의 활동</h2>
+          <button className="close-btn" onClick={onClose}>✕</button>
         </div>
-        <div style={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
-          padding: '25px',
-          borderRadius: '10px',
-          textAlign: 'center',
-          boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)'
-        }}>
-          <h3 style={{ margin: '0 0 10px 0', fontSize: '1em', opacity: 0.9 }}>평균 평점</h3>
-          <div style={{ fontSize: '2.5em', fontWeight: 'bold', marginBottom: '5px' }}>
-            {dashboardData.averageRating.toFixed(1)}
-          </div>
-          <div style={{ fontSize: '1.2em', opacity: 0.9 }}>
-            {renderStarRating(Math.round(dashboardData.averageRating))}
-          </div>
-        </div>
-      </div>
 
-      {/* 콘텐츠별 통계 */}
-      <div style={{
-        background: 'white',
-        padding: '25px',
-        borderRadius: '10px',
-        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
-        marginBottom: '30px'
-      }}>
-        <h2 style={{ 
-          marginBottom: '20px', 
-          paddingBottom: '10px', 
-          borderBottom: '2px solid #f0f0f0' 
-        }}>
-          콘텐츠별 평점 통계
-        </h2>
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
-          gap: '15px' 
-        }}>
-          <div style={{
-            textAlign: 'center',
-            padding: '15px',
-            background: '#f8f9fa',
-            borderRadius: '8px',
-            border: '1px solid #e9ecef'
-          }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>영화</div>
-            <div style={{ fontSize: '1.2em', color: '#007bff', fontWeight: 'bold' }}>
-              {dashboardData.statistics.movies}개
-            </div>
-          </div>
-          <div style={{
-            textAlign: 'center',
-            padding: '15px',
-            background: '#f8f9fa',
-            borderRadius: '8px',
-            border: '1px solid #e9ecef'
-          }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>웹툰</div>
-            <div style={{ fontSize: '1.2em', color: '#007bff', fontWeight: 'bold' }}>
-              {dashboardData.statistics.webtoons}개
-            </div>
-          </div>
-          <div style={{
-            textAlign: 'center',
-            padding: '15px',
-            background: '#f8f9fa',
-            borderRadius: '8px',
-            border: '1px solid #e9ecef'
-          }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>게임</div>
-            <div style={{ fontSize: '1.2em', color: '#007bff', fontWeight: 'bold' }}>
-              {dashboardData.statistics.games}개
-            </div>
-          </div>
-          <div style={{
-            textAlign: 'center',
-            padding: '15px',
-            background: '#f8f9fa',
-            borderRadius: '8px',
-            border: '1px solid #e9ecef'
-          }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>웹소설</div>
-            <div style={{ fontSize: '1.2em', color: '#007bff', fontWeight: 'bold' }}>
-              {dashboardData.statistics.novels}개
-            </div>
-          </div>
-          <div style={{
-            textAlign: 'center',
-            padding: '15px',
-            background: '#f8f9fa',
-            borderRadius: '8px',
-            border: '1px solid #e9ecef'
-          }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>넷플릭스</div>
-            <div style={{ fontSize: '1.2em', color: '#007bff', fontWeight: 'bold' }}>
-              {dashboardData.statistics.netflix}개
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
-        {/* 선호 장르 */}
-        {dashboardData.favoriteGenres.length > 0 && (
-          <div style={{
-            background: 'white',
-            padding: '25px',
-            borderRadius: '10px',
-            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)'
-          }}>
-            <h2 style={{ 
-              marginBottom: '20px', 
-              paddingBottom: '10px', 
-              borderBottom: '2px solid #f0f0f0' 
-            }}>
-              선호 장르
-            </h2>
-            <div>
-              {dashboardData.favoriteGenres.map((genre, index) => (
-                <div key={index} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: '15px'
-                }}>
-                  <span style={{ fontWeight: 'bold', flex: 1 }}>{genre.genre}</span>
-                  <span style={{ color: '#666', marginRight: '10px', minWidth: '40px' }}>
-                    {genre.count}개
-                  </span>
-                  <div style={{
-                    flex: 2,
-                    height: '8px',
-                    background: '#e9ecef',
-                    borderRadius: '4px',
-                    overflow: 'hidden'
-                  }}>
-                    <div style={{
-                      height: '100%',
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      width: `${(genre.count / dashboardData.favoriteGenres[0]?.count) * 100}%`,
-                      transition: 'width 0.3s ease'
-                    }}></div>
-                  </div>
-                </div>
-              ))}
-            </div>
+        {/* 에러 메시지 */}
+        {error && (
+          <div className="error-banner">
+            <p>{error}</p>
+            <button onClick={() => setError('')}>✕</button>
           </div>
         )}
 
-        {/* 최근 평점 */}
-        <div style={{
-          background: 'white',
-          padding: '25px',
-          borderRadius: '10px',
-          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)'
-        }}>
-          <h2 style={{ 
-            marginBottom: '20px', 
-            paddingBottom: '10px', 
-            borderBottom: '2px solid #f0f0f0' 
-          }}>
-            최근 평점
-          </h2>
-          <div>
-            {dashboardData.recentRatings.map(rating => (
-              <div key={rating.id} style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '15px',
-                background: '#f8f9fa',
-                borderRadius: '8px',
-                marginBottom: '10px'
-              }}>
-                <div>
-                  <h4 style={{ margin: '0 0 5px 0' }}>{rating.title}</h4>
-                  <span style={{
-                    fontSize: '12px',
-                    background: '#007bff',
-                    color: 'white',
-                    padding: '2px 6px',
-                    borderRadius: '10px'
-                  }}>
-                    {getTypeLabel(rating.type)}
-                  </span>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ color: '#ff6b35', marginBottom: '5px' }}>
-                    {renderStarRating(rating.rating)}
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#666' }}>
-                    {rating.date}
-                  </div>
-                </div>
+        {/* 통계 카드 */}
+        <div className="stats-section">
+          <div className="stats-grid">
+            <div className="stat-card">
+              <div className="stat-icon">⭐</div>
+              <div className="stat-content">
+                <h3>{stats.totalRatings}</h3>
+                <p>총 평가</p>
               </div>
-            ))}
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon">📊</div>
+              <div className="stat-content">
+                <h3>{stats.averageRating}</h3>
+                <p>평균 평점</p>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon">💖</div>
+              <div className="stat-content">
+                <h3>{likedContent.length}</h3>
+                <p>좋아요</p>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon">📝</div>
+              <div className="stat-content">
+                <h3>{wishlist.length}</h3>
+                <p>위시리스트</p>
+              </div>
+            </div>
           </div>
+
+          {/* 콘텐츠 타입별 통계 */}
+          {Object.keys(stats.contentTypeStats).length > 0 && (
+            <div className="content-type-stats">
+              <h3>📈 콘텐츠 타입별 활동</h3>
+              <div className="type-stats-grid">
+                {Object.entries(stats.contentTypeStats).map(([type, count]) => (
+                  <div key={type} className="type-stat">
+                    <span className="type-icon">{getContentTypeIcon(type)}</span>
+                    <span className="type-name">{getContentTypeLabel(type)}</span>
+                    <span className="type-count">{count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 선호 장르 */}
+          {stats.favoriteGenres.length > 0 && (
+            <div className="favorite-genres">
+              <h3>🎭 선호 장르</h3>
+              <div className="genre-list">
+                {stats.favoriteGenres.map((genre, index) => (
+                  <span key={index} className="genre-badge">
+                    {genre}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 탭 네비게이션 */}
+        <div className="dashboard-tabs">
+          <button 
+            className={`tab ${activeTab === 'ratings' ? 'active' : ''}`}
+            onClick={() => setActiveTab('ratings')}
+          >
+            ⭐ 평가 ({userRatings.length})
+          </button>
+          <button 
+            className={`tab ${activeTab === 'liked' ? 'active' : ''}`}
+            onClick={() => setActiveTab('liked')}
+          >
+            👍 좋아요 ({likedContent.length})
+          </button>
+          <button 
+            className={`tab ${activeTab === 'wishlist' ? 'active' : ''}`}
+            onClick={() => setActiveTab('wishlist')}
+          >
+            💖 위시리스트 ({wishlist.length})
+          </button>
+        </div>
+
+        {/* 탭 콘텐츠 */}
+        <div className="tab-content">
+          {loading ? (
+            <div className="loading">
+              <div className="spinner"></div>
+              <p>데이터를 불러오는 중...</p>
+            </div>
+          ) : (
+            <>
+              {activeTab === 'ratings' && renderRatingsList(userRatings, true)}
+              {activeTab === 'liked' && renderRatingsList(likedContent, false)}
+              {activeTab === 'wishlist' && renderRatingsList(wishlist, false)}
+            </>
+          )}
         </div>
       </div>
     </div>

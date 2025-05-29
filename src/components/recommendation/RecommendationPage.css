@@ -168,3 +168,81 @@
       gap: 5px;
     }
   }
+
+  /* 기존 RecommendationPage.css에 추가할 스타일들 */
+
+/* 에러 배너 */
+.error-banner {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 15px 20px;
+  margin: 20px 0;
+  border-radius: 10px;
+  border: 1px solid #f5c6cb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  animation: slideDown 0.3s ease;
+}
+
+.error-banner p {
+  margin: 0;
+  font-weight: 500;
+}
+
+.error-banner button {
+  background: none;
+  border: none;
+  color: #721c24;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.3s ease;
+}
+
+.error-banner button:hover {
+  background-color: rgba(114, 28, 36, 0.1);
+}
+
+/* 에러 콘텐츠 (대시보드용) */
+.error-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.error-content p {
+  font-size: 1.1rem;
+  color: #6c757d;
+  margin: 0 0 20px 0;
+}
+
+/* 로그인 프롬프트 링크 스타일 */
+.login-prompt .btn {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  margin-top: 20px;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .error-banner {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+  
+  .error-banner button {
+    align-self: flex-end;
+  }
+}
