@@ -20,9 +20,10 @@ const RecommendationPage = () => {
   const [showPreferences, setShowPreferences] = useState(false);
   const [showAIChat, setShowAIChat] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
-  const [contentTypes, setContentTypes] = useState([]);
-  const [genres, setGenres] = useState([]);
+  const [contentTypes, setContentTypes] = useState(['MOVIE', 'WEBTOON', 'NOVEL', 'GAME', 'OTT']);
+  const [genres, setGenres] = useState(['액션', '로맨스', '코미디', '드라마', '스릴러', '판타지', '공포', 'SF']);
   const [userPreferences, setUserPreferences] = useState(null);
+  const [userRatings, setUserRatings] = useState([]);
   const [error, setError] = useState('');
   const [initialLoadCompleted, setInitialLoadCompleted] = useState(false);
 
@@ -39,45 +40,68 @@ const RecommendationPage = () => {
     setError('');
     
     try {
-      // 병렬로 기본 데이터 로드
-      const [loadedContentTypes, loadedGenres] = await Promise.all([
-        api.recommendations.getContentTypes(),
-        api.recommendations.getGenres()
-      ]);
+      // 기본 데이터 로드 (실패해도 계속 진행)
+      await loadBasicData();
       
-      console.log('로드된 콘텐츠 타입:', loadedContentTypes);
-      console.log('로드된 장르:', loadedGenres);
+      // 사용자 데이터 로드 시도 (실패해도 계속 진행)
+      await loadUserData();
       
-      setContentTypes(Array.isArray(loadedContentTypes) ? loadedContentTypes : []);
-      setGenres(Array.isArray(loadedGenres) ? loadedGenres : []);
-      
-      // 사용자 선호도 로드
-      await loadUserPreferences();
-      
-      // 초기 추천 로드
+      // 추천 로드
       await loadRecommendations('initial');
     } catch (error) {
       console.error('초기 데이터 로드 실패:', error);
-      setError('데이터를 불러오는 중 오류가 발생했습니다. 페이지를 새로고침해주세요.');
+      // 에러가 있어도 기본 추천은 시도
+      await generateFallbackRecommendations();
     } finally {
       setLoading(false);
     }
   };
 
-  const loadUserPreferences = async () => {
+  const loadBasicData = async () => {
+    try {
+      // API가 있으면 시도, 없으면 기본값 사용
+      if (api.recommendations) {
+        const [loadedContentTypes, loadedGenres] = await Promise.allSettled([
+          api.recommendations.getContentTypes().catch(() => contentTypes),
+          api.recommendations.getGenres().catch(() => genres)
+        ]);
+        
+        if (loadedContentTypes.status === 'fulfilled' && Array.isArray(loadedContentTypes.value)) {
+          setContentTypes(loadedContentTypes.value);
+        }
+        
+        if (loadedGenres.status === 'fulfilled' && Array.isArray(loadedGenres.value)) {
+          setGenres(loadedGenres.value);
+        }
+      }
+    } catch (error) {
+      console.warn('기본 데이터 로드 실패, 기본값 사용:', error);
+    }
+  };
+
+  const loadUserData = async () => {
     if (!activeUser || !activeUser.username) {
-      console.warn('사용자 정보가 없어 선호도를 로드할 수 없습니다.');
+      console.warn('사용자 정보가 없어 사용자 데이터를 로드할 수 없습니다.');
       return;
     }
     
     try {
-      console.log('사용자 선호도 로드 시작:', activeUser.username);
-      const prefs = await api.recommendations.getUserPreferences(activeUser.username);
-      console.log('로드된 사용자 선호도:', prefs);
-      setUserPreferences(prefs);
+      // 추천 시스템 API가 있는 경우에만 시도
+      if (api.recommendations && api.recommendations.getUserPreferences) {
+        const preferences = await api.recommendations.getUserPreferences(activeUser.username).catch(() => null);
+        if (preferences) {
+          setUserPreferences(preferences);
+        }
+      }
+
+      if (api.recommendations && api.recommendations.getUserRatings) {
+        const ratings = await api.recommendations.getUserRatings(activeUser.username).catch(() => []);
+        if (Array.isArray(ratings)) {
+          setUserRatings(ratings);
+        }
+      }
     } catch (error) {
-      console.warn('사용자 선호도 로드 실패:', error);
-      // 선호도 로드 실패는 에러로 표시하지 않음 (선택사항이므로)
+      console.warn('사용자 데이터 로드 실패:', error);
     }
   };
 
@@ -98,20 +122,57 @@ const RecommendationPage = () => {
 
       switch (type) {
         case 'initial':
-          data = await api.recommendations.getInitialRecommendations(activeUser.username);
+          // 백엔드 추천 API 시도
+          if (api.recommendations && api.recommendations.getInitialRecommendations) {
+            try {
+              data = await api.recommendations.getInitialRecommendations(activeUser.username);
+              console.log('백엔드 초기 추천 성공:', data);
+            } catch (error) {
+              console.warn('백엔드 초기 추천 실패, 폴백 추천 생성:', error);
+              data = await generateFallbackRecommendations();
+            }
+          } else {
+            console.log('초기 추천 API 없음, 폴백 추천 생성');
+            data = await generateFallbackRecommendations();
+          }
           break;
+
         case 'traditional':
-          data = await api.recommendations.getTraditionalRecommendations(activeUser.username);
+          // 전통적 추천 시도
+          if (api.recommendations && api.recommendations.getTraditionalRecommendations) {
+            try {
+              data = await api.recommendations.getTraditionalRecommendations(activeUser.username);
+            } catch (error) {
+              console.warn('전통적 추천 실패, 사용자 기반 추천 생성:', error);
+              data = await generateUserBasedRecommendations();
+            }
+          } else {
+            data = await generateUserBasedRecommendations();
+          }
           break;
+
         case 'llm':
-          data = await api.recommendations.getLLMRecommendations(
-            activeUser.username, 
-            prompt || '재미있는 콘텐츠 추천해주세요'
-          );
+          // LLM 추천 시도
+          if (api.recommendations && api.recommendations.getLLMRecommendations) {
+            try {
+              data = await api.recommendations.getLLMRecommendations(
+                activeUser.username, 
+                prompt || '재미있는 콘텐츠 추천해주세요'
+              );
+            } catch (error) {
+              console.warn('LLM 추천 실패:', error);
+              setError('AI 추천 서비스를 이용할 수 없습니다. 다른 추천을 확인해보세요.');
+              return;
+            }
+          } else {
+            setError('AI 추천 기능이 준비 중입니다. 다른 추천을 확인해보세요.');
+            return;
+          }
           break;
+
         default:
           console.warn('알 수 없는 추천 타입:', type);
-          data = [];
+          data = await generateFallbackRecommendations();
       }
 
       console.log(`추천 로드 완료: ${type}`, data);
@@ -123,42 +184,286 @@ const RecommendationPage = () => {
       setRecommendations(normalizedData);
       setSelectedTab(type);
       
-      // 추천이 비어있을 때 사용자에게 안내
+      // 추천이 비어있을 때 처리
       if (normalizedData.length === 0) {
         if (type === 'initial') {
-          setError('아직 추천할 콘텐츠가 준비되지 않았습니다. 선호도를 설정해보세요!');
-        } else if (type === 'traditional') {
-          setError('맞춤 추천을 위해 콘텐츠를 평가하거나 선호도를 설정해주세요.');
+          console.log('초기 추천이 비어있음, 인기 콘텐츠 생성 시도');
+          const fallbackData = await generatePopularContent();
+          setRecommendations(fallbackData);
+        } else {
+          setError(`${type === 'traditional' ? '맞춤' : 'AI'} 추천을 생성할 수 없습니다.`);
         }
       }
       
     } catch (error) {
       console.error('추천 로드 실패:', error);
-      setError(`추천을 불러오는 중 오류가 발생했습니다: ${error.message}`);
-      setRecommendations([]);
+      
+      // 최후의 수단: 인기 콘텐츠 생성
+      try {
+        const fallbackData = await generatePopularContent();
+        setRecommendations(fallbackData);
+        setError('추천 시스템에 일시적인 문제가 있어 인기 콘텐츠를 보여드립니다.');
+      } catch (fallbackError) {
+        console.error('폴백 추천도 실패:', fallbackError);
+        setError('추천을 불러올 수 없습니다. 잠시 후 다시 시도해주세요.');
+        setRecommendations([]);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // 백엔드 응답 데이터를 정규화하는 함수
+  // 폴백 추천 생성 (API 없을 때 사용)
+  const generateFallbackRecommendations = async () => {
+    try {
+      console.log('폴백 추천 생성 시작...');
+      
+      // 기존 콘텐츠 API에서 데이터 가져오기
+      const [movies, games, webtoons, novels, netflixContent] = await Promise.allSettled([
+        api.getMovies(),
+        api.getSteamGames(),
+        api.getWebtoons(),
+        api.getNovels(),
+        api.getNetflixContent()
+      ]);
+
+      const recommendations = [];
+
+      // 각 카테고리에서 랜덤하게 2-3개씩 선택
+      if (movies.status === 'fulfilled' && movies.value && movies.value.length > 0) {
+        const selectedMovies = getRandomItems(movies.value, 3);
+        selectedMovies.forEach(movie => {
+          recommendations.push(normalizeContentItem({
+            ...movie,
+            contentType: 'MOVIE'
+          }));
+        });
+      }
+
+      if (webtoons.status === 'fulfilled' && webtoons.value && webtoons.value.length > 0) {
+        const selectedWebtoons = getRandomItems(webtoons.value, 2);
+        selectedWebtoons.forEach(webtoon => {
+          recommendations.push(normalizeContentItem({
+            ...webtoon,
+            contentType: 'WEBTOON'
+          }));
+        });
+      }
+
+      if (novels.status === 'fulfilled' && novels.value && novels.value.length > 0) {
+        const selectedNovels = getRandomItems(novels.value, 2);
+        selectedNovels.forEach(novel => {
+          recommendations.push(normalizeContentItem({
+            ...novel,
+            contentType: 'NOVEL'
+          }));
+        });
+      }
+
+      if (games.status === 'fulfilled' && games.value && games.value.length > 0) {
+        const selectedGames = getRandomItems(games.value, 2);
+        selectedGames.forEach(game => {
+          recommendations.push(normalizeContentItem({
+            ...game,
+            contentType: 'GAME'
+          }));
+        });
+      }
+
+      if (netflixContent.status === 'fulfilled' && netflixContent.value && netflixContent.value.length > 0) {
+        const selectedOtt = getRandomItems(netflixContent.value, 2);
+        selectedOtt.forEach(ott => {
+          recommendations.push(normalizeContentItem({
+            ...ott,
+            contentType: 'OTT',
+            id: ott.content_id || ott.id
+          }));
+        });
+      }
+
+      console.log('폴백 추천 생성 완료:', recommendations);
+      return recommendations;
+
+    } catch (error) {
+      console.error('폴백 추천 생성 실패:', error);
+      return [];
+    }
+  };
+
+  // 사용자 기반 추천 생성 (평가 데이터 활용) - 수정된 버전
+  const generateUserBasedRecommendations = async () => {
+    console.log('사용자 기반 추천 생성 시작...');
+    
+    // 최신 평가 데이터를 API에서 직접 가져오기
+    let currentUserRatings = userRatings;
+    
+    // 최신 평가 데이터 로드 시도
+    if (api.recommendations && api.recommendations.getUserRatings) {
+      try {
+        console.log('최신 사용자 평가 데이터 로드 중...');
+        const latestRatings = await api.recommendations.getUserRatings(activeUser.username);
+        if (Array.isArray(latestRatings) && latestRatings.length > 0) {
+          currentUserRatings = latestRatings;
+          console.log('최신 평가 데이터 로드 완료:', currentUserRatings.length, '개');
+        }
+      } catch (error) {
+        console.warn('최신 평가 데이터 로드 실패, 기존 데이터 사용:', error);
+      }
+    }
+    
+    if (currentUserRatings.length === 0) {
+      console.log('평가 데이터가 없어 기본 추천 생성');
+      setError('맞춤 추천을 위해 몇 개의 콘텐츠를 평가해주세요.');
+      return await generateFallbackRecommendations();
+    }
+
+    try {
+      console.log('평가 데이터 분석 시작:', currentUserRatings.length, '개 평가');
+      
+      // 사용자가 좋아한 콘텐츠 타입과 장르 분석
+      const likedContentTypes = {};
+      const likedGenres = {};
+      const dislikedContentTypes = {};
+
+      currentUserRatings.forEach(rating => {
+        console.log('평가 분석:', rating);
+        
+        // 4점 이상 좋아함
+        if (rating.rating >= 4) {
+          likedContentTypes[rating.contentType] = (likedContentTypes[rating.contentType] || 0) + 1;
+          if (rating.genres && Array.isArray(rating.genres)) {
+            rating.genres.forEach(genre => {
+              likedGenres[genre] = (likedGenres[genre] || 0) + 1;
+            });
+          }
+        }
+        // 2점 이하 싫어함
+        else if (rating.rating <= 2) {
+          dislikedContentTypes[rating.contentType] = (dislikedContentTypes[rating.contentType] || 0) + 1;
+        }
+      });
+
+      console.log('선호 분석 결과:', {
+        likedContentTypes,
+        likedGenres,
+        dislikedContentTypes
+      });
+
+      // 선호하는 콘텐츠 타입 기반으로 추천 생성
+      const baseRecommendations = await generateFallbackRecommendations();
+      console.log('기본 추천 생성 완료:', baseRecommendations.length, '개');
+      
+      // 사용자 선호도에 따라 점수 부여하고 정렬
+      const scoredRecommendations = baseRecommendations.map(item => {
+        let score = Math.random() * 0.1; // 기본 랜덤 점수
+        
+        // 콘텐츠 타입 점수
+        if (likedContentTypes[item.contentType]) {
+          score += likedContentTypes[item.contentType] * 3; // 좋아하는 타입 가산점
+          console.log(`${item.title}: +${likedContentTypes[item.contentType] * 3} (좋아하는 타입)`);
+        }
+        
+        // 싫어하는 콘텐츠 타입 감점
+        if (dislikedContentTypes[item.contentType]) {
+          score -= dislikedContentTypes[item.contentType] * 2;
+          console.log(`${item.title}: -${dislikedContentTypes[item.contentType] * 2} (싫어하는 타입)`);
+        }
+        
+        // 장르 점수
+        if (item.genre && Array.isArray(item.genre)) {
+          item.genre.forEach(genre => {
+            if (likedGenres[genre]) {
+              score += likedGenres[genre] * 1.5;
+              console.log(`${item.title}: +${likedGenres[genre] * 1.5} (좋아하는 장르: ${genre})`);
+            }
+          });
+        }
+        
+        return { ...item, score, userScore: score };
+      });
+
+      // 점수순으로 정렬하고 상위 15개 선택
+      const sortedRecommendations = scoredRecommendations
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 15);
+
+      console.log('사용자 기반 추천 생성 완료:', sortedRecommendations.length, '개');
+      console.log('상위 3개 추천:', sortedRecommendations.slice(0, 3).map(item => ({
+        title: item.title,
+        contentType: item.contentType,
+        score: item.score.toFixed(2)
+      })));
+
+      return sortedRecommendations;
+
+    } catch (error) {
+      console.error('사용자 기반 추천 생성 실패:', error);
+      return await generateFallbackRecommendations();
+    }
+  };
+
+  // 인기 콘텐츠 생성
+  const generatePopularContent = async () => {
+    try {
+      const recommendations = await generateFallbackRecommendations();
+      
+      // 인기도 기준으로 정렬 (평점, 최신순 등)
+      const sortedByPopularity = recommendations.sort((a, b) => {
+        const scoreA = (a.rating || 0) + (new Date(a.releaseDate || 0).getFullYear() - 2000) * 0.1;
+        const scoreB = (b.rating || 0) + (new Date(b.releaseDate || 0).getFullYear() - 2000) * 0.1;
+        return scoreB - scoreA;
+      });
+
+      return sortedByPopularity.slice(0, 15);
+    } catch (error) {
+      console.error('인기 콘텐츠 생성 실패:', error);
+      return [];
+    }
+  };
+
+  // 랜덤 아이템 선택 헬퍼
+  const getRandomItems = (array, count) => {
+    if (!Array.isArray(array) || array.length === 0) return [];
+    
+    const shuffled = [...array].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, Math.min(count, array.length));
+  };
+
+  // 백엔드 응답 데이터를 정규화하는 함수 - 수정된 버전
   const normalizeRecommendationData = (data) => {
+    console.log('정규화 시작 - 원본 데이터:', data);
+    
     if (!data) return [];
     
     // 이미 배열인 경우
     if (Array.isArray(data)) {
-      return data.map(item => normalizeContentItem(item));
+      return data.map(item => normalizeContentItem(item)).filter(Boolean);
+    }
+    
+    // 백엔드 응답 구조: {recommendations: {movies: [...], games: [...]}, message: "...", hasPreferences: false}
+    let itemsToProcess = data;
+    
+    // 백엔드 응답에서 recommendations 추출
+    if (data.recommendations && typeof data.recommendations === 'object') {
+      console.log('백엔드 응답에서 recommendations 추출:', data.recommendations);
+      itemsToProcess = data.recommendations;
     }
     
     // 객체인 경우 (백엔드에서 카테고리별로 그룹화된 데이터)
-    if (typeof data === 'object') {
+    if (typeof itemsToProcess === 'object') {
       const allItems = [];
       
       // 모든 카테고리의 아이템들을 하나의 배열로 합침
-      Object.values(data).forEach(categoryItems => {
+      Object.entries(itemsToProcess).forEach(([category, categoryItems]) => {
+        console.log(`${category} 카테고리 처리:`, categoryItems);
+        
         if (Array.isArray(categoryItems)) {
           categoryItems.forEach(item => {
-            const normalizedItem = normalizeContentItem(item);
+            const normalizedItem = normalizeContentItem({
+              ...item,
+              category: category, // 카테고리 정보 추가
+              contentType: mapCategoryToContentType(category) // 카테고리를 contentType으로 매핑
+            });
             if (normalizedItem) {
               allItems.push(normalizedItem);
             }
@@ -166,10 +471,23 @@ const RecommendationPage = () => {
         }
       });
       
+      console.log('정규화 완료:', allItems.length, '개 아이템');
       return allItems;
     }
     
     return [];
+  };
+
+  // 카테고리명을 contentType으로 매핑하는 헬퍼 함수
+  const mapCategoryToContentType = (category) => {
+    const mapping = {
+      'movies': 'MOVIE',
+      'games': 'GAME', 
+      'webtoons': 'WEBTOON',
+      'novels': 'NOVEL',
+      'ott': 'OTT'
+    };
+    return mapping[category] || category.toUpperCase();
   };
 
   // 개별 콘텐츠 아이템 정규화
@@ -177,15 +495,15 @@ const RecommendationPage = () => {
     if (!item) return null;
     
     return {
-      id: item.id || item.contentId || Math.random().toString(36),
+      id: item.id || item.contentId || item.content_id || Math.random().toString(36),
       title: item.title || item.name || item.contentTitle || '제목 없음',
       contentType: item.contentType || item.type || 'UNKNOWN',
-      creator: item.creator || item.author || item.director,
-      summary: item.summary || item.description || item.plot,
-      imageUrl: item.imageUrl || item.thumbnail || item.thumbnailUrl,
+      creator: item.creator || item.author || item.director || item.developer,
+      summary: item.summary || item.description || item.plot || item.shortDescription || item.short_description,
+      imageUrl: item.imageUrl || item.thumbnail || item.thumbnailUrl || item.headerImage || item.header_image || item.image_url,
       rating: item.rating || item.score,
       genre: item.genre || item.genres,
-      releaseDate: item.releaseDate || item.publishDate,
+      releaseDate: item.releaseDate || item.publishDate || item.release_year,
       ...item // 원본 데이터도 보존
     };
   };
@@ -199,20 +517,34 @@ const RecommendationPage = () => {
     try {
       console.log('콘텐츠 평가 시작:', { contentType, contentId, rating, ratingType });
       
-      await api.recommendations.rateContent(activeUser.username, {
-        contentType,
-        contentId,
-        rating,
-        ratingType
-      });
+      // 추천 시스템 API가 있으면 사용
+      if (api.recommendations && api.recommendations.rateContent) {
+        await api.recommendations.rateContent(activeUser.username, {
+          contentType,
+          contentId,
+          rating,
+          ratingType
+        });
+        
+        // 사용자 데이터 다시 로드
+        await loadUserData();
+      } else {
+        // 로컬에서 평가 데이터 관리
+        const newRating = {
+          contentType,
+          contentId,
+          rating,
+          ratingType,
+          timestamp: new Date().toISOString()
+        };
+        
+        setUserRatings(prev => {
+          const filtered = prev.filter(r => !(r.contentType === contentType && r.contentId === contentId));
+          return [...filtered, newRating];
+        });
+      }
       
       console.log('평가 완료');
-      
-      // 선호도 다시 로드
-      await loadUserPreferences();
-      
-      // 평가 후 메시지 표시
-      setError(''); // 기존 에러 메시지 제거
       
     } catch (error) {
       console.error('평가 실패:', error);
@@ -229,12 +561,15 @@ const RecommendationPage = () => {
     try {
       console.log('선호도 업데이트 시작:', newPreferences);
       
-      await api.recommendations.setUserPreferences(activeUser.username, newPreferences);
+      if (api.recommendations && api.recommendations.setUserPreferences) {
+        await api.recommendations.setUserPreferences(activeUser.username, newPreferences);
+      }
+      
       setUserPreferences(newPreferences);
       setShowPreferences(false);
       
-      // 선호도 업데이트 후 맞춤 추천 다시 로드
-      await loadRecommendations('traditional');
+      // 선호도 업데이트 후 추천 다시 로드
+      await loadRecommendations(selectedTab);
       
       console.log('선호도 업데이트 완료');
     } catch (error) {
@@ -270,6 +605,11 @@ const RecommendationPage = () => {
         <div className="user-info">
           <h1>🎬 {activeUser.username || '사용자'}님을 위한 추천</h1>
           <p>당신의 취향에 맞는 최고의 콘텐츠를 찾아드려요</p>
+          {userRatings.length > 0 && (
+            <small style={{ opacity: 0.8 }}>
+              평가한 콘텐츠: {userRatings.length}개 | 추천 품질: {userRatings.length >= 5 ? '매우 높음' : userRatings.length >= 3 ? '높음' : '보통'}
+            </small>
+          )}
         </div>
         
         <div className="header-actions">
@@ -302,22 +642,6 @@ const RecommendationPage = () => {
         </div>
       )}
 
-      {/* 디버그 정보 (개발용) */}
-      {process.env.NODE_ENV === 'development' && (
-        <div style={{ 
-          fontSize: '12px', 
-          color: '#666', 
-          marginBottom: '10px',
-          padding: '10px',
-          backgroundColor: '#f5f5f5',
-          borderRadius: '4px'
-        }}>
-          <strong>디버그 정보:</strong> 사용자: {activeUser?.username}, 
-          추천 수: {recommendations.length}, 
-          선호도: {userPreferences ? '설정됨' : '미설정'}
-        </div>
-      )}
-
       {/* 탭 네비게이션 */}
       <div className="recommendation-tabs">
         <button 
@@ -325,21 +649,14 @@ const RecommendationPage = () => {
           onClick={() => handleTabChange('initial')}
           disabled={loading}
         >
-          🌟 첫 추천
+          🌟 첫 추천 {userRatings.length > 0 && `(${userRatings.length}개 평가 반영)`}
         </button>
         <button 
           className={`tab ${selectedTab === 'traditional' ? 'active' : ''}`}
           onClick={() => handleTabChange('traditional')}
           disabled={loading}
         >
-          🎯 맞춤 추천
-        </button>
-        <button 
-          className={`tab ${selectedTab === 'llm' ? 'active' : ''}`}
-          onClick={() => handleTabChange('llm')}
-          disabled={loading}
-        >
-          🧠 AI 추천
+          🎯 맞춤 추천 {userRatings.length < 3 && `(${userRatings.length}/3)`}
         </button>
       </div>
 
@@ -365,16 +682,16 @@ const RecommendationPage = () => {
                 <h3>😅 추천할 콘텐츠가 없습니다</h3>
                 {selectedTab === 'initial' && (
                   <div>
-                    <p>아직 콘텐츠가 준비되지 않았습니다.</p>
-                    <p>선호도를 설정하고 맞춤 추천을 받아보세요!</p>
+                    <p>추천 시스템을 준비하고 있습니다.</p>
+                    <p>몇 개의 콘텐츠를 평가하시면 개인화된 추천을 받을 수 있어요!</p>
                   </div>
                 )}
                 {selectedTab === 'traditional' && (
                   <div>
                     <p>맞춤 추천을 위해 다음 중 하나를 해보세요:</p>
                     <ul style={{ textAlign: 'left', margin: '10px 0' }}>
+                      <li>더 많은 콘텐츠에 별점 주기 (현재: {userRatings.length}개)</li>
                       <li>선호도 설정하기</li>
-                      <li>콘텐츠에 별점 주기</li>
                       <li>좋아하는 콘텐츠 평가하기</li>
                     </ul>
                   </div>
@@ -387,12 +704,16 @@ const RecommendationPage = () => {
                   onClick={() => {
                     if (selectedTab === 'llm') {
                       setShowAIChat(true);
+                    } else if (userRatings.length === 0) {
+                      // 콘텐츠 페이지로 이동하여 평가 유도
+                      window.location.href = '/contents';
                     } else {
                       setShowPreferences(true);
                     }
                   }}
                 >
-                  {selectedTab === 'llm' ? 'AI 채팅 시작' : '선호도 설정하기'}
+                  {selectedTab === 'llm' ? 'AI 채팅 시작' : 
+                   userRatings.length === 0 ? '콘텐츠 평가하러 가기' : '선호도 설정하기'}
                 </button>
               </div>
             )}

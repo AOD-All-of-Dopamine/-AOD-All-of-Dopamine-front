@@ -14,80 +14,144 @@ const Register = () => {
     const [message, setMessage] = useState('');
     const [successful, setSuccessful] = useState(false);
 
-    // 추천 시스템 관련 새로운 상태들
+    // 새로운 회원가입 단계별 상태
     const [step, setStep] = useState(1);
-    const [showPreferences, setShowPreferences] = useState(false);
-    const [preferences, setPreferences] = useState({
-        preferredGenres: [],
-        preferredContentTypes: [],
-        ageRange: '',
-        preferredLanguage: 'Korean',
-        preferredRating: '',
-        mood: []
-    });
-    const [contentTypes, setContentTypes] = useState([]);
-    const [genres, setGenres] = useState([]);
-    const [skipPreferences, setSkipPreferences] = useState(false);
+    const [sampleContents, setSampleContents] = useState([]);
+    const [userRatings, setUserRatings] = useState({});
     const [dataLoading, setDataLoading] = useState(false);
+    const [skipRatings, setSkipRatings] = useState(false);
 
     const navigate = useNavigate();
-    const { register } = useAuth(); // signup 대신 register 사용
+    const { register } = useAuth();
+
+    // DB에서 랜덤 샘플 콘텐츠 가져오기
+    const loadSampleContents = async () => {
+        try {
+            console.log('샘플 콘텐츠 로딩 시작...');
+            
+            // 각 콘텐츠 타입별로 데이터 가져오기
+            const [movies, games, webtoons, novels, netflixContent] = await Promise.allSettled([
+                api.getMovies(),
+                api.getSteamGames(), 
+                api.getWebtoons(),
+                api.getNovels(),
+                api.getNetflixContent()
+            ]);
+
+            const sampleList = [];
+
+            // 영화에서 1개 랜덤 선택
+            if (movies.status === 'fulfilled' && movies.value && movies.value.length > 0) {
+                const randomMovie = movies.value[Math.floor(Math.random() * Math.min(movies.value.length, 20))];
+                sampleList.push({
+                    contentType: "movie",
+                    contentId: randomMovie.id,
+                    contentTitle: randomMovie.title,
+                    director: randomMovie.director,
+                    thumbnailUrl: randomMovie.thumbnailUrl || randomMovie.thumbnail_url,
+                    genre: randomMovie.genres || ["영화"],
+                    originalData: randomMovie
+                });
+            }
+
+            // 게임에서 1개 랜덤 선택
+            if (games.status === 'fulfilled' && games.value && games.value.length > 0) {
+                const randomGame = games.value[Math.floor(Math.random() * Math.min(games.value.length, 20))];
+                sampleList.push({
+                    contentType: "game",
+                    contentId: randomGame.id,
+                    contentTitle: randomGame.title,
+                    developer: randomGame.developer,
+                    thumbnailUrl: randomGame.headerImage || randomGame.header_image,
+                    genre: randomGame.genres || ["게임"],
+                    originalData: randomGame
+                });
+            }
+
+            // 웹툰에서 1개 랜덤 선택
+            if (webtoons.status === 'fulfilled' && webtoons.value && webtoons.value.length > 0) {
+                const randomWebtoon = webtoons.value[Math.floor(Math.random() * Math.min(webtoons.value.length, 20))];
+                sampleList.push({
+                    contentType: "webtoon",
+                    contentId: randomWebtoon.id,
+                    contentTitle: randomWebtoon.title,
+                    author: randomWebtoon.creator || randomWebtoon.author,
+                    thumbnailUrl: randomWebtoon.thumbnail,
+                    genre: randomWebtoon.genres || ["웹툰"],
+                    originalData: randomWebtoon
+                });
+            }
+
+            // 웹소설에서 1개 랜덤 선택
+            if (novels.status === 'fulfilled' && novels.value && novels.value.length > 0) {
+                const randomNovel = novels.value[Math.floor(Math.random() * Math.min(novels.value.length, 20))];
+                sampleList.push({
+                    contentType: "novel",
+                    contentId: randomNovel.id,
+                    contentTitle: randomNovel.title,
+                    author: randomNovel.author,
+                    thumbnailUrl: randomNovel.image_url,
+                    genre: randomNovel.genres || ["웹소설"],
+                    originalData: randomNovel
+                });
+            }
+
+            // OTT에서 1개 랜덤 선택
+            if (netflixContent.status === 'fulfilled' && netflixContent.value && netflixContent.value.length > 0) {
+                const randomOtt = netflixContent.value[Math.floor(Math.random() * Math.min(netflixContent.value.length, 20))];
+                sampleList.push({
+                    contentType: "ott",
+                    contentId: randomOtt.content_id || randomOtt.id,
+                    contentTitle: randomOtt.title,
+                    creator: randomOtt.creator,
+                    thumbnailUrl: randomOtt.thumbnail,
+                    genre: randomOtt.genres || [randomOtt.type || "OTT"],
+                    originalData: randomOtt
+                });
+            }
+
+            console.log('로드된 샘플 콘텐츠:', sampleList);
+            return sampleList;
+
+        } catch (error) {
+            console.error('샘플 콘텐츠 로드 실패:', error);
+            
+            // 폴백: 기본 샘플 데이터
+            return [
+                {
+                    contentType: "movie",
+                    contentId: 999,
+                    contentTitle: "샘플 영화",
+                    director: "감독명",
+                    thumbnailUrl: "/placeholder-movie.jpg",
+                    genre: ["드라마"]
+                },
+                {
+                    contentType: "webtoon", 
+                    contentId: 998,
+                    contentTitle: "샘플 웹툰",
+                    author: "작가명",
+                    thumbnailUrl: "/placeholder-webtoon.jpg",
+                    genre: ["액션"]
+                }
+            ];
+        }
+    };
 
     useEffect(() => {
-        // 컴포넌트 마운트 시에는 데이터를 로드하지 않음
-        // 선호도 설정 단계에서만 로드
-    }, []);
-
-    const loadInitialData = async () => {
-        if (contentTypes.length > 0 && genres.length > 0) {
-            return; // 이미 로드됨
+        if (step === 2) {
+            loadSampleContentsAsync();
         }
+    }, [step]);
 
+    const loadSampleContentsAsync = async () => {
         setDataLoading(true);
         try {
-            // API 메서드가 존재하는 경우에만 호출
-            let loadedContentTypes = [];
-            let loadedGenres = [];
-
-            if (api.recommendations && api.recommendations.getContentTypes) {
-                try {
-                    loadedContentTypes = await api.recommendations.getContentTypes();
-                } catch (error) {
-                    console.warn('콘텐츠 타입 로드 실패:', error);
-                    // 기본값 설정
-                    loadedContentTypes = ['MOVIE', 'WEBTOON', 'NOVEL', 'GAME', 'OTT'];
-                }
-            } else {
-                // API 메서드가 없으면 기본값 사용
-                loadedContentTypes = ['MOVIE', 'WEBTOON', 'NOVEL', 'GAME', 'OTT'];
-            }
-
-            if (api.recommendations && api.recommendations.getGenres) {
-                try {
-                    loadedGenres = await api.recommendations.getGenres();
-                } catch (error) {
-                    console.warn('장르 로드 실패:', error);
-                    // 기본값 설정
-                    loadedGenres = [
-                        '액션', '로맨스', '코미디', '드라마', '스릴러', '판타지',
-                        '공포', '미스터리', 'SF', '다큐멘터리', '애니메이션', '범죄'
-                    ];
-                }
-            } else {
-                // API 메서드가 없으면 기본값 사용
-                loadedGenres = [
-                    '액션', '로맨스', '코미디', '드라마', '스릴러', '판타지',
-                    '공포', '미스터리', 'SF', '다큐멘터리', '애니메이션', '범죄'
-                ];
-            }
-
-            setContentTypes(Array.isArray(loadedContentTypes) ? loadedContentTypes : []);
-            setGenres(Array.isArray(loadedGenres) ? loadedGenres : []);
+            const contents = await loadSampleContents();
+            setSampleContents(contents);
         } catch (error) {
-            console.error('초기 데이터 로드 실패:', error);
-            // 에러 시 기본값 설정
-            setContentTypes(['MOVIE', 'WEBTOON', 'NOVEL', 'GAME', 'OTT']);
-            setGenres(['액션', '로맨스', '코미디', '드라마', '스릴러', '판타지']);
+            console.error('샘플 콘텐츠 로드 실패:', error);
+            setMessage('콘텐츠를 불러오는 중 오류가 발생했습니다.');
         } finally {
             setDataLoading(false);
         }
@@ -104,7 +168,6 @@ const Register = () => {
             return false;
         }
 
-        // 간단한 이메일 형식 검증
         const emailRegex = /\S+@\S+\.\S+/;
         if (!emailRegex.test(email)) {
             setMessage('유효한 이메일 주소를 입력해주세요.');
@@ -118,44 +181,65 @@ const Register = () => {
         e.preventDefault();
         setMessage('');
         setSuccessful(false);
-        setLoading(true);
 
         if (validateForm()) {
-            // 데이터 로드 후 선호도 설정 단계로 이동
-            await loadInitialData();
-            setShowPreferences(true);
-            setStep(2);
-            setLoading(false);
-        } else {
-            setLoading(false);
+            setStep(2); // 평가 단계로 이동
         }
     };
 
-    // 최종 회원가입 (기존 API 사용 + 선호도 별도 설정)
+    const handleRating = (contentItem, rating) => {
+        setUserRatings(prev => ({
+            ...prev,
+            [`${contentItem.contentType}-${contentItem.contentId}`]: {
+                ...contentItem,
+                rating,
+                isLiked: rating >= 4,
+                isWatched: true,
+                isWishlist: false,
+                review: rating >= 4 ? "좋아요!" : rating >= 3 ? "괜찮아요" : "별로예요"
+            }
+        }));
+    };
+
     const handleFinalRegister = async () => {
         setLoading(true);
         setMessage('');
 
         try {
-            console.log('회원가입 시작:', { username, email, skipPreferences });
+            console.log('회원가입 시작:', { username, email });
             
-            // 1. 기본 회원가입 먼저 진행
+            // 1. 기본 회원가입
             const response = await register(username, email, password);
             console.log('회원가입 응답:', response);
 
-            // 2. 회원가입 성공 시 선호도 설정 (선택사항)
-            if (!skipPreferences && preferences && Object.keys(preferences).length > 0) {
-                try {
-                    console.log('선호도 설정 시작:', preferences);
-                    await api.recommendations.setUserPreferences(username, preferences);
-                    console.log('선호도 설정 완료');
-                } catch (prefError) {
-                    console.warn('선호도 설정 실패 (회원가입은 성공):', prefError);
-                    // 선호도 설정 실패는 회원가입 실패로 처리하지 않음
-                }
+            // 2. 평가 데이터 저장 (건너뛰기 선택하지 않은 경우)
+            if (!skipRatings && Object.keys(userRatings).length > 0) {
+                console.log('평가 데이터 저장 시작:', userRatings);
+                
+                const ratingPromises = Object.values(userRatings).map(async (ratingData) => {
+                    try {
+                        await api.recommendations.rateContent(username, {
+                            username,
+                            contentType: ratingData.contentType,
+                            contentId: ratingData.contentId,
+                            contentTitle: ratingData.contentTitle,
+                            rating: ratingData.rating,
+                            isLiked: ratingData.isLiked,
+                            isWatched: ratingData.isWatched,
+                            isWishlist: ratingData.isWishlist,
+                            review: ratingData.review
+                        });
+                        console.log(`평가 저장 완료: ${ratingData.contentTitle}`);
+                    } catch (error) {
+                        console.warn(`평가 저장 실패: ${ratingData.contentTitle}`, error);
+                    }
+                });
+
+                await Promise.allSettled(ratingPromises);
+                console.log('모든 평가 데이터 저장 완료');
             }
 
-            setMessage('회원가입이 완료되었습니다. 로그인해주세요.');
+            setMessage('회원가입이 완료되었습니다! 이제 개인화된 추천을 받을 수 있습니다.');
             setSuccessful(true);
             setTimeout(() => {
                 navigate('/login');
@@ -164,17 +248,9 @@ const Register = () => {
         } catch (error) {
             console.error('회원가입 오류:', error);
             
-            // 에러 메시지 추출
             let errorMessage = '회원가입 중 오류가 발생했습니다.';
-            
             if (error && error.message) {
                 errorMessage = error.message;
-            } else if (error && error.response && error.response.data) {
-                if (typeof error.response.data === 'string') {
-                    errorMessage = error.response.data;
-                } else if (error.response.data.message) {
-                    errorMessage = error.response.data.message;
-                }
             }
             
             setMessage(errorMessage);
@@ -184,57 +260,62 @@ const Register = () => {
         }
     };
 
-    // 선호도 관련 핸들러들
-    const handleGenreToggle = (genre) => {
-        setPreferences(prev => ({
-            ...prev,
-            preferredGenres: prev.preferredGenres.includes(genre)
-                ? prev.preferredGenres.filter(g => g !== genre)
-                : [...prev.preferredGenres, genre]
-        }));
+    const getContentTypeIcon = (type) => {
+        const icons = {
+            'movie': '🎬',
+            'webtoon': '📚',
+            'novel': '📖',
+            'game': '🎮',
+            'ott': '📺'
+        };
+        return icons[type] || '🎯';
     };
 
-    const handleContentTypeToggle = (type) => {
-        setPreferences(prev => ({
-            ...prev,
-            preferredContentTypes: prev.preferredContentTypes.includes(type)
-                ? prev.preferredContentTypes.filter(t => t !== type)
-                : [...prev.preferredContentTypes, type]
-        }));
+    const getContentTypeLabel = (type) => {
+        const labels = {
+            'movie': '영화',
+            'webtoon': '웹툰',
+            'novel': '웹소설',
+            'game': '게임',
+            'ott': 'OTT'
+        };
+        return labels[type] || type;
     };
 
-    const handleMoodToggle = (moodItem) => {
-        setPreferences(prev => ({
-            ...prev,
-            mood: prev.mood.includes(moodItem)
-                ? prev.mood.filter(m => m !== moodItem)
-                : [...prev.mood, moodItem]
-        }));
+    const renderStars = (contentItem) => {
+        const currentRating = userRatings[`${contentItem.contentType}-${contentItem.contentId}`]?.rating || 0;
+        
+        return (
+            <div className="rating-stars">
+                {[1, 2, 3, 4, 5].map(star => (
+                    <button
+                        key={star}
+                        type="button"
+                        className={`star-btn ${currentRating >= star ? 'active' : ''}`}
+                        onClick={() => handleRating(contentItem, star)}
+                        style={{
+                            background: 'none',
+                            border: 'none',
+                            fontSize: '24px',
+                            cursor: 'pointer',
+                            color: currentRating >= star ? '#ffc107' : '#ddd',
+                            transition: 'color 0.2s'
+                        }}
+                    >
+                        ⭐
+                    </button>
+                ))}
+                {currentRating > 0 && (
+                    <span style={{ marginLeft: '10px', fontSize: '14px', color: '#666' }}>
+                        {currentRating}/5
+                    </span>
+                )}
+            </div>
+        );
     };
 
-    const contentTypeOptions = [
-        { value: 'MOVIE', label: '영화', icon: '🎬' },
-        { value: 'WEBTOON', label: '웹툰', icon: '📚' },
-        { value: 'NOVEL', label: '웹소설', icon: '📖' },
-        { value: 'GAME', label: '게임', icon: '🎮' },
-        { value: 'OTT', label: 'OTT', icon: '📺' }
-    ];
-
-    const ageRangeOptions = [
-        { value: '10s', label: '10대' },
-        { value: '20s', label: '20대' },
-        { value: '30s', label: '30대' },
-        { value: '40s', label: '40대' },
-        { value: '50s+', label: '50대 이상' }
-    ];
-
-    const moodOptions = [
-        '재미있는', '감동적인', '스릴있는', '무서운', '로맨틱한',
-        '웃긴', '진지한', '판타지적인', '현실적인', '교육적인'
-    ];
-
-    if (!showPreferences) {
-        // 기존 회원가입 폼
+    if (step === 1) {
+        // 기본 회원가입 폼
         return (
             <div className="auth-container">
                 <div className="auth-card">
@@ -305,11 +386,7 @@ const Register = () => {
                                 className="btn btn-primary btn-block"
                                 disabled={loading}
                             >
-                                {loading ? (
-                                    <span className="spinner"></span>
-                                ) : (
-                                    "다음 단계로"
-                                )}
+                                다음 단계로
                             </button>
                         </div>
 
@@ -323,12 +400,15 @@ const Register = () => {
         );
     }
 
-    // 선호도 설정 단계
+    // 콘텐츠 평가 단계
     return (
         <div className="auth-container">
-            <div className="auth-card preferences-card">
-                <h2>🎯 취향 설정</h2>
-                <p className="preferences-subtitle">맞춤형 추천을 위해 선호도를 설정해주세요 (선택사항)</p>
+            <div className="auth-card" style={{ maxWidth: '700px' }}>
+                <h2>🎯 콘텐츠 평가하기</h2>
+                <p style={{ textAlign: 'center', color: '#666', marginBottom: '30px' }}>
+                    몇 가지 콘텐츠를 평가해주시면 더 정확한 추천을 받을 수 있어요!<br/>
+                    (최소 3개 이상 평가하시는 것을 권장합니다)
+                </p>
 
                 {message && (
                     <div className={`alert ${successful ? 'alert-success' : 'alert-danger'}`}>
@@ -336,110 +416,138 @@ const Register = () => {
                     </div>
                 )}
 
+                <div style={{ marginBottom: '30px' }}>
+                    <div style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        marginBottom: '20px',
+                        padding: '10px',
+                        backgroundColor: '#f8f9fa',
+                        borderRadius: '8px'
+                    }}>
+                        <span style={{ fontWeight: 'bold' }}>
+                            평가한 콘텐츠: {Object.keys(userRatings).length}/{sampleContents.length}
+                        </span>
+                        <div style={{ width: '100px', height: '8px', backgroundColor: '#e9ecef', borderRadius: '4px' }}>
+                            <div 
+                                style={{ 
+                                    width: `${(Object.keys(userRatings).length / sampleContents.length) * 100}%`,
+                                    height: '100%',
+                                    backgroundColor: '#007bff',
+                                    borderRadius: '4px',
+                                    transition: 'width 0.3s'
+                                }}
+                            />
+                        </div>
+                    </div>
+
                 {dataLoading ? (
-                    <div className="loading-section">
-                        <div className="spinner"></div>
-                        <p>선호도 옵션을 불러오는 중...</p>
+                    <div style={{ textAlign: 'center', padding: '40px' }}>
+                        <div style={{
+                            width: '40px',
+                            height: '40px',
+                            border: '4px solid #f3f3f3',
+                            borderTop: '4px solid #007bff',
+                            borderRadius: '50%',
+                            animation: 'spin 1s linear infinite',
+                            margin: '0 auto 20px'
+                        }}></div>
+                        <p style={{ color: '#666' }}>다양한 콘텐츠를 준비하고 있어요...</p>
+                        <style jsx>{`
+                            @keyframes spin {
+                                0% { transform: rotate(0deg); }
+                                100% { transform: rotate(360deg); }
+                            }
+                        `}</style>
+                    </div>
+                ) : sampleContents.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '40px' }}>
+                        <p style={{ color: '#dc3545' }}>콘텐츠를 불러올 수 없습니다.</p>
+                        <button 
+                            type="button"
+                            className="btn btn-primary"
+                            onClick={loadSampleContentsAsync}
+                        >
+                            다시 시도
+                        </button>
                     </div>
                 ) : (
-                    <div className="preferences-content">
-                        {/* 콘텐츠 타입 선호도 */}
-                        <div className="preference-section">
-                            <h4>📱 관심있는 콘텐츠</h4>
-                            <div className="preferences-grid">
-                                {contentTypeOptions.map(option => (
-                                    <button
-                                        key={option.value}
-                                        type="button"
-                                        className={`preference-option ${preferences.preferredContentTypes.includes(option.value) ? 'selected' : ''}`}
-                                        onClick={() => handleContentTypeToggle(option.value)}
-                                    >
-                                        <span className="option-icon">{option.icon}</span>
-                                        <span>{option.label}</span>
-                                    </button>
-                                ))}
+                    <div style={{ display: 'grid', gap: '20px' }}>
+                        {sampleContents.map((content, index) => (
+                            <div 
+                                key={`${content.contentType}-${content.contentId}`}
+                                style={{
+                                    border: '2px solid #e9ecef',
+                                    borderRadius: '12px',
+                                    padding: '20px',
+                                    backgroundColor: userRatings[`${content.contentType}-${content.contentId}`] ? '#f8f9fa' : 'white',
+                                    transition: 'all 0.3s'
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
+                                    <span style={{ fontSize: '24px', marginRight: '10px' }}>
+                                        {getContentTypeIcon(content.contentType)}
+                                    </span>
+                                    <div>
+                                        <h4 style={{ margin: '0 0 5px 0', fontSize: '18px' }}>
+                                            {content.contentTitle}
+                                        </h4>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                            <span style={{ 
+                                                fontSize: '12px', 
+                                                backgroundColor: '#007bff', 
+                                                color: 'white',
+                                                padding: '3px 8px',
+                                                borderRadius: '12px'
+                                            }}>
+                                                {getContentTypeLabel(content.contentType)}
+                                            </span>
+                                            <span style={{ fontSize: '14px', color: '#666' }}>
+                                                {content.author || content.director || content.developer || content.creator}
+                                            </span>
+                                            {content.genre && (
+                                                <span style={{ fontSize: '12px', color: '#28a745' }}>
+                                                    {content.genre.join(', ')}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div style={{ marginLeft: '34px' }}>
+                                    <p style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
+                                        이 콘텐츠를 평가해주세요:
+                                    </p>
+                                    {renderStars(content)}
+                                </div>
                             </div>
-                        </div>
-
-                        {/* 장르 선호도 */}
-                        <div className="preference-section">
-                            <h4>🎭 좋아하는 장르</h4>
-                            <div className="preferences-tags">
-                                {Array.isArray(genres) && genres.length > 0 ? (
-                                    genres.slice(0, 12).map(genre => (
-                                        <button
-                                            key={genre}
-                                            type="button"
-                                            className={`preference-tag ${preferences.preferredGenres.includes(genre) ? 'selected' : ''}`}
-                                            onClick={() => handleGenreToggle(genre)}
-                                        >
-                                            {genre}
-                                        </button>
-                                    ))
-                                ) : (
-                                    <p className="no-genres">장르 정보를 불러올 수 없습니다.</p>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* 연령대 */}
-                        <div className="preference-section">
-                            <h4>👤 연령대</h4>
-                            <div className="radio-options">
-                                {ageRangeOptions.map(option => (
-                                    <label key={option.value} className="radio-option">
-                                        <input
-                                            type="radio"
-                                            name="ageRange"
-                                            value={option.value}
-                                            checked={preferences.ageRange === option.value}
-                                            onChange={(e) => setPreferences(prev => ({
-                                                ...prev,
-                                                ageRange: e.target.value
-                                            }))}
-                                        />
-                                        <span>{option.label}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* 선호 분위기 */}
-                        <div className="preference-section">
-                            <h4>🌈 선호하는 분위기</h4>
-                            <div className="preferences-tags">
-                                {moodOptions.map(mood => (
-                                    <button
-                                        key={mood}
-                                        type="button"
-                                        className={`preference-tag ${preferences.mood.includes(mood) ? 'selected' : ''}`}
-                                        onClick={() => handleMoodToggle(mood)}
-                                    >
-                                        {mood}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
+                        ))}
                     </div>
                 )}
+                </div>
 
-                <div className="preferences-actions">
-                    <div className="skip-option">
-                        <label className="checkbox-label">
+                <div style={{ borderTop: '1px solid #e9ecef', paddingTop: '25px' }}>
+                    <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}>
                             <input
                                 type="checkbox"
-                                checked={skipPreferences}
-                                onChange={(e) => setSkipPreferences(e.target.checked)}
+                                checked={skipRatings}
+                                onChange={(e) => setSkipRatings(e.target.checked)}
+                                style={{ width: '16px', height: '16px' }}
                             />
-                            <span>나중에 설정하기</span>
+                            <span style={{ fontSize: '14px', color: '#6c757d' }}>
+                                나중에 평가하기 (추천 정확도가 낮을 수 있습니다)
+                            </span>
                         </label>
                     </div>
 
-                    <div className="action-buttons">
+                    <div style={{ display: 'flex', gap: '15px', justifyContent: 'space-between' }}>
                         <button 
                             type="button"
                             className="btn btn-secondary"
-                            onClick={() => setShowPreferences(false)}
+                            onClick={() => setStep(1)}
+                            style={{ flex: 1 }}
                         >
                             이전
                         </button>
@@ -447,15 +555,22 @@ const Register = () => {
                             type="button"
                             className="btn btn-primary"
                             onClick={handleFinalRegister}
-                            disabled={loading || dataLoading}
+                            disabled={loading || dataLoading || (!skipRatings && Object.keys(userRatings).length < Math.min(3, sampleContents.length))}
+                            style={{ flex: 2 }}
                         >
                             {loading ? (
                                 <span className="spinner"></span>
                             ) : (
-                                "🎉 가입 완료"
+                                `🎉 가입 완료 ${!skipRatings ? `(${Object.keys(userRatings).length}/5)` : ''}`
                             )}
                         </button>
                     </div>
+
+                    {!skipRatings && sampleContents.length > 0 && Object.keys(userRatings).length < Math.min(3, sampleContents.length) && (
+                        <p style={{ fontSize: '12px', color: '#dc3545', textAlign: 'center', marginTop: '10px' }}>
+                            최소 {Math.min(3, sampleContents.length)}개 이상의 콘텐츠를 평가해주세요
+                        </p>
+                    )}
                 </div>
             </div>
         </div>

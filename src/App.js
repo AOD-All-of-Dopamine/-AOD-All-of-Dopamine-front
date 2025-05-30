@@ -10,7 +10,6 @@ import AuthNav from './components/AuthNav';
 import PrivateRoute from './components/PrivateRoute';
 import RecommendationPage from './components/recommendation/RecommendationPage';
 import UserDashboard from './components/recommendation/UserDashboard';
-<Route path="/recommendations" element={<RecommendationPage />} />
 import './App.css';
 
 const AppContent = () => {
@@ -56,9 +55,6 @@ const AppContent = () => {
                 </NavLink>
                 <NavLink to="/recommendations" className={({ isActive }) => isActive ? 'active' : ''}>
                   맞춤 추천
-                </NavLink>
-                <NavLink to="/dashboard" className={({ isActive }) => isActive ? 'active' : ''}>
-                  대시보드
                 </NavLink>
               </>
             )}
