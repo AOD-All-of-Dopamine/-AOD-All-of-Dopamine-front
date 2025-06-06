@@ -116,11 +116,11 @@ const api = {
     }
   },
 
-  // 스팀 게임 데이터 가져오기
-  getSteamGames: async () => {
+  // 게임 데이터 가져오기 (경로 변경: steam-games -> games)
+  getGames: async () => {
     try {
       console.log('게임 API 호출 중...');
-      const response = await axiosInstance.get('/steam-games');
+      const response = await axiosInstance.get('/games');
       console.log('게임 API 응답:', response);
       if (response.status === 200) {
         return response.data;
@@ -139,6 +139,11 @@ const api = {
       }
       throw error;
     }
+  },
+
+  // 하위 호환성을 위한 별칭
+  getSteamGames: async () => {
+    return api.getGames();
   },
 
   // 웹툰 데이터 가져오기
@@ -166,11 +171,11 @@ const api = {
     }
   },
 
-  // 웹툰 장르별 데이터 가져오기
-  getWebtoonsByGenre: async (genreId) => {
+  // 웹툰 장르별 데이터 가져오기 (genreId -> genreName)
+  getWebtoonsByGenre: async (genreName) => {
     try {
-      console.log(`장르 ID ${genreId}의 웹툰 API 호출 중...`);
-      const response = await axiosInstance.get(`/webtoons/genre/${genreId}`);
+      console.log(`장르 ${genreName}의 웹툰 API 호출 중...`);
+      const response = await axiosInstance.get(`/webtoons/genre/${genreName}`);
       console.log('웹툰 장르별 API 응답:', response);
       if (response.status === 200) {
         return response.data;
@@ -180,6 +185,24 @@ const api = {
       }
     } catch (error) {
       console.error('웹툰 장르별 데이터를 가져오는 중 오류 발생:', error);
+      throw error;
+    }
+  },
+
+  // 웹툰 작가별 데이터 가져오기 (새로 추가)
+  getWebtoonsByAuthor: async (authorName) => {
+    try {
+      console.log(`작가 ${authorName}의 웹툰 API 호출 중...`);
+      const response = await axiosInstance.get(`/webtoons/author/${authorName}`);
+      console.log('웹툰 작가별 API 응답:', response);
+      if (response.status === 200) {
+        return response.data;
+      } else {
+        console.warn('API 응답이 성공이지만 상태 코드가 200이 아닙니다:', response.status);
+        return [];
+      }
+    } catch (error) {
+      console.error('웹툰 작가별 데이터를 가져오는 중 오류 발생:', error);
       throw error;
     }
   },
@@ -209,11 +232,11 @@ const api = {
     }
   },
 
-  // 웹소설 장르별 데이터 가져오기
-  getNovelsByGenre: async (genreId) => {
+  // 웹소설 장르별 데이터 가져오기 (genreId -> genreName)
+  getNovelsByGenre: async (genreName) => {
     try {
-      console.log(`장르 ID ${genreId}의 웹소설 API 호출 중...`);
-      const response = await axiosInstance.get(`/novels/genre/${genreId}`);
+      console.log(`장르 ${genreName}의 웹소설 API 호출 중...`);
+      const response = await axiosInstance.get(`/novels/genre/${genreName}`);
       console.log('웹소설 장르별 API 응답:', response);
       if (response.status === 200) {
         return response.data;
@@ -227,12 +250,12 @@ const api = {
     }
   },
 
-  // 넷플릭스 콘텐츠 데이터 가져오기
-  getNetflixContent: async () => {
+  // 웹소설 작가별 데이터 가져오기 (새로 추가)
+  getNovelsByAuthor: async (authorName) => {
     try {
-      console.log('넷플릭스 API 호출 중...');
-      const response = await axiosInstance.get('/netflix-content');
-      console.log('넷플릭스 API 응답:', response);
+      console.log(`작가 ${authorName}의 웹소설 API 호출 중...`);
+      const response = await axiosInstance.get(`/novels/author/${authorName}`);
+      console.log('웹소설 작가별 API 응답:', response);
       if (response.status === 200) {
         return response.data;
       } else {
@@ -240,7 +263,25 @@ const api = {
         return [];
       }
     } catch (error) {
-      console.error('넷플릭스 데이터를 가져오는 중 오류 발생:', error);
+      console.error('웹소설 작가별 데이터를 가져오는 중 오류 발생:', error);
+      throw error;
+    }
+  },
+
+  // OTT 콘텐츠 데이터 가져오기 (netflix-content -> ott-content)
+  getOttContent: async () => {
+    try {
+      console.log('OTT 콘텐츠 API 호출 중...');
+      const response = await axiosInstance.get('/ott-content');
+      console.log('OTT 콘텐츠 API 응답:', response);
+      if (response.status === 200) {
+        return response.data;
+      } else {
+        console.warn('API 응답이 성공이지만 상태 코드가 200이 아닙니다:', response.status);
+        return [];
+      }
+    } catch (error) {
+      console.error('OTT 콘텐츠 데이터를 가져오는 중 오류 발생:', error);
       if (error.response) {
         console.error('서버 응답 오류:', error.response.status, error.response.data);
       } else if (error.request) {
@@ -252,66 +293,100 @@ const api = {
     }
   },
 
-  // 넷플릭스 타입별(영화, 시리즈 등) 데이터 가져오기
+  // 하위 호환성을 위한 별칭
+  getNetflixContent: async () => {
+    return api.getOttContent();
+  },
+
+  // OTT 장르별 데이터 가져오기
+  getOttContentByGenre: async (genreName) => {
+    try {
+      console.log(`장르 ${genreName}의 OTT 콘텐츠 API 호출 중...`);
+      const response = await axiosInstance.get(`/ott-content/genre/${genreName}`);
+      console.log('OTT 장르별 API 응답:', response);
+      if (response.status === 200) {
+        return response.data;
+      } else {
+        console.warn('API 응답이 성공이지만 상태 코드가 200이 아닙니다:', response.status);
+        return [];
+      }
+    } catch (error) {
+      console.error('OTT 장르별 데이터를 가져오는 중 오류 발생:', error);
+      throw error;
+    }
+  },
+
+  // OTT 배우별 데이터 가져오기 (새로 추가)
+  getOttContentByActor: async (actorName) => {
+    try {
+      console.log(`배우 ${actorName}의 OTT 콘텐츠 API 호출 중...`);
+      const response = await axiosInstance.get(`/ott-content/actor/${actorName}`);
+      console.log('OTT 배우별 API 응답:', response);
+      if (response.status === 200) {
+        return response.data;
+      } else {
+        console.warn('API 응답이 성공이지만 상태 코드가 200이 아닙니다:', response.status);
+        return [];
+      }
+    } catch (error) {
+      console.error('OTT 배우별 데이터를 가져오는 중 오류 발생:', error);
+      throw error;
+    }
+  },
+
+  // 하위 호환성을 위한 넷플릭스 관련 함수들
+  getNetflixContentByGenre: async (genreId) => {
+    return api.getOttContentByGenre(genreId);
+  },
+
   getNetflixContentByType: async (type) => {
     try {
-      console.log(`타입 ${type}의 넷플릭스 콘텐츠 API 호출 중...`);
-      const response = await axiosInstance.get(`/netflix-content/type/${type}`);
-      console.log('넷플릭스 타입별 API 응답:', response);
+      console.log(`타입 ${type}의 OTT 콘텐츠 API 호출 중...`);
+      // 통합 검색 API 사용
+      const response = await axiosInstance.get(`/search?keyword=&type=ott`);
+      console.log('OTT 타입별 API 응답:', response);
       if (response.status === 200) {
-        return response.data;
+        // 클라이언트 사이드에서 타입 필터링
+        return response.data.filter(content => 
+          !type || content.type?.toLowerCase() === type.toLowerCase()
+        );
       } else {
         console.warn('API 응답이 성공이지만 상태 코드가 200이 아닙니다:', response.status);
         return [];
       }
     } catch (error) {
-      console.error('넷플릭스 타입별 데이터를 가져오는 중 오류 발생:', error);
+      console.error('OTT 타입별 데이터를 가져오는 중 오류 발생:', error);
       throw error;
     }
   },
 
-  // 넷플릭스 장르별 데이터 가져오기
-  getNetflixContentByGenre: async (genreId) => {
-    try {
-      console.log(`장르 ID ${genreId}의 넷플릭스 콘텐츠 API 호출 중...`);
-      const response = await axiosInstance.get(`/netflix-content/genre/${genreId}`);
-      console.log('넷플릭스 장르별 API 응답:', response);
-      if (response.status === 200) {
-        return response.data;
-      } else {
-        console.warn('API 응답이 성공이지만 상태 코드가 200이 아닙니다:', response.status);
-        return [];
-      }
-    } catch (error) {
-      console.error('넷플릭스 장르별 데이터를 가져오는 중 오류 발생:', error);
-      throw error;
-    }
-  },
-
-  // 넷플릭스 연도별 데이터 가져오기
   getNetflixContentByYear: async (year) => {
     try {
-      console.log(`연도 ${year}의 넷플릭스 콘텐츠 API 호출 중...`);
-      const response = await axiosInstance.get(`/netflix-content/year/${year}`);
-      console.log('넷플릭스 연도별 API 응답:', response);
+      console.log(`연도 ${year}의 OTT 콘텐츠 API 호출 중...`);
+      // 통합 검색 API 사용
+      const response = await axiosInstance.get(`/search?keyword=&type=ott`);
+      console.log('OTT 연도별 API 응답:', response);
       if (response.status === 200) {
-        return response.data;
+        // 클라이언트 사이드에서 연도 필터링
+        return response.data.filter(content => 
+          content.release_year?.toString() === year.toString()
+        );
       } else {
         console.warn('API 응답이 성공이지만 상태 코드가 200이 아닙니다:', response.status);
         return [];
       }
     } catch (error) {
-      console.error('넷플릭스 연도별 데이터를 가져오는 중 오류 발생:', error);
+      console.error('OTT 연도별 데이터를 가져오는 중 오류 발생:', error);
       throw error;
     }
   },
 
-  // 넷플릭스 검색 API
-  searchNetflixContent: async (keyword) => {
+  // 통합 검색 API
+  searchContent: async (keyword, type) => {
     try {
-      console.log(`키워드 "${keyword}"로 넷플릭스 콘텐츠 검색 중...`);
-      const response = await axiosInstance.get(`/netflix-content/search?keyword=${encodeURIComponent(keyword)}`);
-      console.log('넷플릭스 검색 API 응답:', response);
+      console.log(`키워드 "${keyword}", 타입 "${type}"로 콘텐츠 검색 중...`);
+      const response = await axiosInstance.get(`/search?keyword=${encodeURIComponent(keyword)}&type=${type}`);
+      console.log('검색 API 응답:', response);
       if (response.status === 200) {
         return response.data;
       } else {
@@ -319,7 +394,62 @@ const api = {
         return [];
       }
     } catch (error) {
-      console.error('넷플릭스 검색 데이터를 가져오는 중 오류 발생:', error);
+      console.error('검색 데이터를 가져오는 중 오류 발생:', error);
+      throw error;
+    }
+  },
+
+  // 하위 호환성을 위한 넷플릭스 검색
+  searchNetflixContent: async (keyword) => {
+    return api.searchContent(keyword, 'ott');
+  },
+
+  // 영화 관련 새로운 API들
+  getMoviesByGenre: async (genreName) => {
+    try {
+      console.log(`장르 ${genreName}의 영화 API 호출 중...`);
+      const response = await axiosInstance.get(`/movies/genre/${genreName}`);
+      console.log('영화 장르별 API 응답:', response);
+      return response.data;
+    } catch (error) {
+      console.error('영화 장르별 데이터를 가져오는 중 오류 발생:', error);
+      throw error;
+    }
+  },
+
+  getMoviesByActor: async (actorName) => {
+    try {
+      console.log(`배우 ${actorName}의 영화 API 호출 중...`);
+      const response = await axiosInstance.get(`/movies/actor/${actorName}`);
+      console.log('영화 배우별 API 응답:', response);
+      return response.data;
+    } catch (error) {
+      console.error('영화 배우별 데이터를 가져오는 중 오류 발생:', error);
+      throw error;
+    }
+  },
+
+  // 게임 관련 새로운 API들
+  getGamesByPublisher: async (publisherName) => {
+    try {
+      console.log(`퍼블리셔 ${publisherName}의 게임 API 호출 중...`);
+      const response = await axiosInstance.get(`/games/publisher/${publisherName}`);
+      console.log('게임 퍼블리셔별 API 응답:', response);
+      return response.data;
+    } catch (error) {
+      console.error('게임 퍼블리셔별 데이터를 가져오는 중 오류 발생:', error);
+      throw error;
+    }
+  },
+
+  getGamesByDeveloper: async (developerName) => {
+    try {
+      console.log(`개발사 ${developerName}의 게임 API 호출 중...`);
+      const response = await axiosInstance.get(`/games/developer/${developerName}`);
+      console.log('게임 개발사별 API 응답:', response);
+      return response.data;
+    } catch (error) {
+      console.error('게임 개발사별 데이터를 가져오는 중 오류 발생:', error);
       throw error;
     }
   },

@@ -42,8 +42,8 @@ const AppContent = () => {
             <NavLink to="/novels" className={({ isActive }) => isActive ? 'active' : ''}>
               웹소설
             </NavLink>
-            <NavLink to="/netflix" className={({ isActive }) => isActive ? 'active' : ''}>
-              넷플릭스
+            <NavLink to="/ott" className={({ isActive }) => isActive ? 'active' : ''}>
+              OTT 콘텐츠
             </NavLink>
             <NavLink to="/api-test" className={({ isActive }) => isActive ? 'active' : ''}>
               API 테스트
@@ -74,9 +74,9 @@ const AppContent = () => {
                   <h2>통합 콘텐츠</h2>
                   <p>영화, 게임, 웹툰, 웹소설, 넷플릭스를 한 곳에서</p>
                 </Link>
-                <Link to="/netflix" className="category-card">
-                  <h2>넷플릭스 콘텐츠</h2>
-                  <p>다양한 넷플릭스 콘텐츠를 살펴보세요</p>
+                <Link to="/ott" className="category-card">
+                  <h2>OTT 콘텐츠</h2>
+                  <p>다양한 OTT 콘텐츠를 살펴보세요</p>
                 </Link>
                 <Link to="/webtoons" className="category-card">
                   <h2>웹툰</h2>
@@ -109,7 +109,7 @@ const AppContent = () => {
           <Route path="/games" element={<ContentPlatform activeTab="games" />} />
           <Route path="/webtoons" element={<ContentPlatform activeTab="webtoons" />} />
           <Route path="/novels" element={<ContentPlatform activeTab="novels" />} />
-          <Route path="/netflix" element={<ContentPlatform activeTab="netflix" />} />
+          <Route path="/ott" element={<ContentPlatform activeTab="ott" />} />
           <Route path="/api-test" element={<ApiTester />} />
           <Route path="/recommendations" element={<RecommendationPage />} />
           <Route path="/dashboard" element={

@@ -5,10 +5,10 @@ import { Star, Heart, Bookmark } from 'lucide-react';
 
 const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
   const [movies, setMovies] = useState([]);
-  const [steamGames, setSteamGames] = useState([]);
+  const [games, setGames] = useState([]);
   const [webtoons, setWebtoons] = useState([]);
   const [novels, setNovels] = useState([]);
-  const [netflixContent, setNetflixContent] = useState([]);
+  const [ottContent, setOttContent] = useState([]);
   const [activeTab, setActiveTab] = useState(initialActiveTab);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -21,7 +21,12 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
 
   // 초기 activeTab prop이 변경될 때 상태 업데이트
   useEffect(() => {
-    setActiveTab(initialActiveTab);
+    // netflix 탭을 ott로 변환 (하위 호환성)
+    if (initialActiveTab === 'netflix') {
+      setActiveTab('ott');
+    } else {
+      setActiveTab(initialActiveTab);
+    }
   }, [initialActiveTab]);
 
   useEffect(() => {
@@ -42,12 +47,12 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
           setError('영화 데이터 로드 오류: ' + movieError.message);
         }
         
-        // 스팀 게임 데이터 로드
+        // 게임 데이터 로드 (getSteamGames -> getGames)
         try {
           console.log('게임 데이터 요청 시작');
-          const gamesData = await api.getSteamGames();
+          const gamesData = await api.getGames();
           console.log('게임 데이터 응답:', gamesData);
-          setSteamGames(Array.isArray(gamesData) ? gamesData : []);
+          setGames(Array.isArray(gamesData) ? gamesData : []);
         } catch (gameError) {
           console.error('게임 데이터 오류:', gameError);
           setError(prevError => 
@@ -81,16 +86,16 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
           );
         }
         
-        // 넷플릭스 콘텐츠 데이터 로드
+        // OTT 콘텐츠 데이터 로드 (getNetflixContent -> getOttContent)
         try {
-          console.log('넷플릭스 데이터 요청 시작');
-          const netflixData = await api.getNetflixContent();
-          console.log('넷플릭스 데이터 응답:', netflixData);
-          setNetflixContent(Array.isArray(netflixData) ? netflixData : []);
-        } catch (netflixError) {
-          console.error('넷플릭스 데이터 오류:', netflixError);
+          console.log('OTT 콘텐츠 데이터 요청 시작');
+          const ottData = await api.getOttContent();
+          console.log('OTT 콘텐츠 데이터 응답:', ottData);
+          setOttContent(Array.isArray(ottData) ? ottData : []);
+        } catch (ottError) {
+          console.error('OTT 콘텐츠 데이터 오류:', ottError);
           setError(prevError => 
-            (prevError ? prevError + '\n' : '') + '넷플릭스 데이터 로드 오류: ' + netflixError.message
+            (prevError ? prevError + '\n' : '') + 'OTT 콘텐츠 데이터 로드 오류: ' + ottError.message
           );
         }
         
@@ -127,7 +132,7 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
         // 평가가 없는 경우는 정상
         console.log('사용자 평가 없음');
       }
-    }, [contentType, contentId, currentUser?.username, isAuthenticated]);
+    }, [contentType, contentId]);
 
     const loadAverageRating = useCallback(async () => {
       if (!contentId) return;
@@ -143,11 +148,11 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
     useEffect(() => {
       if (contentId) {
         loadAverageRating();
-        if (isAuthenticated) {
+        if (isAuthenticated && currentUser) {
           loadUserRating();
         }
       }
-    }, [contentId, isAuthenticated, loadAverageRating, loadUserRating]);
+    }, [contentId, loadAverageRating, loadUserRating]);
 
     const handleRating = async (rating) => {
       if (!isAuthenticated || !currentUser || loading) {
@@ -299,7 +304,7 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
     movie.title && movie.title.toLowerCase().includes(searchTerm.toLowerCase())
   ) : [];
 
-  const filteredGames = steamGames && steamGames.length ? steamGames.filter(game => 
+  const filteredGames = games && games.length ? games.filter(game => 
     game.title && game.title.toLowerCase().includes(searchTerm.toLowerCase())
   ) : [];
 
@@ -311,10 +316,23 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
     novel.title && novel.title.toLowerCase().includes(searchTerm.toLowerCase())
   ) : [];
 
-  const filteredNetflixContent = netflixContent && netflixContent.length ? 
-    netflixContent.filter(content => {
+  const filteredOttContent = ottContent && ottContent.length ? 
+    ottContent.filter(content => {
       const matchesSearch = content.title && content.title.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesFilter = contentFilter === 'all' || (content.type && content.type.toLowerCase() === contentFilter);
+      // contentFilter 로직 수정 - 대소문자 구분 없이 비교하고 'TV Show' 등의 값도 고려
+      const matchesFilter = contentFilter === 'all' || 
+        (content.type && (
+          content.type.toLowerCase() === contentFilter ||
+          (contentFilter === 'series' && content.type === 'TV Show') ||
+          (contentFilter === 'movie' && content.type === 'Movie')
+        ));
+      console.log('OTT 필터링:', { 
+        title: content.title, 
+        type: content.type, 
+        contentFilter, 
+        matchesSearch, 
+        matchesFilter 
+      });
       return matchesSearch && matchesFilter;
     }) : [];
 
@@ -362,7 +380,7 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
           className={`tab-button ${activeTab === 'games' ? 'active' : ''}`}
           onClick={() => setActiveTab('games')}
         >
-          스팀 게임
+          게임
         </button>
         <button 
           className={`tab-button ${activeTab === 'webtoons' ? 'active' : ''}`}
@@ -377,16 +395,16 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
           웹소설
         </button>
         <button 
-          className={`tab-button ${activeTab === 'netflix' ? 'active' : ''}`}
-          onClick={() => setActiveTab('netflix')}
+          className={`tab-button ${activeTab === 'ott' ? 'active' : ''}`}
+          onClick={() => setActiveTab('ott')}
         >
-          넷플릭스
+          OTT 콘텐츠
         </button>
       </div>
 
-      {/* 넷플릭스 탭 활성화 시 추가 필터링 옵션 */}
-      {activeTab === 'netflix' && (
-        <div className="netflix-filters" style={{ display: 'flex', justifyContent: 'center', margin: '0 0 20px' }}>
+      {/* OTT 탭 활성화 시 추가 필터링 옵션 */}
+      {activeTab === 'ott' && (
+        <div className="ott-filters" style={{ display: 'flex', justifyContent: 'center', margin: '0 0 20px' }}>
           <select 
             value={contentFilter} 
             onChange={(e) => setContentFilter(e.target.value)}
@@ -400,15 +418,18 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
           >
             <option value="all">모든 콘텐츠</option>
             <option value="movie">영화</option>
-            <option value="series">시리즈</option>
+            <option value="series">TV 쇼</option>
             <option value="documentary">다큐멘터리</option>
           </select>
+          <div style={{ fontSize: '12px', color: '#666', alignSelf: 'center' }}>
+            총 {ottContent.length}개 콘텐츠, 표시 중: {filteredOttContent.length}개
+          </div>
         </div>
       )}
 
       <main className="content-container">
         {/* 콘텐츠가 없을 경우 표시할 메시지 */}
-        {!loading && movies.length === 0 && steamGames.length === 0 && webtoons.length === 0 && novels.length === 0 && netflixContent.length === 0 && (
+        {!loading && movies.length === 0 && games.length === 0 && webtoons.length === 0 && novels.length === 0 && ottContent.length === 0 && (
           <div className="no-content-message" style={{ textAlign: 'center', padding: '50px' }}>
             <h2>데이터가 없습니다</h2>
             <p>서버에서 데이터를 가져오지 못했습니다. 다음을 확인해보세요:</p>
@@ -441,8 +462,8 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
               filteredMovies.map(movie => (
                 <div key={movie.id} className="movie-card">
                   <div className="thumbnail">
-                    {movie.thumbnailUrl || movie.thumbnail_url ? (
-                      <img src={movie.thumbnailUrl || movie.thumbnail_url} alt={movie.title} />
+                    {movie.image_url ? (
+                      <img src={movie.image_url} alt={movie.title} />
                     ) : (
                       <div className="no-image">이미지 없음</div>
                     )}
@@ -452,10 +473,12 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
                     <p className="director"><strong>감독:</strong> {movie.director || '정보 없음'}</p>
                     <div className="movie-meta">
                       <span className="rating">평점: {movie.rating ? movie.rating.toFixed(1) : 'N/A'}</span>
-                      <span className="age-rating">{movie.ageRating || movie.age_rating || ''}</span>
+                      <span className="age-rating">{movie.age_rating || ''}</span>
                     </div>
                     <p className="country">{movie.country || ''}</p>
-                    <p className="running-time">{movie.runningTime || movie.running_time ? `${movie.runningTime || movie.running_time}분` : ''}</p>
+                    <p className="running-time">{movie.running_time ? `${movie.running_time}분` : ''}</p>
+                    <p className="actors"><strong>출연:</strong> {movie.actors || '정보 없음'}</p>
+                    <p className="genres"><strong>장르:</strong> {movie.genres || '정보 없음'}</p>
                     
                     {/* 평가 컴포넌트 추가 */}
                     <RatingComponent 
@@ -476,8 +499,8 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
               filteredGames.map(game => (
                 <div key={game.id} className="game-card">
                   <div className="game-images">
-                    {game.headerImage || game.header_image ? (
-                      <img src={game.headerImage || game.header_image} alt={game.title} className="header-image" />
+                    {game.image_url ? (
+                      <img src={game.image_url} alt={game.title} className="header-image" />
                     ) : (
                       <div className="no-image">이미지 없음</div>
                     )}
@@ -485,30 +508,24 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
                   <div className="game-info">
                     <h3>{game.title}</h3>
                     <div className="game-price">
-                      {(game.finalPrice !== null || game.final_price !== null) ? (
-                        <span className="price">₩{(game.finalPrice || game.final_price || 0).toLocaleString()}</span>
+                      {game.final_price !== null ? (
+                        <span className="price">₩{(game.final_price || 0).toLocaleString()}</span>
                       ) : (
                         <span className="price">가격 정보 없음</span>
                       )}
-                      {((game.initialPrice !== null && game.initialPrice > game.finalPrice) || 
-                        (game.initial_price !== null && game.initial_price > game.final_price)) && (
-                        <span className="original-price">₩{(game.initialPrice || game.initial_price || 0).toLocaleString()}</span>
+                      {(game.initial_price !== null && game.initial_price > game.final_price) && (
+                        <span className="original-price">₩{(game.initial_price || 0).toLocaleString()}</span>
                       )}
                     </div>
-                    <p className="short-description">{game.shortDescription || game.short_description || '설명 없음'}</p>
+                    <p className="short-description">{game.summary || '설명 없음'}</p>
                     <div className="game-meta">
-                      {(game.requiredAge > 0 || game.required_age > 0) && (
-                        <span className="age-rating">{game.requiredAge || game.required_age}세 이상</span>
+                      {game.required_age > 0 && (
+                        <span className="age-rating">{game.required_age}세 이상</span>
                       )}
-                      {(game.supportedLanguages || game.supported_languages) && (
-                        <span className="languages">지원 언어: {(game.supportedLanguages || game.supported_languages).split(',')[0]}</span>
-                      )}
+                      <span className="platform">플랫폼: {game.platform || 'PC'}</span>
                     </div>
-                    {(game.website) && (
-                      <a href={game.website} target="_blank" rel="noopener noreferrer" className="website-link">
-                        웹사이트 방문
-                      </a>
-                    )}
+                    <p className="publishers"><strong>퍼블리셔:</strong> {game.publishers || '정보 없음'}</p>
+                    <p className="developers"><strong>개발사:</strong> {game.developers || '정보 없음'}</p>
                     
                     {/* 평가 컴포넌트 추가 */}
                     <RatingComponent 
@@ -529,23 +546,20 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
               filteredWebtoons.map(webtoon => (
                 <div key={webtoon.id} className="webtoon-card">
                   <div className="thumbnail">
-                    {webtoon.thumbnail ? (
-                      <img src={webtoon.thumbnail} alt={webtoon.title} />
+                    {webtoon.image_url ? (
+                      <img src={webtoon.image_url} alt={webtoon.title} />
                     ) : (
                       <div className="no-image">이미지 없음</div>
                     )}
                   </div>
                   <div className="webtoon-info">
                     <h3>{webtoon.title}</h3>
-                    <p className="creator"><strong>작가:</strong> {webtoon.creator || '정보 없음'}</p>
+                    <p className="creators"><strong>작가:</strong> {webtoon.authors || '정보 없음'}</p>
                     <div className="webtoon-meta">
                       <span className="summary">{webtoon.summary || '줄거리 정보 없음'}</span>
                     </div>
-                    {webtoon.url && (
-                      <a href={webtoon.url} target="_blank" rel="noopener noreferrer" className="website-link">
-                        웹툰 보기
-                      </a>
-                    )}
+                    <p className="genres"><strong>장르:</strong> {webtoon.genres || '정보 없음'}</p>
+                    <p className="platform">플랫폼: {webtoon.platform || '정보 없음'}</p>
                     
                     {/* 평가 컴포넌트 추가 */}
                     <RatingComponent 
@@ -574,6 +588,7 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
                   </div>
                   <div className="novel-info">
                     <h3>{novel.title}</h3>
+                    <p className="authors"><strong>작가:</strong> {novel.authors || '정보 없음'}</p>
                     <div className="novel-meta">
                       <span className="age-rating">{novel.age_rating || '연령 제한 없음'}</span>
                       <span className="publisher">{novel.publisher || '출판사 정보 없음'}</span>
@@ -590,16 +605,9 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
                       {novel.status || '상태 정보 없음'}
                     </div>
                     <p className="description" style={{ marginTop: '15px' }}>
-                      {novel.description || '줄거리 정보가 없습니다.'}
+                      {novel.summary || '줄거리 정보가 없습니다.'}
                     </p>
-                    {novel.url && (
-                      <a href={novel.url} target="_blank" rel="noopener noreferrer" className="website-link" style={{
-                        marginTop: '15px',
-                        display: 'inline-block'
-                      }}>
-                        소설 읽기
-                      </a>
-                    )}
+                    <p className="genres"><strong>장르:</strong> {novel.genres || '정보 없음'}</p>
                     
                     {/* 평가 컴포넌트 추가 */}
                     <RatingComponent 
@@ -614,52 +622,59 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
               <div className="no-results">검색 결과가 없습니다.</div>
             )}
           </div>
-        ) : activeTab === 'netflix' ? (
-          <div className="netflix-grid">
-            {filteredNetflixContent.length > 0 ? (
-              filteredNetflixContent.map(content => (
-                <div key={content.content_id} className="netflix-card">
-                  <div className="thumbnail">
-                    {content.thumbnail ? (
-                      <img src={content.thumbnail} alt={content.title} />
-                    ) : (
-                      <div className="no-image">이미지 없음</div>
-                    )}
+        ) : activeTab === 'ott' ? (
+          <div className="movies-grid">
+            {console.log('OTT 탭 렌더링:', { ottContent, filteredOttContent, activeTab })}
+            {filteredOttContent.length > 0 ? (
+              filteredOttContent.map((content, index) => {
+                console.log(`OTT 콘텐츠 ${index}:`, content);
+                return (
+                  <div key={content.id || index} className="movie-card">
+                    <div className="thumbnail">
+                      {content.image_url || content.thumbnail ? (
+                        <img src={content.image_url || content.thumbnail} alt={content.title} />
+                      ) : (
+                        <div className="no-image">이미지 없음</div>
+                      )}
+                    </div>
+                    <div className="movie-info">
+                      <h3>{content.title}</h3>
+                      <div className="movie-meta">
+                        <span className={`type ${content.type || ''}`}>
+                          {content.type === 'Movie' ? '영화' : 
+                           content.type === 'TV Show' ? 'TV 쇼' : 
+                           content.type === 'documentary' ? '다큐멘터리' : 
+                           content.type || '정보 없음'}
+                        </span>
+                        <span className="year">{content.release_year || ''}</span>
+                      </div>
+                      <div className="movie-meta">
+                        <span>시청 등급: {content.maturity_rating || 'N/A'}</span>
+                      </div>
+                      <p className="description">{content.description || '줄거리 정보 없음'}</p>
+                      <div className="creator-info">
+                        <span className="creator"><strong>제작:</strong> {content.creator || '정보 없음'}</span>
+                      </div>
+                      <p className="actors"><strong>출연:</strong> {content.actors || '정보 없음'}</p>
+                      <p className="genres"><strong>장르:</strong> {content.genres || '정보 없음'}</p>
+                      
+                      {/* 평가 컴포넌트 추가 */}
+                      <RatingComponent 
+                        contentType="ott"
+                        contentId={content.id}
+                        contentTitle={content.title}
+                      />
+                    </div>
                   </div>
-                  <div className="netflix-info">
-                    <h3>{content.title}</h3>
-                    <div className="netflix-meta">
-                      <span className={`type ${content.type}`}>
-                        {content.type === 'movie' ? '영화' : 
-                         content.type === 'series' ? '시리즈' : 
-                         content.type === 'documentary' ? '다큐멘터리' : content.type}
-                      </span>
-                      <span className="year">{content.release_year || ''}</span>
-                    </div>
-                    <div className="maturity-rating">
-                      <span>시청 등급: {content.maturity_rating || 'N/A'}</span>
-                    </div>
-                    <p className="description">{content.description || '줄거리 정보 없음'}</p>
-                    <div className="creator-info">
-                      <span className="creator"><strong>제작:</strong> {content.creator || '정보 없음'}</span>
-                    </div>
-                    {content.main_url && (
-                      <a href={content.main_url} target="_blank" rel="noopener noreferrer" className="website-link netflix">
-                        넷플릭스에서 보기
-                      </a>
-                    )}
-                    
-                    {/* 평가 컴포넌트 추가 */}
-                    <RatingComponent 
-                      contentType="ott"
-                      contentId={content.content_id}
-                      contentTitle={content.title}
-                    />
-                  </div>
-                </div>
-              ))
+                );
+              })
             ) : (
-              <div className="no-results">검색 결과가 없습니다.</div>
+              <div className="no-results">
+                {ottContent.length === 0 ? 'OTT 콘텐츠 데이터가 없습니다.' : '검색 결과가 없습니다.'}
+                <div style={{ fontSize: '12px', marginTop: '10px', color: '#666' }}>
+                  전체 OTT 콘텐츠 수: {ottContent.length}, 필터링된 콘텐츠 수: {filteredOttContent.length}
+                </div>
+              </div>
             )}
           </div>
         ) : null}
@@ -667,9 +682,9 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
 
       <div className="home-container">
         <div className="category-links">
-          <div className="category-card" onClick={() => setActiveTab('netflix')} style={{ cursor: 'pointer' }}>
-            <h2>넷플릭스 콘텐츠</h2>
-            <p>다양한 넷플릭스 컨텐츠를 살펴보세요</p>
+          <div className="category-card" onClick={() => setActiveTab('ott')} style={{ cursor: 'pointer' }}>
+            <h2>OTT 콘텐츠</h2>
+            <p>다양한 OTT 콘텐츠를 살펴보세요</p>
           </div>
           <div className="category-card" onClick={() => setActiveTab('webtoons')} style={{ cursor: 'pointer' }}>
             <h2>웹툰</h2>
