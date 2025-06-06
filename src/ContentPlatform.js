@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 import api from './api';
-import { Star, Heart, Bookmark } from 'lucide-react';
+import { Star, Heart, Bookmark, ChevronDown, Search, Filter } from 'lucide-react';
 
 const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
+  // 기존 상태 유지
   const [movies, setMovies] = useState([]);
   const [games, setGames] = useState([]);
   const [webtoons, setWebtoons] = useState([]);
@@ -15,13 +16,23 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [contentFilter, setContentFilter] = useState('all');
 
+  // 새로운 페이징 상태 (기본값을 true로 설정 - 성능 모드 기본 활성화)
+  const [usePagination, setUsePagination] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [sortBy, setSortBy] = useState('rating');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [selectedGenre, setSelectedGenre] = useState('all');
+  const itemsPerPage = 20;
+
   // 사용자 정보 가져오기
   const currentUser = api.auth?.getCurrentUser?.();
   const isAuthenticated = api.auth?.isAuthenticated?.() || false;
 
   // 초기 activeTab prop이 변경될 때 상태 업데이트
   useEffect(() => {
-    // netflix 탭을 ott로 변환 (하위 호환성)
     if (initialActiveTab === 'netflix') {
       setActiveTab('ott');
     } else {
@@ -29,87 +40,202 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
     }
   }, [initialActiveTab]);
 
-  useEffect(() => {
-    // 모든 데이터 가져오기
-    const fetchData = async () => {
+  // 기존 데이터 로딩 함수 (원본 유지)
+  const fetchOriginalData = async () => {
+    try {
+      setLoading(true);
+      console.log('데이터 요청 시작...');
+      
+      // 영화 데이터 로드
       try {
-        setLoading(true);
-        console.log('데이터 요청 시작...');
-        
-        // 영화 데이터 로드
-        try {
-          console.log('영화 데이터 요청 시작');
-          const moviesData = await api.getMovies();
-          console.log('영화 데이터 응답:', moviesData);
-          setMovies(Array.isArray(moviesData) ? moviesData : []);
-        } catch (movieError) {
-          console.error('영화 데이터 오류:', movieError);
-          setError('영화 데이터 로드 오류: ' + movieError.message);
+        console.log('영화 데이터 요청 시작');
+        const moviesData = await api.getMovies();
+        console.log('영화 데이터 응답:', moviesData);
+        setMovies(Array.isArray(moviesData) ? moviesData : []);
+      } catch (movieError) {
+        console.error('영화 데이터 오류:', movieError);
+        setError('영화 데이터 로드 오류: ' + movieError.message);
+      }
+      
+      // 게임 데이터 로드
+      try {
+        console.log('게임 데이터 요청 시작');
+        const gamesData = await api.getGames();
+        console.log('게임 데이터 응답:', gamesData);
+        setGames(Array.isArray(gamesData) ? gamesData : []);
+      } catch (gameError) {
+        console.error('게임 데이터 오류:', gameError);
+        setError(prevError => 
+          (prevError ? prevError + '\n' : '') + '게임 데이터 로드 오류: ' + gameError.message
+        );
+      }
+      
+      // 웹툰 데이터 로드
+      try {
+        console.log('웹툰 데이터 요청 시작');
+        const webtoonsData = await api.getWebtoons();
+        console.log('웹툰 데이터 응답:', webtoonsData);
+        setWebtoons(Array.isArray(webtoonsData) ? webtoonsData : []);
+      } catch (webtoonError) {
+        console.error('웹툰 데이터 오류:', webtoonError);
+        setError(prevError => 
+          (prevError ? prevError + '\n' : '') + '웹툰 데이터 로드 오류: ' + webtoonError.message
+        );
+      }
+      
+      // 웹소설 데이터 로드
+      try {
+        console.log('웹소설 데이터 요청 시작');
+        const novelsData = await api.getNovels();
+        console.log('웹소설 데이터 응답:', novelsData);
+        setNovels(Array.isArray(novelsData) ? novelsData : []);
+      } catch (novelError) {
+        console.error('웹소설 데이터 오류:', novelError);
+        setError(prevError => 
+          (prevError ? prevError + '\n' : '') + '웹소설 데이터 로드 오류: ' + novelError.message
+        );
+      }
+      
+      // OTT 콘텐츠 데이터 로드
+      try {
+        console.log('OTT 콘텐츠 데이터 요청 시작');
+        const ottData = await api.getOttContent();
+        console.log('OTT 콘텐츠 데이터 응답:', ottData);
+        setOttContent(Array.isArray(ottData) ? ottData : []);
+      } catch (ottError) {
+        console.error('OTT 콘텐츠 데이터 오류:', ottError);
+        setError(prevError => 
+          (prevError ? prevError + '\n' : '') + 'OTT 콘텐츠 데이터 로드 오류: ' + ottError.message
+        );
+      }
+      
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 페이징 API 호출 함수
+  const fetchPaginatedData = async (tab, page = 1, reset = false) => {
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: itemsPerPage.toString(),
+        sort: sortBy,
+        order: sortOrder,
+        ...(selectedGenre !== 'all' && { genre: selectedGenre }),
+        ...(searchTerm && { search: searchTerm })
+      });
+
+      const endpoints = {
+        movies: 'movies',
+        games: 'games',
+        webtoons: 'webtoons',
+        novels: 'novels',
+        ott: 'ott-content'
+      };
+      
+      const endpoint = endpoints[tab] || 'movies';
+      const response = await fetch(`http://localhost:8080/api/${endpoint}/paginated?${params}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('페이징 데이터 응답:', data);
+      
+      if (reset) {
+        switch (tab) {
+          case 'movies': setMovies(data.items || []); break;
+          case 'games': setGames(data.items || []); break;
+          case 'webtoons': setWebtoons(data.items || []); break;
+          case 'novels': setNovels(data.items || []); break;
+          case 'ott': setOttContent(data.items || []); break;
         }
-        
-        // 게임 데이터 로드 (getSteamGames -> getGames)
-        try {
-          console.log('게임 데이터 요청 시작');
-          const gamesData = await api.getGames();
-          console.log('게임 데이터 응답:', gamesData);
-          setGames(Array.isArray(gamesData) ? gamesData : []);
-        } catch (gameError) {
-          console.error('게임 데이터 오류:', gameError);
-          setError(prevError => 
-            (prevError ? prevError + '\n' : '') + '게임 데이터 로드 오류: ' + gameError.message
-          );
+      } else {
+        switch (tab) {
+          case 'movies': setMovies(prev => [...prev, ...(data.items || [])]); break;
+          case 'games': setGames(prev => [...prev, ...(data.items || [])]); break;
+          case 'webtoons': setWebtoons(prev => [...prev, ...(data.items || [])]); break;
+          case 'novels': setNovels(prev => [...prev, ...(data.items || [])]); break;
+          case 'ott': setOttContent(prev => [...prev, ...(data.items || [])]); break;
         }
-        
-        // 웹툰 데이터 로드
-        try {
-          console.log('웹툰 데이터 요청 시작');
-          const webtoonsData = await api.getWebtoons();
-          console.log('웹툰 데이터 응답:', webtoonsData);
-          setWebtoons(Array.isArray(webtoonsData) ? webtoonsData : []);
-        } catch (webtoonError) {
-          console.error('웹툰 데이터 오류:', webtoonError);
-          setError(prevError => 
-            (prevError ? prevError + '\n' : '') + '웹툰 데이터 로드 오류: ' + webtoonError.message
-          );
-        }
-        
-        // 웹소설 데이터 로드
-        try {
-          console.log('웹소설 데이터 요청 시작');
-          const novelsData = await api.getNovels();
-          console.log('웹소설 데이터 응답:', novelsData);
-          setNovels(Array.isArray(novelsData) ? novelsData : []);
-        } catch (novelError) {
-          console.error('웹소설 데이터 오류:', novelError);
-          setError(prevError => 
-            (prevError ? prevError + '\n' : '') + '웹소설 데이터 로드 오류: ' + novelError.message
-          );
-        }
-        
-        // OTT 콘텐츠 데이터 로드 (getNetflixContent -> getOttContent)
-        try {
-          console.log('OTT 콘텐츠 데이터 요청 시작');
-          const ottData = await api.getOttContent();
-          console.log('OTT 콘텐츠 데이터 응답:', ottData);
-          setOttContent(Array.isArray(ottData) ? ottData : []);
-        } catch (ottError) {
-          console.error('OTT 콘텐츠 데이터 오류:', ottError);
-          setError(prevError => 
-            (prevError ? prevError + '\n' : '') + 'OTT 콘텐츠 데이터 로드 오류: ' + ottError.message
-          );
-        }
-        
-        setLoading(false);
-      } catch (error) {
-        setError(error.message);
-        setLoading(false);
+      }
+      
+      setTotalCount(data.total || 0);
+      setHasMore(data.hasNext || false);
+      setCurrentPage(page);
+      
+      return data;
+    } catch (error) {
+      console.warn('페이징 API 실패:', error);
+      throw error;
+    }
+  };
+
+  // 데이터 로딩 (항상 페이징 모드 사용)
+  const loadData = async (reset = false) => {
+    if (loading && !reset) return;
+    
+    try {
+      setLoading(reset);
+      const page = reset ? 1 : currentPage + 1;
+      await fetchPaginatedData(activeTab, page, reset);
+    } catch (error) {
+      console.warn('페이징 API 실패, 기본 API로 폴백');
+      await fetchOriginalData();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 초기 데이터 로드 (성능 모드가 기본이므로 페이징 방식으로 로드)
+  useEffect(() => {
+    loadData(true);
+  }, []);
+
+  // 탭 변경 시 페이징 데이터 새로 로드
+  useEffect(() => {
+    loadData(true);
+  }, [activeTab]);
+
+  // 검색/필터 변경 시 디바운싱
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadData(true);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm, selectedGenre, sortBy, sortOrder]);
+
+  // 더보기 로드
+  const loadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    
+    setLoadingMore(true);
+    try {
+      await fetchPaginatedData(activeTab, currentPage + 1, false);
+    } catch (error) {
+      console.error('더보기 로딩 오류:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  // 무한 스크롤
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.innerHeight + document.documentElement.scrollTop >= document.documentElement.offsetHeight - 1000 && hasMore && !loadingMore) {
+        loadMore();
       }
     };
 
-    fetchData();
-  }, []);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [loadingMore, hasMore]);
 
-  // 평가 컴포넌트
+  // 평가 컴포넌트 (기존과 동일)
   const RatingComponent = ({ contentType, contentId, contentTitle }) => {
     const [userRating, setUserRating] = useState(null);
     const [averageRating, setAverageRating] = useState(0);
@@ -129,7 +255,6 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
           setIsWishlist(rating.isWishlist || false);
         }
       } catch (error) {
-        // 평가가 없는 경우는 정상
         console.log('사용자 평가 없음');
       }
     }, [contentType, contentId]);
@@ -173,7 +298,7 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
         
         setUserRating(rating);
         setIsLiked(rating >= 4);
-        await loadAverageRating(); // 평균 평점 새로고침
+        await loadAverageRating();
       } catch (error) {
         console.error('평가 저장 오류:', error);
         alert('평가 저장 중 오류가 발생했습니다.');
@@ -224,7 +349,6 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
 
     return (
       <div className="rating-component" style={{ marginTop: '10px' }}>
-        {/* 평균 평점과 위시리스트 버튼 */}
         <div style={{ 
           display: 'flex', 
           alignItems: 'center', 
@@ -253,7 +377,6 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
           </button>
         </div>
 
-        {/* 사용자 평점 */}
         <div style={{ 
           display: 'flex', 
           alignItems: 'center', 
@@ -299,7 +422,7 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
     );
   };
 
-  // 검색 필터링
+  // 기존 필터링 로직 유지
   const filteredMovies = movies && movies.length ? movies.filter(movie => 
     movie.title && movie.title.toLowerCase().includes(searchTerm.toLowerCase())
   ) : [];
@@ -319,20 +442,12 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
   const filteredOttContent = ottContent && ottContent.length ? 
     ottContent.filter(content => {
       const matchesSearch = content.title && content.title.toLowerCase().includes(searchTerm.toLowerCase());
-      // contentFilter 로직 수정 - 대소문자 구분 없이 비교하고 'TV Show' 등의 값도 고려
       const matchesFilter = contentFilter === 'all' || 
         (content.type && (
           content.type.toLowerCase() === contentFilter ||
           (contentFilter === 'series' && content.type === 'TV Show') ||
           (contentFilter === 'movie' && content.type === 'Movie')
         ));
-      console.log('OTT 필터링:', { 
-        title: content.title, 
-        type: content.type, 
-        contentFilter, 
-        matchesSearch, 
-        matchesFilter 
-      });
       return matchesSearch && matchesFilter;
     }) : [];
 
@@ -366,6 +481,36 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
           />
+        </div>
+        
+        {/* 성능 정보 표시 */}
+        <div style={{ marginTop: '15px', textAlign: 'center' }}>
+          <div style={{ 
+            display: 'inline-flex', 
+            alignItems: 'center', 
+            gap: '8px', 
+            color: '#666', 
+            fontSize: '14px',
+            padding: '8px 16px',
+            backgroundColor: '#e8f5e8',
+            borderRadius: '20px',
+            border: '1px solid #4CAF50'
+          }}>
+            <span style={{ color: '#4CAF50', fontWeight: 'bold' }}>✓</span>
+            성능 모드 활성화 (페이징 + 무한스크롤)
+          </div>
+          
+          {totalCount > 0 && (
+            <div style={{ fontSize: '12px', color: '#888', marginTop: '5px' }}>
+              총 {totalCount.toLocaleString()}개 | 현재 {
+                activeTab === 'movies' ? movies.length :
+                activeTab === 'games' ? games.length :
+                activeTab === 'webtoons' ? webtoons.length :
+                activeTab === 'novels' ? novels.length :
+                ottContent.length
+              }개 표시
+            </div>
+          )}
         </div>
       </header>
 
@@ -401,6 +546,67 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
           OTT 콘텐츠
         </button>
       </div>
+
+      {/* 고급 필터 (항상 표시) */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        gap: '15px', 
+        margin: '20px 0',
+        flexWrap: 'wrap',
+        backgroundColor: '#f8f9fa',
+        padding: '15px',
+        borderRadius: '8px'
+      }}>
+          <select 
+            value={`${sortBy}-${sortOrder}`}
+            onChange={(e) => {
+              const [sort, order] = e.target.value.split('-');
+              setSortBy(sort);
+              setSortOrder(order);
+            }}
+            style={{ 
+              padding: '6px 12px',
+              borderRadius: '6px',
+              border: '1px solid #ccc',
+              backgroundColor: '#fff'
+            }}
+          >
+            <option value="rating-desc">평점 높은순</option>
+            <option value="rating-asc">평점 낮은순</option>
+            <option value="latest-desc">최신순</option>
+            <option value="latest-asc">오래된순</option>
+            <option value="title-asc">제목 A-Z</option>
+            <option value="title-desc">제목 Z-A</option>
+            {activeTab === 'games' && (
+              <>
+                <option value="price-asc">가격 낮은순</option>
+                <option value="price-desc">가격 높은순</option>
+              </>
+            )}
+          </select>
+
+          <select 
+            value={selectedGenre}
+            onChange={(e) => setSelectedGenre(e.target.value)}
+            style={{ 
+              padding: '6px 12px',
+              borderRadius: '6px',
+              border: '1px solid #ccc',
+              backgroundColor: '#fff'
+            }}
+          >
+            <option value="all">전체 장르</option>
+            <option value="액션">액션</option>
+            <option value="드라마">드라마</option>
+            <option value="코미디">코미디</option>
+            <option value="로맨스">로맨스</option>
+            <option value="스릴러">스릴러</option>
+            <option value="판타지">판타지</option>
+            <option value="다큐멘터리">다큐멘터리</option>
+          </select>
+        </div>
+      )
 
       {/* OTT 탭 활성화 시 추가 필터링 옵션 */}
       {activeTab === 'ott' && (
@@ -480,7 +686,6 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
                     <p className="actors"><strong>출연:</strong> {movie.actors || '정보 없음'}</p>
                     <p className="genres"><strong>장르:</strong> {movie.genres || '정보 없음'}</p>
                     
-                    {/* 평가 컴포넌트 추가 */}
                     <RatingComponent 
                       contentType="movie"
                       contentId={movie.id}
@@ -527,7 +732,6 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
                     <p className="publishers"><strong>퍼블리셔:</strong> {game.publishers || '정보 없음'}</p>
                     <p className="developers"><strong>개발사:</strong> {game.developers || '정보 없음'}</p>
                     
-                    {/* 평가 컴포넌트 추가 */}
                     <RatingComponent 
                       contentType="game"
                       contentId={game.id}
@@ -561,7 +765,6 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
                     <p className="genres"><strong>장르:</strong> {webtoon.genres || '정보 없음'}</p>
                     <p className="platform">플랫폼: {webtoon.platform || '정보 없음'}</p>
                     
-                    {/* 평가 컴포넌트 추가 */}
                     <RatingComponent 
                       contentType="webtoon"
                       contentId={webtoon.id}
@@ -609,7 +812,6 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
                     </p>
                     <p className="genres"><strong>장르:</strong> {novel.genres || '정보 없음'}</p>
                     
-                    {/* 평가 컴포넌트 추가 */}
                     <RatingComponent 
                       contentType="novel"
                       contentId={novel.id}
@@ -624,50 +826,45 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
           </div>
         ) : activeTab === 'ott' ? (
           <div className="movies-grid">
-            {console.log('OTT 탭 렌더링:', { ottContent, filteredOttContent, activeTab })}
             {filteredOttContent.length > 0 ? (
-              filteredOttContent.map((content, index) => {
-                console.log(`OTT 콘텐츠 ${index}:`, content);
-                return (
-                  <div key={content.id || index} className="movie-card">
-                    <div className="thumbnail">
-                      {content.image_url || content.thumbnail ? (
-                        <img src={content.image_url || content.thumbnail} alt={content.title} />
-                      ) : (
-                        <div className="no-image">이미지 없음</div>
-                      )}
-                    </div>
-                    <div className="movie-info">
-                      <h3>{content.title}</h3>
-                      <div className="movie-meta">
-                        <span className={`type ${content.type || ''}`}>
-                          {content.type === 'Movie' ? '영화' : 
-                           content.type === 'TV Show' ? 'TV 쇼' : 
-                           content.type === 'documentary' ? '다큐멘터리' : 
-                           content.type || '정보 없음'}
-                        </span>
-                        <span className="year">{content.release_year || ''}</span>
-                      </div>
-                      <div className="movie-meta">
-                        <span>시청 등급: {content.maturity_rating || 'N/A'}</span>
-                      </div>
-                      <p className="description">{content.description || '줄거리 정보 없음'}</p>
-                      <div className="creator-info">
-                        <span className="creator"><strong>제작:</strong> {content.creator || '정보 없음'}</span>
-                      </div>
-                      <p className="actors"><strong>출연:</strong> {content.actors || '정보 없음'}</p>
-                      <p className="genres"><strong>장르:</strong> {content.genres || '정보 없음'}</p>
-                      
-                      {/* 평가 컴포넌트 추가 */}
-                      <RatingComponent 
-                        contentType="ott"
-                        contentId={content.id}
-                        contentTitle={content.title}
-                      />
-                    </div>
+              filteredOttContent.map((content, index) => (
+                <div key={content.id || index} className="movie-card">
+                  <div className="thumbnail">
+                    {content.image_url || content.thumbnail ? (
+                      <img src={content.image_url || content.thumbnail} alt={content.title} />
+                    ) : (
+                      <div className="no-image">이미지 없음</div>
+                    )}
                   </div>
-                );
-              })
+                  <div className="movie-info">
+                    <h3>{content.title}</h3>
+                    <div className="movie-meta">
+                      <span className={`type ${content.type || ''}`}>
+                        {content.type === 'Movie' ? '영화' : 
+                         content.type === 'TV Show' ? 'TV 쇼' : 
+                         content.type === 'documentary' ? '다큐멘터리' : 
+                         content.type || '정보 없음'}
+                      </span>
+                      <span className="year">{content.release_year || ''}</span>
+                    </div>
+                    <div className="movie-meta">
+                      <span>시청 등급: {content.maturity_rating || 'N/A'}</span>
+                    </div>
+                    <p className="description">{content.description || '줄거리 정보 없음'}</p>
+                    <div className="creator-info">
+                      <span className="creator"><strong>제작:</strong> {content.creator || '정보 없음'}</span>
+                    </div>
+                    <p className="actors"><strong>출연:</strong> {content.actors || '정보 없음'}</p>
+                    <p className="genres"><strong>장르:</strong> {content.genres || '정보 없음'}</p>
+                    
+                    <RatingComponent 
+                      contentType="ott"
+                      contentId={content.id}
+                      contentTitle={content.title}
+                    />
+                  </div>
+                </div>
+              ))
             ) : (
               <div className="no-results">
                 {ottContent.length === 0 ? 'OTT 콘텐츠 데이터가 없습니다.' : '검색 결과가 없습니다.'}
@@ -678,6 +875,56 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
             )}
           </div>
         ) : null}
+        
+        {/* 무한 스크롤 로딩 표시 */}
+        {loadingMore && (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '20px',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '10px'
+          }}>
+            <div className="loading-spinner" style={{ width: '20px', height: '20px' }}></div>
+            <span>더 많은 콘텐츠를 불러오는 중...</span>
+          </div>
+        )}
+        
+        {/* 더 이상 데이터가 없을 때 */}
+        {!hasMore && (movies.length > 0 || games.length > 0 || webtoons.length > 0 || novels.length > 0 || ottContent.length > 0) && (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '20px',
+            color: '#666',
+            fontSize: '14px'
+          }}>
+            모든 콘텐츠를 확인했습니다
+          </div>
+        )}
+        
+        {/* 수동 더보기 버튼 */}
+        {hasMore && !loadingMore && (
+          <div style={{ textAlign: 'center', padding: '20px' }}>
+            <button 
+              onClick={loadMore}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                transition: 'background-color 0.2s'
+              }}
+              onMouseOver={(e) => e.target.style.backgroundColor = '#0056b3'}
+              onMouseOut={(e) => e.target.style.backgroundColor = '#007bff'}
+            >
+              더보기
+            </button>
+          </div>
+        )}
       </main>
 
       <div className="home-container">
