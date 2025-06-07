@@ -11,7 +11,7 @@ const ContentCard = ({ content, onRate }) => {
   // 장르 데이터를 안전하게 배열로 변환하는 헬퍼 함수
   const getGenresArray = (content) => {
     const genreData = content.genres || content.genre;
-    
+
     if (!genreData) return [];
     if (Array.isArray(genreData)) return genreData;
     if (typeof genreData === 'string') {
@@ -61,6 +61,8 @@ const ContentCard = ({ content, onRate }) => {
   // 장르 배열 가져오기
   const genres = getGenresArray(content);
 
+  const imageUrl = (content.imageUrl && content.imageUrl.trim()) || content.thumbnailUrl || null;
+
   return (
     <div className="content-card">
       <div className="card-header">
@@ -76,9 +78,9 @@ const ContentCard = ({ content, onRate }) => {
       </div>
 
       <div className="card-image">
-        {content.imageUrl ? (
-          <img 
-            src={content.imageUrl} 
+        {imageUrl ? (
+          <img
+            src={imageUrl}
             alt={content.title}
             onError={(e) => {
               e.target.style.display = 'none';
@@ -86,24 +88,26 @@ const ContentCard = ({ content, onRate }) => {
             }}
           />
         ) : null}
-        <div className="image-placeholder" style={{ display: content.imageUrl ? 'none' : 'flex' }}>
+
+        <div className="image-placeholder" style={{ display: imageUrl ? 'none' : 'flex' }}>
           <span className="placeholder-icon">{getContentTypeIcon(content.contentType)}</span>
         </div>
       </div>
+
 
       <div className="card-content">
         <h3 className="content-title" title={content.title}>
           {truncateText(content.title, 30)}
         </h3>
-        
+
         {content.author && (
           <p className="content-author">✍️ {content.author}</p>
         )}
-        
+
         {content.director && (
           <p className="content-director">🎬 {content.director}</p>
         )}
-        
+
         {content.developer && (
           <p className="content-developer">👨‍💻 {content.developer}</p>
         )}
@@ -141,13 +145,13 @@ const ContentCard = ({ content, onRate }) => {
       </div>
 
       <div className="card-actions">
-        <button 
+        <button
           className="btn-details"
           onClick={() => setShowDetails(!showDetails)}
         >
           {showDetails ? '간단히 보기' : '자세히 보기'}
         </button>
-        
+
         <RatingComponent
           onRate={handleRating}
           currentRating={userRating}
@@ -162,7 +166,7 @@ const ContentCard = ({ content, onRate }) => {
               <p>{content.fullDescription}</p>
             </div>
           )}
-          
+
           {content.cast && content.cast.length > 0 && (
             <div className="detail-section">
               <h4>🎭 출연진</h4>
@@ -173,7 +177,7 @@ const ContentCard = ({ content, onRate }) => {
               </div>
             </div>
           )}
-          
+
           {content.features && content.features.length > 0 && (
             <div className="detail-section">
               <h4>✨ 특징</h4>
@@ -198,9 +202,9 @@ const ContentCard = ({ content, onRate }) => {
 
           {content.url && (
             <div className="detail-section">
-              <a 
-                href={content.url} 
-                target="_blank" 
+              <a
+                href={content.url}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-external"
               >

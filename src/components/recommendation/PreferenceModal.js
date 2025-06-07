@@ -214,23 +214,6 @@ const PreferenceModal = ({
             </div>
           </div>
 
-          {/* 언어 설정 */}
-          <div className="preference-section">
-            <h3>🌐 선호 언어</h3>
-            <select
-              value={preferences.preferredLanguage}
-              onChange={(e) => setPreferences(prev => ({
-                ...prev,
-                preferredLanguage: e.target.value
-              }))}
-              className="language-select"
-            >
-              <option value="Korean">한국어</option>
-              <option value="English">English</option>
-              <option value="Japanese">日本語</option>
-              <option value="Chinese">中文</option>
-            </select>
-          </div>
         </div>
 
         <div className="modal-footer">

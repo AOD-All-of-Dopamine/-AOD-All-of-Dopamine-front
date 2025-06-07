@@ -2,12 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Star, Heart, Bookmark, MessageSquare, Sparkles, User, Filter } from 'lucide-react';
 
 const RecommendationSystem = () => {
-  const [activeTab, setActiveTab] = useState('traditional');
+  // 탭 관련 상태 제거 - 이제 항상 전통적인 추천만 사용
   const [userPreferences, setUserPreferences] = useState(null);
   const [traditionalRecommendations, setTraditionalRecommendations] = useState({});
-  const [llmPrompt, setLlmPrompt] = useState('');
-  const [llmResponse, setLlmResponse] = useState('');
-  const [llmRecommendations, setLlmRecommendations] = useState({});
   const [loading, setLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState('testuser'); // 실제로는 인증에서 가져와야 함
   const [showPreferenceModal, setShowPreferenceModal] = useState(false);
@@ -76,35 +73,6 @@ const RecommendationSystem = () => {
     setLoading(false);
   };
 
-  // LLM 추천 요청
-  const handleLLMRecommendation = async () => {
-    if (!llmPrompt.trim()) {
-      alert('추천 요청 내용을 입력해주세요.');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await fetch(`http://localhost:8080/api/recommendations/llm/${currentUser}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ prompt: llmPrompt })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setLlmResponse(data.llmResponse || '');
-        setLlmRecommendations(data);
-      }
-    } catch (error) {
-      console.error('LLM 추천 오류:', error);
-      setLlmResponse('추천을 생성하는 중 오류가 발생했습니다.');
-    }
-    setLoading(false);
-  };
-
   // 사용자 선호도 저장
   const savePreferences = async () => {
     try {
@@ -121,6 +89,8 @@ const RecommendationSystem = () => {
         setUserPreferences(data);
         setShowPreferenceModal(false);
         alert('선호도가 저장되었습니다!');
+        // 선호도 저장 후 추천 새로고침
+        loadTraditionalRecommendations();
       }
     } catch (error) {
       console.error('선호도 저장 오류:', error);
@@ -191,8 +161,70 @@ const RecommendationSystem = () => {
       return content.title || content.name || '제목 없음';
     };
 
-    const getImage = (content) => {
-      return content.imageUrl || content.thumbnail || content.thumbnailUrl || '/placeholder-image.jpg';
+    const getImage = (content, contentType) => {
+      let imageUrl = null;
+      
+      switch(contentType) {
+        case 'novel':
+          imageUrl = content.thumbnail || content.imageUrl || content.thumbnailUrl;
+          break;
+        case 'game':
+          // 게임의 경우 특별 처리
+          imageUrl = content.thumbnailUrl || content.imageUrl || content.headerImage;
+          
+          // 게임 이미지가 없으면 제목 기반 placeholder 생성
+          if (!imageUrl || imageUrl === 'null' || imageUrl === null) {
+            const gameTitle = content.title || 'Game';
+            const encodedTitle = encodeURIComponent(gameTitle.substring(0, 20));
+            imageUrl = `https://via.placeholder.com/460x215/1b2838/66c0f4?text=${encodedTitle}`;
+          }
+          break;
+        case 'ott':
+          imageUrl = content.thumbnailUrl || content.imageUrl || content.thumbnail;
+          break;
+        case 'movie':
+          imageUrl = content.thumbnailUrl || content.imageUrl || content.posterUrl;
+          break;
+        case 'webtoon':
+          imageUrl = content.thumbnail || content.imageUrl || content.thumbnailUrl;
+          break;
+        default:
+          imageUrl = content.imageUrl || content.thumbnail || content.thumbnailUrl;
+      }
+      
+      // 이미지 URL 검증 및 변환
+      if (!imageUrl || imageUrl === 'null' || imageUrl.trim() === '') {
+        // 콘텐츠 타입별 기본 placeholder
+        switch(contentType) {
+          case 'novel':
+            return 'https://via.placeholder.com/300x400/6366f1/white?text=📚+Novel';
+          case 'game':
+            const gameTitle = content.title || 'Game';
+            const encodedTitle = encodeURIComponent(gameTitle.substring(0, 15));
+            return `https://via.placeholder.com/460x215/1b2838/66c0f4?text=${encodedTitle}`;
+          case 'ott':
+            return 'https://via.placeholder.com/300x400/f59e0b/white?text=📺+OTT';
+          case 'movie':
+            return 'https://via.placeholder.com/300x400/ef4444/white?text=🎬+Movie';
+          case 'webtoon':
+            return 'https://via.placeholder.com/300x400/8b5cf6/white?text=📖+Webtoon';
+          default:
+            return 'https://via.placeholder.com/300x400/6b7280/white?text=📄+Content';
+        }
+      }
+      
+      // 상대 경로를 절대 경로로 변환
+      if (imageUrl.startsWith('/') && !imageUrl.startsWith('//')) {
+        return `http://localhost:8080${imageUrl}`;
+      }
+      
+      // 이미 완전한 URL인 경우
+      if (imageUrl.startsWith('http')) {
+        return imageUrl;
+      }
+      
+      // 기타 경우 기본 경로 추가
+      return `http://localhost:8080/images/${imageUrl}`;
     };
 
     const handleStarClick = (starRating) => {
@@ -204,11 +236,11 @@ const RecommendationSystem = () => {
       <div className="bg-white rounded-xl shadow-lg overflow-hidden transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
         <div className="relative h-48 overflow-hidden">
           <img 
-            src={getImage(content)} 
+            src={getImage(content, contentType)} 
             alt={getTitle(content)}
             className="w-full h-full object-cover"
             onError={(e) => {
-              e.target.src = '/placeholder-image.jpg';
+              e.target.src = getImage(content, contentType);
             }}
           />
           <div className="absolute top-2 right-2">
@@ -275,7 +307,7 @@ const RecommendationSystem = () => {
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-800 mb-4 flex items-center justify-center gap-3">
             <Sparkles className="text-purple-600" size={40} />
-            개인 맞춤 추천 시스템
+            개인 맞춤 추천
           </h1>
           <p className="text-lg text-gray-600 mb-6">
             당신의 취향에 맞는 완벽한 콘텐츠를 찾아드립니다
@@ -284,122 +316,46 @@ const RecommendationSystem = () => {
           {/* 선호도 설정 버튼 */}
           <button
             onClick={() => setShowPreferenceModal(true)}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 mx-auto transition-colors"
+            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 mx-auto transition-colors mb-6"
           >
             <User size={20} />
             선호도 설정
           </button>
+
+          {/* 맞춤 추천 받기 버튼 */}
+          <button
+            onClick={loadTraditionalRecommendations}
+            disabled={loading}
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-8 py-3 rounded-lg font-medium transition-colors"
+          >
+            {loading ? '추천 생성 중...' : '맞춤 추천 받기'}
+          </button>
         </div>
 
-        {/* 탭 네비게이션 */}
-        <div className="flex justify-center mb-8">
-          <div className="bg-white rounded-lg p-1 shadow-lg">
-            <button
-              onClick={() => setActiveTab('traditional')}
-              className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                activeTab === 'traditional'
-                  ? 'bg-purple-600 text-white shadow-md'
-                  : 'text-gray-600 hover:text-purple-600'
-              }`}
-            >
-              <Filter className="inline mr-2" size={16} />
-              전통적인 추천
-            </button>
-            <button
-              onClick={() => setActiveTab('llm')}
-              className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                activeTab === 'llm'
-                  ? 'bg-purple-600 text-white shadow-md'
-                  : 'text-gray-600 hover:text-purple-600'
-              }`}
-            >
-              <MessageSquare className="inline mr-2" size={16} />
-              AI 추천
-            </button>
-          </div>
-        </div>
-
-        {/* 전통적인 추천 탭 */}
-        {activeTab === 'traditional' && (
+        {/* 추천 결과 */}
+        {Object.keys(traditionalRecommendations).length > 0 && (
           <div className="space-y-8">
-            <div className="text-center">
-              <button
-                onClick={loadTraditionalRecommendations}
-                disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-8 py-3 rounded-lg font-medium transition-colors"
-              >
-                {loading ? '추천 생성 중...' : '맞춤 추천 받기'}
-              </button>
-            </div>
-
-            {Object.keys(traditionalRecommendations).length > 0 && (
-              <div className="space-y-8">
-                {Object.entries(traditionalRecommendations).map(([contentType, items]) => (
-                  <div key={contentType} className="bg-white rounded-xl shadow-lg p-6">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-6 capitalize">
-                      {contentType === 'movies' ? '영화' :
-                       contentType === 'novels' ? '웹소설' :
-                       contentType === 'webtoons' ? '웹툰' :
-                       contentType === 'ott' ? 'OTT 콘텐츠' :
-                       contentType === 'games' ? '게임' : contentType} 추천
-                    </h2>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                      {items.slice(0, 8).map((item, index) => (
-                        <ContentCard
-                          key={`${contentType}-${index}`}
-                          content={item}
-                          contentType={contentType.slice(0, -1)} // 복수형을 단수형으로
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* AI 추천 탭 */}
-        {activeTab === 'llm' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">
-                AI에게 추천 요청하기
-              </h2>
-              <p className="text-gray-600 mb-4">
-                원하는 콘텐츠에 대해 자세히 설명해주세요. 
-                예: "액션 영화 중에서 최근작으로 추천해주세요", "힐링되는 웹툰이 보고 싶어요"
-              </p>
-              
-              <div className="space-y-4">
-                <textarea
-                  value={llmPrompt}
-                  onChange={(e) => setLlmPrompt(e.target.value)}
-                  placeholder="어떤 콘텐츠를 찾고 계신가요? 구체적으로 설명해주세요..."
-                  className="w-full h-32 p-4 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
+            {Object.entries(traditionalRecommendations).map(([contentType, items]) => (
+              <div key={contentType} className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6 capitalize">
+                  {contentType === 'movies' ? '영화' :
+                   contentType === 'novels' ? '웹소설' :
+                   contentType === 'webtoons' ? '웹툰' :
+                   contentType === 'ott' ? 'OTT 콘텐츠' :
+                   contentType === 'games' ? '게임' : contentType} 추천
+                </h2>
                 
-                <button
-                  onClick={handleLLMRecommendation}
-                  disabled={loading || !llmPrompt.trim()}
-                  className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-8 py-3 rounded-lg font-medium transition-colors"
-                >
-                  {loading ? 'AI가 추천 생성 중...' : 'AI 추천 받기'}
-                </button>
-              </div>
-            </div>
-
-            {llmResponse && (
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <h3 className="text-xl font-bold text-gray-800 mb-4">AI 추천 결과</h3>
-                <div className="prose max-w-none">
-                  <div className="bg-gray-50 p-4 rounded-lg whitespace-pre-wrap">
-                    {llmResponse}
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {items.slice(0, 8).map((item, index) => (
+                    <ContentCard
+                      key={`${contentType}-${index}`}
+                      content={item}
+                      contentType={contentType.slice(0, -1)} // 복수형을 단수형으로
+                    />
+                  ))}
                 </div>
               </div>
-            )}
+            ))}
           </div>
         )}
 
@@ -601,5 +557,5 @@ const RecommendationSystem = () => {
     </div>
   );
 };
-
-export default RecommendationSystem;
+a
+export default RecommendationSystem;a
