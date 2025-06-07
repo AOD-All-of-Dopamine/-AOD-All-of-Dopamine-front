@@ -45,9 +45,6 @@ const AppContent = () => {
             <NavLink to="/ott" className={({ isActive }) => isActive ? 'active' : ''}>
               OTT 콘텐츠
             </NavLink>
-            <NavLink to="/api-test" className={({ isActive }) => isActive ? 'active' : ''}>
-              API 테스트
-            </NavLink>
             {currentUser && (
               <>
                 <NavLink to="/profile" className={({ isActive }) => isActive ? 'active' : ''}>
