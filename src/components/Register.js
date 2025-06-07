@@ -196,9 +196,56 @@ const Register = () => {
         e.preventDefault();
         setMessage('');
         setSuccessful(false);
+        setLoading(true);
 
-        if (validateForm()) {
-            setStep(2); // 평가 단계로 이동
+        try {
+            // 1. 기본 폼 검증
+            if (!validateForm()) {
+                setLoading(false);
+                return;
+            }
+
+            // 2. 백엔드에서 중복 체크
+            console.log('중복 체크 시작:', { username, email });
+
+            const duplicateCheckResponse = await fetch('/api/auth/check-duplicate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: username,
+                    email: email
+                })
+            });
+
+            const duplicateData = await duplicateCheckResponse.json();
+            console.log('중복 체크 응답:', duplicateData);
+
+            if (!duplicateCheckResponse.ok) {
+                // 중복된 경우
+                if (duplicateData.usernameExists && duplicateData.emailExists) {
+                    setMessage('이미 사용 중인 아이디와 이메일입니다.');
+                } else if (duplicateData.usernameExists) {
+                    setMessage('이미 사용 중인 아이디입니다.');
+                } else if (duplicateData.emailExists) {
+                    setMessage('이미 사용 중인 이메일입니다.');
+                } else {
+                    setMessage(duplicateData.message || '회원가입 중 오류가 발생했습니다.');
+                }
+                setLoading(false);
+                return;
+            }
+
+            // 3. 중복이 없으면 다음 단계로 이동
+            console.log('중복 체크 통과, 다음 단계로 이동');
+            setStep(2);
+
+        } catch (error) {
+            console.error('중복 체크 오류:', error);
+            setMessage('서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -223,7 +270,7 @@ const Register = () => {
         try {
             console.log('회원가입 시작:', { username, email });
 
-            // 1. 기본 회원가입
+            // 1. 기본 회원가입 (중복 체크는 이미 첫 단계에서 완료)
             const response = await register(username, email, password);
             console.log('회원가입 응답:', response);
 
@@ -545,15 +592,6 @@ const Register = () => {
                 <div style={{ borderTop: '1px solid #e9ecef', paddingTop: '25px' }}>
                     <div style={{ marginBottom: '20px', textAlign: 'center' }}>
                         <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}>
-                            <input
-                                type="checkbox"
-                                checked={skipRatings}
-                                onChange={(e) => setSkipRatings(e.target.checked)}
-                                style={{ width: '16px', height: '16px' }}
-                            />
-                            <span style={{ fontSize: '14px', color: '#6c757d' }}>
-                                나중에 평가하기 (추천 정확도가 낮을 수 있습니다)
-                            </span>
                         </label>
                     </div>
 
