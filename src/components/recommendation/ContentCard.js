@@ -1,3 +1,5 @@
+// ContentCard.js의 전체 수정된 코드
+
 import React, { useState } from 'react';
 import RatingComponent from './RatingComponent';
 import './ContentCard.css';
@@ -5,6 +7,18 @@ import './ContentCard.css';
 const ContentCard = ({ content, onRate }) => {
   const [showDetails, setShowDetails] = useState(false);
   const [userRating, setUserRating] = useState(0);
+
+  // 장르 데이터를 안전하게 배열로 변환하는 헬퍼 함수
+  const getGenresArray = (content) => {
+    const genreData = content.genres || content.genre;
+    
+    if (!genreData) return [];
+    if (Array.isArray(genreData)) return genreData;
+    if (typeof genreData === 'string') {
+      return genreData.split(',').map(g => g.trim()).filter(g => g.length > 0);
+    }
+    return [];
+  };
 
   const getContentTypeIcon = (type) => {
     const icons = {
@@ -43,6 +57,9 @@ const ContentCard = ({ content, onRate }) => {
     if (!text) return '';
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
+
+  // 장르 배열 가져오기
+  const genres = getGenresArray(content);
 
   return (
     <div className="content-card">
@@ -91,15 +108,15 @@ const ContentCard = ({ content, onRate }) => {
           <p className="content-developer">👨‍💻 {content.developer}</p>
         )}
 
-        {content.genres && content.genres.length > 0 && (
+        {genres.length > 0 && (
           <div className="content-genres">
-            {content.genres.slice(0, 3).map((genre, index) => (
+            {genres.slice(0, 3).map((genre, index) => (
               <span key={index} className="genre-tag">
                 {genre}
               </span>
             ))}
-            {content.genres.length > 3 && (
-              <span className="genre-more">+{content.genres.length - 3}</span>
+            {genres.length > 3 && (
+              <span className="genre-more">+{genres.length - 3}</span>
             )}
           </div>
         )}

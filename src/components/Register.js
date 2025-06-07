@@ -4,6 +4,21 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../api';
 import '../Auth.css';
 
+const getGenresArray = (genreData) => {
+    if (!genreData) return [];
+    if (Array.isArray(genreData)) return genreData;
+    if (typeof genreData === 'string') {
+        return genreData.split(',').map(g => g.trim()).filter(g => g.length > 0);
+    }
+    return [];
+};
+
+const formatGenres = (genreData) => {
+    const genres = getGenresArray(genreData);
+    return genres.length > 0 ? genres.join(', ') : '';
+};
+
+
 const Register = () => {
     // 기존 상태들
     const [username, setUsername] = useState('');
@@ -28,11 +43,11 @@ const Register = () => {
     const loadSampleContents = async () => {
         try {
             console.log('샘플 콘텐츠 로딩 시작...');
-            
+
             // 각 콘텐츠 타입별로 데이터 가져오기
             const [movies, games, webtoons, novels, netflixContent] = await Promise.allSettled([
                 api.getMovies(),
-                api.getSteamGames(), 
+                api.getSteamGames(),
                 api.getWebtoons(),
                 api.getNovels(),
                 api.getNetflixContent()
@@ -49,7 +64,7 @@ const Register = () => {
                     contentTitle: randomMovie.title,
                     director: randomMovie.director,
                     thumbnailUrl: randomMovie.thumbnailUrl || randomMovie.thumbnail_url,
-                    genre: randomMovie.genres || ["영화"],
+                    genre: getGenresArray(randomMovie.genres || randomMovie.genre || ["영화"]), // 안전하게 배열로 변환
                     originalData: randomMovie
                 });
             }
@@ -63,7 +78,7 @@ const Register = () => {
                     contentTitle: randomGame.title,
                     developer: randomGame.developer,
                     thumbnailUrl: randomGame.headerImage || randomGame.header_image,
-                    genre: randomGame.genres || ["게임"],
+                    genre: getGenresArray(randomGame.genres || randomGame.genre || ["게임"]), // 안전하게 배열로 변환
                     originalData: randomGame
                 });
             }
@@ -77,7 +92,7 @@ const Register = () => {
                     contentTitle: randomWebtoon.title,
                     author: randomWebtoon.creator || randomWebtoon.author,
                     thumbnailUrl: randomWebtoon.thumbnail,
-                    genre: randomWebtoon.genres || ["웹툰"],
+                    genre: getGenresArray(randomWebtoon.genres || randomWebtoon.genre || ["웹툰"]), // 안전하게 배열로 변환
                     originalData: randomWebtoon
                 });
             }
@@ -91,7 +106,7 @@ const Register = () => {
                     contentTitle: randomNovel.title,
                     author: randomNovel.author,
                     thumbnailUrl: randomNovel.image_url,
-                    genre: randomNovel.genres || ["웹소설"],
+                    genre: getGenresArray(randomNovel.genres || randomNovel.genre || ["웹소설"]), // 안전하게 배열로 변환
                     originalData: randomNovel
                 });
             }
@@ -105,7 +120,7 @@ const Register = () => {
                     contentTitle: randomOtt.title,
                     creator: randomOtt.creator,
                     thumbnailUrl: randomOtt.thumbnail,
-                    genre: randomOtt.genres || [randomOtt.type || "OTT"],
+                    genre: getGenresArray(randomOtt.genres || randomOtt.genre || [randomOtt.type || "OTT"]), // 안전하게 배열로 변환
                     originalData: randomOtt
                 });
             }
@@ -115,7 +130,7 @@ const Register = () => {
 
         } catch (error) {
             console.error('샘플 콘텐츠 로드 실패:', error);
-            
+
             // 폴백: 기본 샘플 데이터
             return [
                 {
@@ -124,15 +139,15 @@ const Register = () => {
                     contentTitle: "샘플 영화",
                     director: "감독명",
                     thumbnailUrl: "/placeholder-movie.jpg",
-                    genre: ["드라마"]
+                    genre: ["드라마"] // 배열로 설정
                 },
                 {
-                    contentType: "webtoon", 
+                    contentType: "webtoon",
                     contentId: 998,
                     contentTitle: "샘플 웹툰",
                     author: "작가명",
                     thumbnailUrl: "/placeholder-webtoon.jpg",
-                    genre: ["액션"]
+                    genre: ["액션"] // 배열로 설정
                 }
             ];
         }
@@ -207,7 +222,7 @@ const Register = () => {
 
         try {
             console.log('회원가입 시작:', { username, email });
-            
+
             // 1. 기본 회원가입
             const response = await register(username, email, password);
             console.log('회원가입 응답:', response);
@@ -215,7 +230,7 @@ const Register = () => {
             // 2. 평가 데이터 저장 (건너뛰기 선택하지 않은 경우)
             if (!skipRatings && Object.keys(userRatings).length > 0) {
                 console.log('평가 데이터 저장 시작:', userRatings);
-                
+
                 const ratingPromises = Object.values(userRatings).map(async (ratingData) => {
                     try {
                         await api.recommendations.rateContent(username, {
@@ -247,12 +262,12 @@ const Register = () => {
 
         } catch (error) {
             console.error('회원가입 오류:', error);
-            
+
             let errorMessage = '회원가입 중 오류가 발생했습니다.';
             if (error && error.message) {
                 errorMessage = error.message;
             }
-            
+
             setMessage(errorMessage);
             setSuccessful(false);
         } finally {
@@ -284,7 +299,7 @@ const Register = () => {
 
     const renderStars = (contentItem) => {
         const currentRating = userRatings[`${contentItem.contentType}-${contentItem.contentId}`]?.rating || 0;
-        
+
         return (
             <div className="rating-stars">
                 {[1, 2, 3, 4, 5].map(star => (
@@ -406,7 +421,7 @@ const Register = () => {
             <div className="auth-card" style={{ maxWidth: '700px' }}>
                 <h2>🎯 콘텐츠 평가하기</h2>
                 <p style={{ textAlign: 'center', color: '#666', marginBottom: '30px' }}>
-                    몇 가지 콘텐츠를 평가해주시면 더 정확한 추천을 받을 수 있어요!<br/>
+                    몇 가지 콘텐츠를 평가해주시면 더 정확한 추천을 받을 수 있어요!<br />
                     (최소 3개 이상 평가하시는 것을 권장합니다)
                 </p>
 
@@ -417,9 +432,9 @@ const Register = () => {
                 )}
 
                 <div style={{ marginBottom: '30px' }}>
-                    <div style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
                         alignItems: 'center',
                         marginBottom: '20px',
                         padding: '10px',
@@ -430,8 +445,8 @@ const Register = () => {
                             평가한 콘텐츠: {Object.keys(userRatings).length}/{sampleContents.length}
                         </span>
                         <div style={{ width: '100px', height: '8px', backgroundColor: '#e9ecef', borderRadius: '4px' }}>
-                            <div 
-                                style={{ 
+                            <div
+                                style={{
                                     width: `${(Object.keys(userRatings).length / sampleContents.length) * 100}%`,
                                     height: '100%',
                                     backgroundColor: '#007bff',
@@ -442,89 +457,89 @@ const Register = () => {
                         </div>
                     </div>
 
-                {dataLoading ? (
-                    <div style={{ textAlign: 'center', padding: '40px' }}>
-                        <div style={{
-                            width: '40px',
-                            height: '40px',
-                            border: '4px solid #f3f3f3',
-                            borderTop: '4px solid #007bff',
-                            borderRadius: '50%',
-                            animation: 'spin 1s linear infinite',
-                            margin: '0 auto 20px'
-                        }}></div>
-                        <p style={{ color: '#666' }}>다양한 콘텐츠를 준비하고 있어요...</p>
-                        <style jsx>{`
+                    {dataLoading ? (
+                        <div style={{ textAlign: 'center', padding: '40px' }}>
+                            <div style={{
+                                width: '40px',
+                                height: '40px',
+                                border: '4px solid #f3f3f3',
+                                borderTop: '4px solid #007bff',
+                                borderRadius: '50%',
+                                animation: 'spin 1s linear infinite',
+                                margin: '0 auto 20px'
+                            }}></div>
+                            <p style={{ color: '#666' }}>다양한 콘텐츠를 준비하고 있어요...</p>
+                            <style jsx>{`
                             @keyframes spin {
                                 0% { transform: rotate(0deg); }
                                 100% { transform: rotate(360deg); }
                             }
                         `}</style>
-                    </div>
-                ) : sampleContents.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '40px' }}>
-                        <p style={{ color: '#dc3545' }}>콘텐츠를 불러올 수 없습니다.</p>
-                        <button 
-                            type="button"
-                            className="btn btn-primary"
-                            onClick={loadSampleContentsAsync}
-                        >
-                            다시 시도
-                        </button>
-                    </div>
-                ) : (
-                    <div style={{ display: 'grid', gap: '20px' }}>
-                        {sampleContents.map((content, index) => (
-                            <div 
-                                key={`${content.contentType}-${content.contentId}`}
-                                style={{
-                                    border: '2px solid #e9ecef',
-                                    borderRadius: '12px',
-                                    padding: '20px',
-                                    backgroundColor: userRatings[`${content.contentType}-${content.contentId}`] ? '#f8f9fa' : 'white',
-                                    transition: 'all 0.3s'
-                                }}
+                        </div>
+                    ) : sampleContents.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '40px' }}>
+                            <p style={{ color: '#dc3545' }}>콘텐츠를 불러올 수 없습니다.</p>
+                            <button
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={loadSampleContentsAsync}
                             >
-                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
-                                    <span style={{ fontSize: '24px', marginRight: '10px' }}>
-                                        {getContentTypeIcon(content.contentType)}
-                                    </span>
-                                    <div>
-                                        <h4 style={{ margin: '0 0 5px 0', fontSize: '18px' }}>
-                                            {content.contentTitle}
-                                        </h4>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                            <span style={{ 
-                                                fontSize: '12px', 
-                                                backgroundColor: '#007bff', 
-                                                color: 'white',
-                                                padding: '3px 8px',
-                                                borderRadius: '12px'
-                                            }}>
-                                                {getContentTypeLabel(content.contentType)}
-                                            </span>
-                                            <span style={{ fontSize: '14px', color: '#666' }}>
-                                                {content.author || content.director || content.developer || content.creator}
-                                            </span>
-                                            {content.genre && (
-                                                <span style={{ fontSize: '12px', color: '#28a745' }}>
-                                                    {content.genre.join(', ')}
+                                다시 시도
+                            </button>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'grid', gap: '20px' }}>
+                            {sampleContents.map((content, index) => (
+                                <div
+                                    key={`${content.contentType}-${content.contentId}`}
+                                    style={{
+                                        border: '2px solid #e9ecef',
+                                        borderRadius: '12px',
+                                        padding: '20px',
+                                        backgroundColor: userRatings[`${content.contentType}-${content.contentId}`] ? '#f8f9fa' : 'white',
+                                        transition: 'all 0.3s'
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
+                                        <span style={{ fontSize: '24px', marginRight: '10px' }}>
+                                            {getContentTypeIcon(content.contentType)}
+                                        </span>
+                                        <div>
+                                            <h4 style={{ margin: '0 0 5px 0', fontSize: '18px' }}>
+                                                {content.contentTitle}
+                                            </h4>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                                <span style={{
+                                                    fontSize: '12px',
+                                                    backgroundColor: '#007bff',
+                                                    color: 'white',
+                                                    padding: '3px 8px',
+                                                    borderRadius: '12px'
+                                                }}>
+                                                    {getContentTypeLabel(content.contentType)}
                                                 </span>
-                                            )}
+                                                <span style={{ fontSize: '14px', color: '#666' }}>
+                                                    {content.author || content.director || content.developer || content.creator}
+                                                </span>
+                                                {content.genre && content.genre.length > 0 && (
+                                                    <span style={{ fontSize: '12px', color: '#28a745' }}>
+                                                        {formatGenres(content.genre)}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
+
+                                    <div style={{ marginLeft: '34px' }}>
+                                        <p style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
+                                            이 콘텐츠를 평가해주세요:
+                                        </p>
+                                        {renderStars(content)}
+                                    </div>
                                 </div>
-                                
-                                <div style={{ marginLeft: '34px' }}>
-                                    <p style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
-                                        이 콘텐츠를 평가해주세요:
-                                    </p>
-                                    {renderStars(content)}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 <div style={{ borderTop: '1px solid #e9ecef', paddingTop: '25px' }}>
@@ -543,7 +558,7 @@ const Register = () => {
                     </div>
 
                     <div style={{ display: 'flex', gap: '15px', justifyContent: 'space-between' }}>
-                        <button 
+                        <button
                             type="button"
                             className="btn btn-secondary"
                             onClick={() => setStep(1)}
@@ -551,7 +566,7 @@ const Register = () => {
                         >
                             이전
                         </button>
-                        <button 
+                        <button
                             type="button"
                             className="btn btn-primary"
                             onClick={handleFinalRegister}
