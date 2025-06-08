@@ -471,98 +471,98 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
 
   return (
     <div className="content-platform">
-        <div className="search-container">
-          <input
-            type="text"
-            placeholder="검색어를 입력하세요..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
-        </div>
+      <div className="search-container">
+        <input
+          type="text"
+          placeholder="검색어를 입력하세요..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="search-input"
+        />
+      </div>
 
 
 
       {/* 고급 필터 (항상 표시) */}
       <div className="filter-container">
+        <select
+          className="filter-select"
+          value={`${sortBy}-${sortOrder}`}
+          onChange={(e) => {
+            const [sort, order] = e.target.value.split('-');
+            setSortBy(sort);
+            setSortOrder(order);
+          }}
+        >
+          <option value="rating-desc">평점 높은순</option>
+          <option value="rating-asc">평점 낮은순</option>
+          {(activeTab === 'webtoons') && (
+            <>
+              <option value="latest-desc">최신순</option>
+              <option value="latest-asc">오래된순</option>
+            </>
+          )}
+          <option value="title-asc">제목 A-Z</option>
+          <option value="title-desc">제목 Z-A</option>
+          {activeTab === 'games' && (
+            <>
+              <option value="price-asc">가격 낮은순</option>
+              <option value="price-desc">가격 높은순</option>
+            </>
+          )}
+        </select>
+
+        {activeTab !== 'games' && (
           <select
             className="filter-select"
-            value={`${sortBy}-${sortOrder}`}
-            onChange={(e) => {
-              const [sort, order] = e.target.value.split('-');
-              setSortBy(sort);
-              setSortOrder(order);
-            }}
+            value={selectedGenre}
+            onChange={(e) => setSelectedGenre(e.target.value)}
           >
-            <option value="rating-desc">평점 높은순</option>
-            <option value="rating-asc">평점 낮은순</option>
-            {(activeTab === 'webtoons') && (
+            <option value="all">전체 장르</option>
+            {activeTab === 'webtoons' ? (
+              // 웹툰 전용 장르
               <>
-                <option value="latest-desc">최신순</option>
-                <option value="latest-asc">오래된순</option>
+                <option value="#액션">액션</option>
+                <option value="#무협/사극">무협/사극</option>
+                <option value="#로맨스">로맨스</option>
+                <option value="#드라마">드라마</option>
+                <option value="#스릴러">스릴러/미스터리</option>
+                <option value="#일상">일상/힐링</option>
+                <option value="#판타지">판타지</option>
+                <option value="#청춘">학원/청춘</option>
               </>
-            )}
-            <option value="title-asc">제목 A-Z</option>
-            <option value="title-desc">제목 Z-A</option>
-            {activeTab === 'games' && (
+            ) : activeTab === 'ott' ? (
+              // OTT 전용 장르 (실제 DB 값)
               <>
-                <option value="price-asc">가격 낮은순</option>
-                <option value="price-desc">가격 높은순</option>
+                <option value="코미디 시리즈,">코미디</option>
+                <option value="액션 & 어드벤처 시리즈,">액션 & 어드벤처</option>
+                <option value="스릴러 시리즈,">스릴러</option>
+                <option value="범죄 시리즈,">범죄</option>
+                <option value="미스터리 시리즈,">미스터리</option>
+                <option value="로맨틱한 드라마,">로맨스</option>
+                <option value="애니 시리즈,">애니메이션</option>
+                <option value="한국 드라마">한국 드라마</option>
+                <option value="리얼리티 시리즈">리얼리티 예능</option>
+              </>
+            ) : (
+              // 영화, OTT용 장르
+              <>
+                <option value="액션">액션</option>
+                <option value="드라마">드라마</option>
+                <option value="코미디">코미디</option>
+                <option value="로맨스">로맨스</option>
+                <option value="스릴러">스릴러</option>
+                <option value="판타지">판타지</option>
+                <option value="다큐멘터리">다큐멘터리</option>
+                <option value="범죄">범죄</option>
+                <option value="호러">호러</option>
+                <option value="애니메이션">애니메이션</option>
               </>
             )}
           </select>
+        )}
 
-          {activeTab !== 'games' && (
-            <select
-              className="filter-select"
-              value={selectedGenre}
-              onChange={(e) => setSelectedGenre(e.target.value)}
-            >
-              <option value="all">전체 장르</option>
-              {activeTab === 'webtoons' ? (
-                // 웹툰 전용 장르
-                <>
-                  <option value="#액션">액션</option>
-                  <option value="#무협/사극">무협/사극</option>
-                  <option value="#로맨스">로맨스</option>
-                  <option value="#드라마">드라마</option>
-                  <option value="#스릴러">스릴러/미스터리</option>
-                  <option value="#일상">일상/힐링</option>
-                  <option value="#판타지">판타지</option>
-                  <option value="#청춘">학원/청춘</option>
-                </>
-              ) : activeTab === 'ott' ? (
-                // OTT 전용 장르 (실제 DB 값)
-                <>
-                  <option value="코미디 시리즈,">코미디</option>
-                  <option value="액션 & 어드벤처 시리즈,">액션 & 어드벤처</option>
-                  <option value="스릴러 시리즈,">스릴러</option>
-                  <option value="범죄 시리즈,">범죄</option>
-                  <option value="미스터리 시리즈,">미스터리</option>
-                  <option value="로맨틱한 드라마,">로맨스</option>
-                  <option value="애니 시리즈,">애니메이션</option>
-                  <option value="한국 드라마">한국 드라마</option>
-                  <option value="리얼리티 시리즈">리얼리티 예능</option>
-                </>
-              ) : (
-                // 영화, OTT용 장르
-                <>
-                  <option value="액션">액션</option>
-                  <option value="드라마">드라마</option>
-                  <option value="코미디">코미디</option>
-                  <option value="로맨스">로맨스</option>
-                  <option value="스릴러">스릴러</option>
-                  <option value="판타지">판타지</option>
-                  <option value="다큐멘터리">다큐멘터리</option>
-                  <option value="범죄">범죄</option>
-                  <option value="호러">호러</option>
-                  <option value="애니메이션">애니메이션</option>
-                </>
-              )}
-            </select>
-          )}
-
-        </div>
+      </div>
 
       <main className="content-container">
         {/* 콘텐츠가 없을 경우 표시할 메시지 */}
@@ -608,10 +608,20 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
                   <div className="movie-info">
                     <h3>{movie.title}</h3>
                     <p className="director"><strong>감독:</strong> {movie.director || '정보 없음'}</p>
+
+                    {/* 기존 평점과 사용자 평점 모두 표시 */}
                     <div className="movie-meta">
-                      <span className="rating">평점: {movie.rating ? movie.rating.toFixed(1) : 'N/A'}</span>
+                      <span className="rating">
+                        DB평점: {movie.rating ? movie.rating.toFixed(1) : 'N/A'}
+                      </span>
+                      {movie.avg_user_rating > 0 && (
+                        <span className="user-rating" style={{ color: '#ffc107' }}>
+                          ⭐ 사용자: {parseFloat(movie.avg_user_rating).toFixed(1)}
+                        </span>
+                      )}
                       <span className="age-rating">{movie.age_rating || ''}</span>
                     </div>
+
                     <p className="country">{movie.country || ''}</p>
                     <p className="running-time">{movie.running_time ? `${movie.running_time}분` : ''}</p>
                     <p className="actors"><strong>출연:</strong> {movie.actors || '정보 없음'}</p>
@@ -629,6 +639,7 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
               <div className="no-results">검색 결과가 없습니다.</div>
             )}
           </div>
+
         ) : activeTab === 'games' ? (
           <div className="games-grid">
             {games.length > 0 ? (
@@ -643,6 +654,21 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
                   </div>
                   <div className="game-info">
                     <h3>{game.title}</h3>
+
+                    {/* 사용자 평점 평균 표시 추가 */}
+                    {game.avg_user_rating > 0 && (
+                      <div className="user-rating" style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        marginBottom: '8px',
+                        fontSize: '14px',
+                        color: '#ffc107'
+                      }}>
+                        <span>⭐ 사용자 평점: {parseFloat(game.avg_user_rating).toFixed(1)}</span>
+                      </div>
+                    )}
+
                     <div className="game-price">
                       {game.final_price !== null ? (
                         <span className="price">₩{(game.final_price || 0).toLocaleString()}</span>
@@ -690,6 +716,21 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
                   <div className="webtoon-info">
                     <h3>{webtoon.title}</h3>
                     <p className="creators"><strong>작가:</strong> {webtoon.authors || '정보 없음'}</p>
+
+                    {/* 사용자 평점 평균 표시 추가 */}
+                    {webtoon.avg_user_rating > 0 && (
+                      <div className="user-rating" style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        marginBottom: '8px',
+                        fontSize: '14px',
+                        color: '#ffc107'
+                      }}>
+                        <span>⭐ 사용자 평점: {parseFloat(webtoon.avg_user_rating).toFixed(1)}</span>
+                      </div>
+                    )}
+
                     {webtoon.publish_date && (
                       <p className="publish-date">
                         <strong>연재시작:</strong> {
@@ -733,6 +774,21 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
                   <div className="novel-info">
                     <h3>{novel.title}</h3>
                     <p className="authors"><strong>작가:</strong> {novel.authors || '정보 없음'}</p>
+
+                    {/* 사용자 평점 평균 표시 추가 */}
+                    {novel.avg_user_rating > 0 && (
+                      <div className="user-rating" style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        marginBottom: '8px',
+                        fontSize: '14px',
+                        color: '#ffc107'
+                      }}>
+                        <span>⭐ 사용자 평점: {parseFloat(novel.avg_user_rating).toFixed(1)}</span>
+                      </div>
+                    )}
+
                     <div className="novel-meta">
                       <span className="age-rating">{novel.age_rating || '연령 제한 없음'}</span>
                       <span className="publisher">{novel.publisher || '출판사 정보 없음'}</span>
@@ -779,6 +835,21 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
                   </div>
                   <div className="movie-info">
                     <h3>{content.title}</h3>
+
+                    {/* 사용자 평점 평균 표시 추가 */}
+                    {content.avg_user_rating > 0 && (
+                      <div className="user-rating" style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        marginBottom: '8px',
+                        fontSize: '14px',
+                        color: '#ffc107'
+                      }}>
+                        <span>⭐ 사용자 평점: {parseFloat(content.avg_user_rating).toFixed(1)}</span>
+                      </div>
+                    )}
+
                     <div className="movie-meta">
                       <span className={`type ${content.type || ''}`}>
                         {content.type === 'Movie' ? '영화' :
