@@ -471,7 +471,6 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
 
   return (
     <div className="content-platform">
-      <header className="App-header">
         <div className="search-container">
           <input
             type="text"
@@ -482,107 +481,88 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
           />
         </div>
 
-      </header>
+
 
       {/* 고급 필터 (항상 표시) */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        gap: '15px',
-        margin: '20px 0',
-        flexWrap: 'wrap',
-        backgroundColor: '#f8f9fa',
-        padding: '15px',
-        borderRadius: '8px'
-      }}>
-        <select
-          value={`${sortBy}-${sortOrder}`}
-          onChange={(e) => {
-            const [sort, order] = e.target.value.split('-');
-            setSortBy(sort);
-            setSortOrder(order);
-          }}
-          style={{
-            padding: '6px 12px',
-            borderRadius: '6px',
-            border: '1px solid #ccc',
-            backgroundColor: '#fff'
-          }}
-        >
-          <option value="rating-desc">평점 높은순</option>
-          <option value="rating-asc">평점 낮은순</option>
-          {(activeTab === 'webtoons') && (
-            <>
-              <option value="latest-desc">최신순</option>
-              <option value="latest-asc">오래된순</option>
-            </>
-          )}
-          <option value="title-asc">제목 A-Z</option>
-          <option value="title-desc">제목 Z-A</option>
-          {activeTab === 'games' && (
-            <>
-              <option value="price-asc">가격 낮은순</option>
-              <option value="price-desc">가격 높은순</option>
-            </>
-          )}
-        </select>
-
-        {activeTab !== 'games' && (
+      <div className="filter-container">
           <select
-            value={selectedGenre}
-            onChange={(e) => setSelectedGenre(e.target.value)}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '6px',
-              border: '1px solid #ccc',
-              backgroundColor: '#fff'
+            className="filter-select"
+            value={`${sortBy}-${sortOrder}`}
+            onChange={(e) => {
+              const [sort, order] = e.target.value.split('-');
+              setSortBy(sort);
+              setSortOrder(order);
             }}
           >
-            <option value="all">전체 장르</option>
-            {activeTab === 'webtoons' ? (
-              // 웹툰 전용 장르
+            <option value="rating-desc">평점 높은순</option>
+            <option value="rating-asc">평점 낮은순</option>
+            {(activeTab === 'webtoons') && (
               <>
-                <option value="#액션">액션</option>
-                <option value="#무협/사극">무협/사극</option>
-                <option value="#로맨스">로맨스</option>
-                <option value="#드라마">드라마</option>
-                <option value="#스릴러">스릴러/미스터리</option>
-                <option value="#일상">일상/힐링</option>
-                <option value="#판타지">판타지</option>
-                <option value="#청춘">학원/청춘</option>
+                <option value="latest-desc">최신순</option>
+                <option value="latest-asc">오래된순</option>
               </>
-            ) : activeTab === 'ott' ? (
-              // OTT 전용 장르 (실제 DB 값)
+            )}
+            <option value="title-asc">제목 A-Z</option>
+            <option value="title-desc">제목 Z-A</option>
+            {activeTab === 'games' && (
               <>
-                <option value="코미디 시리즈,">코미디</option>
-                <option value="액션 & 어드벤처 시리즈,">액션 & 어드벤처</option>
-                <option value="스릴러 시리즈,">스릴러</option>
-                <option value="범죄 시리즈,">범죄</option>
-                <option value="미스터리 시리즈,">미스터리</option>
-                <option value="로맨틱한 드라마,">로맨스</option>
-                <option value="애니 시리즈,">애니메이션</option>
-                <option value="한국 드라마">한국 드라마</option>
-                <option value="리얼리티 시리즈">리얼리티 예능</option>
-              </>
-            ) : (
-              // 영화, OTT용 장르
-              <>
-                <option value="액션">액션</option>
-                <option value="드라마">드라마</option>
-                <option value="코미디">코미디</option>
-                <option value="로맨스">로맨스</option>
-                <option value="스릴러">스릴러</option>
-                <option value="판타지">판타지</option>
-                <option value="다큐멘터리">다큐멘터리</option>
-                <option value="범죄">범죄</option>
-                <option value="호러">호러</option>
-                <option value="애니메이션">애니메이션</option>
+                <option value="price-asc">가격 낮은순</option>
+                <option value="price-desc">가격 높은순</option>
               </>
             )}
           </select>
-        )}
 
-      </div>
+          {activeTab !== 'games' && (
+            <select
+              className="filter-select"
+              value={selectedGenre}
+              onChange={(e) => setSelectedGenre(e.target.value)}
+            >
+              <option value="all">전체 장르</option>
+              {activeTab === 'webtoons' ? (
+                // 웹툰 전용 장르
+                <>
+                  <option value="#액션">액션</option>
+                  <option value="#무협/사극">무협/사극</option>
+                  <option value="#로맨스">로맨스</option>
+                  <option value="#드라마">드라마</option>
+                  <option value="#스릴러">스릴러/미스터리</option>
+                  <option value="#일상">일상/힐링</option>
+                  <option value="#판타지">판타지</option>
+                  <option value="#청춘">학원/청춘</option>
+                </>
+              ) : activeTab === 'ott' ? (
+                // OTT 전용 장르 (실제 DB 값)
+                <>
+                  <option value="코미디 시리즈,">코미디</option>
+                  <option value="액션 & 어드벤처 시리즈,">액션 & 어드벤처</option>
+                  <option value="스릴러 시리즈,">스릴러</option>
+                  <option value="범죄 시리즈,">범죄</option>
+                  <option value="미스터리 시리즈,">미스터리</option>
+                  <option value="로맨틱한 드라마,">로맨스</option>
+                  <option value="애니 시리즈,">애니메이션</option>
+                  <option value="한국 드라마">한국 드라마</option>
+                  <option value="리얼리티 시리즈">리얼리티 예능</option>
+                </>
+              ) : (
+                // 영화, OTT용 장르
+                <>
+                  <option value="액션">액션</option>
+                  <option value="드라마">드라마</option>
+                  <option value="코미디">코미디</option>
+                  <option value="로맨스">로맨스</option>
+                  <option value="스릴러">스릴러</option>
+                  <option value="판타지">판타지</option>
+                  <option value="다큐멘터리">다큐멘터리</option>
+                  <option value="범죄">범죄</option>
+                  <option value="호러">호러</option>
+                  <option value="애니메이션">애니메이션</option>
+                </>
+              )}
+            </select>
+          )}
+
+        </div>
 
       <main className="content-container">
         {/* 콘텐츠가 없을 경우 표시할 메시지 */}
