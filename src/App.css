@@ -30,9 +30,9 @@ body {
   border-radius: 16px;
   padding: 0;
   overflow: hidden;
-  position: sticky;
-  top: 10px;
-  z-index: 1000;
+  /* sticky 제거로 스크롤 시 따라오지 않게 함 */
+  position: relative;
+  z-index: 100; /* z-index 낮춤 */
 }
 
 .header-top {

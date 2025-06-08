@@ -472,7 +472,6 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
   return (
     <div className="content-platform">
       <header className="App-header">
-        <h1>콘텐츠 통합 플랫폼</h1>
         <div className="search-container">
           <input
             type="text"
@@ -483,63 +482,7 @@ const ContentPlatform = ({ activeTab: initialActiveTab = 'movies' }) => {
           />
         </div>
 
-        {/* 성능 정보 표시 */}
-        <div style={{ marginTop: '15px', textAlign: 'center' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            color: '#666',
-            fontSize: '14px',
-            padding: '8px 16px',
-            backgroundColor: '#e8f5e8',
-            borderRadius: '20px',
-            border: '1px solid #4CAF50'
-          }}>
-            <span style={{ color: '#4CAF50', fontWeight: 'bold' }}>✓</span>
-            성능 모드 활성화 (페이징 + 무한스크롤)
-          </div>
-
-          {totalCount > 0 && (
-            <div style={{ fontSize: '12px', color: '#888', marginTop: '5px' }}>
-              총 {totalCount.toLocaleString()}개 | 현재 {getCurrentTabData().length}개 표시
-            </div>
-          )}
-        </div>
       </header>
-
-      <div className="tab-container">
-        <button
-          className={`tab-button ${activeTab === 'movies' ? 'active' : ''}`}
-          onClick={() => setActiveTab('movies')}
-        >
-          영화
-        </button>
-        <button
-          className={`tab-button ${activeTab === 'games' ? 'active' : ''}`}
-          onClick={() => setActiveTab('games')}
-        >
-          게임
-        </button>
-        <button
-          className={`tab-button ${activeTab === 'webtoons' ? 'active' : ''}`}
-          onClick={() => setActiveTab('webtoons')}
-        >
-          웹툰
-        </button>
-        <button
-          className={`tab-button ${activeTab === 'novels' ? 'active' : ''}`}
-          onClick={() => setActiveTab('novels')}
-        >
-          웹소설
-        </button>
-        <button
-          className={`tab-button ${activeTab === 'ott' ? 'active' : ''}`}
-          onClick={() => setActiveTab('ott')}
-        >
-          OTT 콘텐츠
-        </button>
-      </div>
 
       {/* 고급 필터 (항상 표시) */}
       <div style={{
