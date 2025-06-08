@@ -21,7 +21,7 @@ const AppContent = () => {
       <div className="App">
         <header className="App-header">
           <div className="header-top">
-            <h1>콘텐츠 통합 플랫폼</h1>
+            <h1>DopamineOne</h1>
             <AuthNav />
           </div>
           <nav>

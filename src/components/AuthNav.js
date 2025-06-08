@@ -15,7 +15,7 @@ const AuthNav = () => {
     <div className="auth-nav">
       {currentUser ? (
         <div className="auth-nav-user">
-          <Link to="/profile" className="auth-nav-link">
+          <Link to="/recommendations" className="auth-nav-link">
             {currentUser.username}
           </Link>
           <button onClick={handleLogout} className="auth-nav-button">

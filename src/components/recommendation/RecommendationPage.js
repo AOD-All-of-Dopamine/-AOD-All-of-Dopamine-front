@@ -648,24 +648,19 @@ const RecommendationPage = () => {
       {/* 헤더 */}
       <div className="recommendation-header">
         <div className="user-info">
-          <h1>🎯 {activeUser.username || '사용자'}님을 위한 맞춤 추천</h1>
+          <h1> {activeUser.username || '사용자'}님을 위한 맞춤 추천</h1>
           <p>당신의 취향에 맞는 최고의 콘텐츠를 찾아드려요</p>
-          {userRatings.length > 0 && (
-            <small style={{ opacity: 0.8 }}>
-              평가한 콘텐츠: {userRatings.length}개 | 추천 품질: {userRatings.length >= 5 ? '매우 높음' : userRatings.length >= 3 ? '높음' : '보통'}
-            </small>
-          )}
         </div>
 
         <div className="header-actions">
           <button
-            className="btn btn-outline"
+            className="action-btn ai-btn"
             onClick={() => setShowAIChat(true)}
           >
             🤖 AI 추천 채팅
           </button>
           <button
-            className="btn btn-outline"
+            className="action-btn dashboard-btn"
             onClick={() => setShowDashboard(true)}
           >
             📊 내 활동
@@ -685,7 +680,7 @@ const RecommendationPage = () => {
       <div className="recommendation-content">
         {loading ? (
           <div className="loading">
-            <div className="spinner"></div>
+            <div className="loading-spinner"></div>
             <p>맞춤 추천을 준비중입니다...</p>
           </div>
         ) : (
@@ -701,15 +696,15 @@ const RecommendationPage = () => {
             ) : (
               <div className="no-recommendations">
                 <h3>😅 맞춤 추천을 준비중입니다</h3>
-                <div>
+                <div className="no-recommendations-content">
                   <p>더 정확한 맞춤 추천을 위해 다음 중 하나를 해보세요:</p>
-                  <ul style={{ textAlign: 'left', margin: '10px 0' }}>
+                  <ul>
                     <li>더 많은 콘텐츠에 별점 주기 (현재: {userRatings.length}개)</li>
                     <li>선호도 설정하기</li>
                     <li>AI 채팅으로 원하는 콘텐츠 설명하기</li>
                   </ul>
                 </div>
-                <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <div className="no-recommendations-actions">
                   <button
                     className="btn btn-primary"
                     onClick={() => {
