@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Star, Heart, Bookmark } from 'lucide-react';
 import api from '../../api';
 import './UserDashboard.css';
 
@@ -15,6 +16,16 @@ const UserDashboard = ({ user, onClose }) => {
     favoriteGenres: [],
     contentTypeStats: {}
   });
+
+  // 별점 수정 관련 상태
+  const [removingItems, setRemovingItems] = useState(new Set());
+  const [showRatingMessages, setShowRatingMessages] = useState(new Set());
+  const [hoveredRatings, setHoveredRatings] = useState({});
+  const [ratingLoading, setRatingLoading] = useState(new Set());
+
+  // 현재 사용자 정보
+  const currentUser = api.auth?.getCurrentUser?.();
+  const isAuthenticated = api.auth?.isAuthenticated?.() || false;
 
   useEffect(() => {
     if (user && user.username) {
@@ -133,6 +144,110 @@ const UserDashboard = ({ user, onClose }) => {
     });
   };
 
+  // 별점 수정 핸들러 (ContentCard와 동일한 로직)
+  const handleRatingUpdate = async (item, newRating) => {
+    if (!isAuthenticated || !currentUser || !item) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
+    const itemKey = `${item.contentType}-${item.contentId}`;
+    
+    // 로딩 상태 추가
+    setRatingLoading(prev => new Set([...prev, itemKey]));
+    
+    try {
+      await api.recommendations.rateContent(currentUser.username, {
+        contentType: item.contentType,
+        contentId: item.contentId,
+        contentTitle: item.contentTitle,
+        rating: newRating,
+        isLiked: newRating >= 4,
+        isWatched: true
+      });
+
+      // 평가 완료 메시지 표시
+      setShowRatingMessages(prev => new Set([...prev, itemKey]));
+      
+      // 부드러운 제거 애니메이션 시작
+      setTimeout(() => {
+        setRemovingItems(prev => new Set([...prev, itemKey]));
+        
+        // 카드 제거 완료 후 데이터 업데이트
+        setTimeout(() => {
+          // 상태에서 해당 아이템 제거
+          if (activeTab === 'ratings') {
+            setUserRatings(prev => prev.filter(rating => 
+              `${rating.contentType}-${rating.contentId}` !== itemKey
+            ));
+          }
+          
+          // 모든 상태 정리
+          setRemovingItems(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(itemKey);
+            return newSet;
+          });
+          setShowRatingMessages(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(itemKey);
+            return newSet;
+          });
+          setRatingLoading(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(itemKey);
+            return newSet;
+          });
+          
+          // 통계 재계산
+          calculateStats(userRatings.filter(rating => 
+            `${rating.contentType}-${rating.contentId}` !== itemKey
+          ));
+        }, 800); // CSS 애니메이션 시간과 맞춤
+      }, 1500); // 메시지 표시 시간
+
+    } catch (error) {
+      console.error('평가 수정 오류:', error);
+      alert('평가 수정 중 오류가 발생했습니다.');
+      
+      // 로딩 상태 제거
+      setRatingLoading(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(itemKey);
+        return newSet;
+      });
+    }
+  };
+
+  // 위시리스트 토글 핸들러
+  const handleWishlistToggle = async (item) => {
+    if (!isAuthenticated || !currentUser) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
+    try {
+      await api.recommendations.rateContent(currentUser.username, {
+        contentType: item.contentType,
+        contentId: item.contentId,
+        contentTitle: item.contentTitle,
+        isWishlist: !item.isWishlist
+      });
+
+      // 위시리스트 상태 업데이트
+      if (activeTab === 'wishlist') {
+        setWishlist(prev => prev.map(wishItem => 
+          wishItem.contentId === item.contentId && wishItem.contentType === item.contentType
+            ? { ...wishItem, isWishlist: !wishItem.isWishlist }
+            : wishItem
+        ));
+      }
+    } catch (error) {
+      console.error('위시리스트 수정 오류:', error);
+      alert('위시리스트 수정 중 오류가 발생했습니다.');
+    }
+  };
+
   const getContentTypeIcon = (type) => {
     const icons = {
       'MOVIE': '🎬',
@@ -155,20 +270,6 @@ const UserDashboard = ({ user, onClose }) => {
     return labels[type] || type;
   };
 
-  const renderStars = (rating) => {
-    const stars = [];
-    const numRating = Number(rating) || 0;
-    
-    for (let i = 1; i <= 5; i++) {
-      stars.push(
-        <span key={i} className={`star ${i <= numRating ? 'filled' : ''}`}>
-          ⭐
-        </span>
-      );
-    }
-    return stars;
-  };
-
   const formatDate = (dateString) => {
     if (!dateString) return '날짜 없음';
     try {
@@ -177,6 +278,90 @@ const UserDashboard = ({ user, onClose }) => {
     } catch (error) {
       return '날짜 없음';
     }
+  };
+
+  // 별점 컴포넌트 (ContentCard와 동일)
+  const RatingComponent = ({ item, showRating = true }) => {
+    const itemKey = `${item.contentType}-${item.contentId}`;
+    const isLoadingItem = ratingLoading.has(itemKey);
+    const hoveredRating = hoveredRatings[itemKey] || 0;
+    
+    if (!isAuthenticated || !showRating) {
+      return (
+        <div className="rating-display">
+          {item.rating && (
+            <div className="rating-stars">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                  key={star}
+                  size={16}
+                  style={{
+                    color: star <= item.rating ? '#ffc107' : '#e9ecef',
+                    fill: star <= item.rating ? '#ffc107' : 'none'
+                  }}
+                />
+              ))}
+              <span className="rating-value">({item.rating}/5)</span>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className="rating-component interactive">
+        <div className="rating-header">
+          <span className="current-rating">현재 평점: {item.rating || 0}점</span>
+          {activeTab === 'wishlist' && (
+            <button
+              onClick={() => handleWishlistToggle(item)}
+              disabled={isLoadingItem}
+              className="wishlist-btn"
+              title={item.isWishlist ? '위시리스트에서 제거' : '위시리스트에 추가'}
+            >
+              <Bookmark size={16} fill={item.isWishlist ? 'currentColor' : 'none'} />
+            </button>
+          )}
+        </div>
+
+        {showRating && (
+          <div className="rating-stars-container">
+            <div className="rating-stars">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                  key={star}
+                  size={18}
+                  style={{
+                    cursor: isLoadingItem ? 'not-allowed' : 'pointer',
+                    color: (hoveredRating || item.rating) >= star ? '#ffc107' : '#e9ecef',
+                    fill: (hoveredRating || item.rating) >= star ? '#ffc107' : 'none',
+                    transition: 'all 0.2s',
+                    opacity: isLoadingItem ? 0.5 : 1
+                  }}
+                  onMouseEnter={() => !isLoadingItem && setHoveredRatings(prev => ({ ...prev, [itemKey]: star }))}
+                  onMouseLeave={() => !isLoadingItem && setHoveredRatings(prev => ({ ...prev, [itemKey]: 0 }))}
+                  onClick={() => !isLoadingItem && handleRatingUpdate(item, star)}
+                />
+              ))}
+            </div>
+            
+            {hoveredRating > 0 && (
+              <span className="rating-preview">
+                {hoveredRating}점으로 수정하시겠습니까?
+              </span>
+            )}
+
+            {item.isLiked && (
+              <Heart
+                size={16}
+                style={{ color: '#dc3545', fill: '#dc3545', marginLeft: '8px' }}
+                title="좋아하는 콘텐츠"
+              />
+            )}
+          </div>
+        )}
+      </div>
+    );
   };
 
   const renderRatingsList = (items, showRating = true) => {
@@ -192,36 +377,65 @@ const UserDashboard = ({ user, onClose }) => {
 
     return (
       <div className="ratings-list">
-        {items.map((item, index) => (
-          <div key={`${item.contentType || 'item'}-${item.contentId || index}-${index}`} className="rating-item">
-            <div className="item-header">
-              <div className="item-type">
-                <span className="type-icon">{getContentTypeIcon(item.contentType)}</span>
-                <span className="type-label">{getContentTypeLabel(item.contentType)}</span>
-              </div>
-              {showRating && item.rating && (
-                <div className="item-rating">
-                  {renderStars(item.rating)}
-                  <span className="rating-value">({item.rating}/5)</span>
+        {items.map((item, index) => {
+          const itemKey = `${item.contentType || 'item'}-${item.contentId || index}`;
+          const isRemoving = removingItems.has(itemKey);
+          const showMessage = showRatingMessages.has(itemKey);
+          
+          return (
+            <div 
+              key={`${itemKey}-${index}`} 
+              className={`rating-item-wrapper ${isRemoving ? 'removing' : ''}`}
+              style={{
+                position: 'relative',
+                overflow: 'hidden'
+              }}
+            >
+              {/* 평가 완료 메시지 오버레이 */}
+              {showMessage && (
+                <div className="rating-success-overlay">
+                  <div className="rating-success-message">
+                    <div className="success-icon">⭐</div>
+                    <h4>평가가 수정되었습니다!</h4>
+                    <p>"{item.contentTitle}"</p>
+                    <div className="success-subtext">
+                      업데이트된 평가가 반영되었습니다 ✨
+                    </div>
+                  </div>
                 </div>
               )}
+
+              <div className="rating-item">
+                <div className="item-header">
+                  <div className="item-type">
+                    <span className="type-icon">{getContentTypeIcon(item.contentType)}</span>
+                    <span className="type-label">{getContentTypeLabel(item.contentType)}</span>
+                  </div>
+                </div>
+                
+                <h4 className="item-title">{item.contentTitle || item.title || '제목 없음'}</h4>
+                
+                {item.author && (
+                  <p className="item-author">✍️ {item.author}</p>
+                )}
+                
+                <div className="item-meta">
+                  <span className="item-date">📅 {formatDate(item.createdAt || item.ratedAt)}</span>
+                  {item.ratingType && item.ratingType !== 'STAR' && (
+                    <span className="rating-type">
+                      {item.ratingType === 'LIKE' ? '👍 좋아요' :
+                       item.ratingType === 'WISHLIST' ? '💖 위시리스트' :
+                       item.ratingType === 'COMPLETED' ? '✅ 완료' : ''}
+                    </span>
+                  )}
+                </div>
+
+                {/* 별점 컴포넌트 */}
+                <RatingComponent item={item} showRating={showRating} />
+              </div>
             </div>
-            <h4 className="item-title">{item.contentTitle || item.title || '제목 없음'}</h4>
-            {item.author && (
-              <p className="item-author">✍️ {item.author}</p>
-            )}
-            <div className="item-meta">
-              <span className="item-date">📅 {formatDate(item.createdAt || item.ratedAt)}</span>
-              {item.ratingType && item.ratingType !== 'STAR' && (
-                <span className="rating-type">
-                  {item.ratingType === 'LIKE' ? '👍 좋아요' :
-                   item.ratingType === 'WISHLIST' ? '💖 위시리스트' :
-                   item.ratingType === 'COMPLETED' ? '✅ 완료' : ''}
-                </span>
-              )}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   };
@@ -293,35 +507,6 @@ const UserDashboard = ({ user, onClose }) => {
             </div>
           </div>
 
-          {/* 콘텐츠 타입별 통계 */}
-          {Object.keys(stats.contentTypeStats).length > 0 && (
-            <div className="content-type-stats">
-              <h3>📈 콘텐츠 타입별 활동</h3>
-              <div className="type-stats-grid">
-                {Object.entries(stats.contentTypeStats).map(([type, count]) => (
-                  <div key={type} className="type-stat">
-                    <span className="type-icon">{getContentTypeIcon(type)}</span>
-                    <span className="type-name">{getContentTypeLabel(type)}</span>
-                    <span className="type-count">{count}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 선호 장르 */}
-          {stats.favoriteGenres.length > 0 && (
-            <div className="favorite-genres">
-              <h3>🎭 선호 장르</h3>
-              <div className="genre-list">
-                {stats.favoriteGenres.map((genre, index) => (
-                  <span key={index} className="genre-badge">
-                    {genre}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* 탭 네비게이션 */}
