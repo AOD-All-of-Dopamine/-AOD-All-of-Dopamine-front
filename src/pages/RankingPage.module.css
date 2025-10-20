@@ -1,0 +1,174 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.filterSection {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: #1a1a1a;
+  border-bottom: 1px solid #333;
+  padding-bottom: 16px;
+}
+
+.categorySelector {
+  display: flex;
+  gap: 8px;
+  padding: 16px 20px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.categorySelector::-webkit-scrollbar {
+  display: none;
+}
+
+.categoryButton {
+  flex-shrink: 0;
+  padding: 8px 20px;
+  border-radius: 20px;
+  background-color: #2a2a2a;
+  color: #888;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.categoryButton.active {
+  background-color: #646cff;
+  color: #fff;
+}
+
+.periodTabs {
+  display: flex;
+  gap: 8px;
+  padding: 0 20px;
+}
+
+.periodTab {
+  flex: 1;
+  padding: 10px;
+  background-color: #2a2a2a;
+  color: #888;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.periodTab.active {
+  background-color: #646cff;
+  color: #fff;
+}
+
+.contentArea {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.rankingList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rankingItem {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px;
+  background-color: #2a2a2a;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.rankingItem:hover {
+  background-color: #333;
+  transform: translateX(4px);
+}
+
+.rank {
+  font-size: 24px;
+  font-weight: 700;
+  color: #646cff;
+  min-width: 40px;
+  text-align: center;
+}
+
+.rank.top1 {
+  color: #ffd700;
+}
+
+.rank.top2 {
+  color: #c0c0c0;
+}
+
+.rank.top3 {
+  color: #cd7f32;
+}
+
+.thumbnail {
+  width: 60px;
+  height: 80px;
+  border-radius: 6px;
+  object-fit: cover;
+  background-color: #444;
+  flex-shrink: 0;
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: #888;
+}
+
+.score {
+  color: #ffd700;
+  font-weight: 600;
+}
+
+.change {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.change.up {
+  color: #4ade80;
+}
+
+.change.down {
+  color: #f87171;
+}
+
+.change.new {
+  color: #646cff;
+}
+
+.emptyState {
+  text-align: center;
+  color: #888;
+  padding: 60px 20px;
+  font-size: 14px;
+}
