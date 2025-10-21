@@ -196,3 +196,80 @@
   padding: 60px 20px;
   font-size: 14px;
 }
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 32px;
+  padding: 20px 0 80px 0;
+}
+
+.pageButton {
+  padding: 8px 20px;
+  border-radius: 8px;
+  background-color: #2a2a2a;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.pageButton:hover:not(:disabled) {
+  background-color: #646cff;
+}
+
+.pageButton:disabled {
+  background-color: #1a1a1a;
+  color: #555;
+  cursor: not-allowed;
+}
+
+.pageNumbers {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.pageNumber {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  border-radius: 8px;
+  background-color: #2a2a2a;
+  color: #888;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pageNumber:hover {
+  background-color: #3a3a3a;
+  color: #fff;
+}
+
+.pageNumber.active {
+  background-color: #646cff;
+  color: #fff;
+}
+
+.pageNumber.active:hover {
+  background-color: #5558dd;
+}
+
+.ellipsis {
+  min-width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  font-size: 14px;
+  user-select: none;
+}

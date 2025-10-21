@@ -145,23 +145,100 @@ function ExplorePage() {
         {isLoading ? (
           <div className={styles.emptyState}>로딩 중...</div>
         ) : data && data.content.length > 0 ? (
-          <div className={styles.grid}>
-            {data.content.map((work) => (
-              <div
-                key={work.id}
-                className={styles.card}
-                onClick={() => handleCardClick(String(work.id))}
+          <>
+            <div className={styles.grid}>
+              {data.content.map((work) => (
+                <div
+                  key={work.id}
+                  className={styles.card}
+                  onClick={() => handleCardClick(String(work.id))}
+                >
+                  <img
+                    src={work.thumbnail || 'https://via.placeholder.com/160x220'}
+                    alt={work.title}
+                    className={styles.thumbnail}
+                  />
+                  <div className={styles.cardTitle}>{work.title}</div>
+                  <div className={styles.cardScore}>⭐ {(work.score || 0).toFixed(1)}</div>
+                </div>
+              ))}
+            </div>
+            
+            {/* 페이지네이션 */}
+            <div className={styles.pagination}>
+              <button
+                className={styles.pageButton}
+                onClick={() => setPage(page - 1)}
+                disabled={page === 0}
               >
-                <img
-                  src={work.thumbnail || 'https://via.placeholder.com/160x220'}
-                  alt={work.title}
-                  className={styles.thumbnail}
-                />
-                <div className={styles.cardTitle}>{work.title}</div>
-                <div className={styles.cardScore}>⭐ {(work.score || 0).toFixed(1)}</div>
+                이전
+              </button>
+              
+              <div className={styles.pageNumbers}>
+                {(() => {
+                  const totalPages = data.totalPages || 1
+                  const currentPage = page
+                  const pages: (number | string)[] = []
+                  
+                  if (totalPages <= 7) {
+                    // 페이지가 7개 이하면 모두 표시
+                    for (let i = 0; i < totalPages; i++) {
+                      pages.push(i)
+                    }
+                  } else {
+                    // 페이지가 많으면 생략 표시
+                    pages.push(0) // 첫 페이지
+                    
+                    if (currentPage > 3) {
+                      pages.push('...') // 왼쪽 생략
+                    }
+                    
+                    // 현재 페이지 주변
+                    const start = Math.max(1, currentPage - 1)
+                    const end = Math.min(totalPages - 2, currentPage + 1)
+                    
+                    for (let i = start; i <= end; i++) {
+                      pages.push(i)
+                    }
+                    
+                    if (currentPage < totalPages - 4) {
+                      pages.push('...') // 오른쪽 생략
+                    }
+                    
+                    pages.push(totalPages - 1) // 마지막 페이지
+                  }
+                  
+                  return pages.map((pageNum, index) => {
+                    if (pageNum === '...') {
+                      return (
+                        <span key={`ellipsis-${index}`} className={styles.ellipsis}>
+                          ...
+                        </span>
+                      )
+                    }
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        className={`${styles.pageNumber} ${pageNum === currentPage ? styles.active : ''}`}
+                        onClick={() => setPage(pageNum as number)}
+                      >
+                        {(pageNum as number) + 1}
+                      </button>
+                    )
+                  })
+                })()}
               </div>
-            ))}
-          </div>
+              
+              <button
+                className={styles.pageButton}
+                onClick={() => setPage(page + 1)}
+                disabled={page >= (data.totalPages || 1) - 1}
+              >
+                다음
+              </button>
+            </div>
+          </>
         ) : (
           <div className={styles.emptyState}>
             선택한 필터에 맞는 작품이 없습니다.
