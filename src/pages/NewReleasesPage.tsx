@@ -54,8 +54,8 @@ function NewReleasesPage() {
     icon: platformIcons[platformName.toLowerCase()] || '📦',
   }))
   
-  // 선택된 플랫폼을 문자열로 변환 (첫 번째 선택된 항목만 사용)
-  const selectedPlatform = selectedPlatforms.size > 0 ? Array.from(selectedPlatforms)[0] : undefined
+  // 선택된 플랫폼을 배열로 변환
+  const selectedPlatformsArray = selectedPlatforms.size > 0 ? Array.from(selectedPlatforms) : undefined
 
   // API 호출
   const {
@@ -65,7 +65,7 @@ function NewReleasesPage() {
   } = useRecentReleases(
     {
       domain: domainMap[selectedCategory],
-      platform: selectedPlatform,
+      platforms: selectedPlatformsArray,
       page,
       size: 20,
     },
@@ -79,7 +79,7 @@ function NewReleasesPage() {
   } = useUpcomingReleases(
     {
       domain: domainMap[selectedCategory],
-      platform: selectedPlatform,
+      platforms: selectedPlatformsArray,
       page,
       size: 20,
     },

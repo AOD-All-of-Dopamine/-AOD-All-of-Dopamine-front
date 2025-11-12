@@ -49,15 +49,15 @@ function ExplorePage() {
     icon: platformIcons[platformName.toLowerCase()] || '📦',
   }))
 
-  // 선택된 플랫폼과 장르를 문자열로 변환 (첫 번째 선택된 항목만 사용)
-  const selectedPlatform = selectedPlatforms.size > 0 ? Array.from(selectedPlatforms)[0] : undefined
-  const selectedGenre = selectedGenres.size > 0 ? Array.from(selectedGenres)[0] : undefined
+  // 선택된 플랫폼과 장르를 배열로 변환
+  const selectedPlatformsArray = selectedPlatforms.size > 0 ? Array.from(selectedPlatforms) : undefined
+  const selectedGenresArray = selectedGenres.size > 0 ? Array.from(selectedGenres) : undefined
 
   // API 호출
   const { data, isLoading } = useWorks({
     domain: selectedCategory.toUpperCase(),
-    platform: selectedPlatform,
-    genre: selectedGenre,
+    platforms: selectedPlatformsArray,
+    genres: selectedGenresArray,
     page,
     size: 20,
   })
