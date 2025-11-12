@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useWorks } from '../hooks/useWorks'
+import { useWorks, useGenres, usePlatforms } from '../hooks/useWorks'
 import styles from './ExplorePage.module.css'
 
 type Category = 'av' | 'game' | 'webtoon' | 'webnovel'
@@ -18,24 +18,14 @@ const categories: { id: Category; label: string }[] = [
   { id: 'webnovel', label: '웹소설' },
 ]
 
-const platformsByCategory: Record<Category, Platform[]> = {
-  av: [
-    { id: 'tmdb', name: 'TMDB', icon: '🎬' },
-    { id: 'netflix', name: 'Netflix', icon: '🎥' },
-  ],
-  game: [{ id: 'steam', name: 'Steam', icon: '🎮' }],
-  webtoon: [{ id: 'naver', name: '네이버', icon: '📱' }],
-  webnovel: [
-    { id: 'kakao', name: '카카오', icon: '📚' },
-    { id: 'naverseries', name: '네이버시리즈', icon: '📖' },
-  ],
-}
-
-const genresByCategory: Record<Category, string[]> = {
-  av: ['액션', '드라마', '코미디', 'SF', '스릴러', '로맨스', '판타지'],
-  game: ['액션', 'RPG', '어드벤처', '전략', '시뮬레이션', '스포츠', '인디'],
-  webtoon: ['액션', '로맨스', '판타지', '일상', '스릴러', '개그', '드라마'],
-  webnovel: ['판타지', '로맨스', '무협', '현대', 'BL', '미스터리', '역사'],
+// 플랫폼 아이콘 매핑
+const platformIcons: Record<string, string> = {
+  tmdb: '🎬',
+  netflix: '🎥',
+  steam: '🎮',
+  naver: '📱',
+  kakao: '📚',
+  naverseries: '📖',
 }
 
 function ExplorePage() {
@@ -47,8 +37,17 @@ function ExplorePage() {
   const [selectedGenres, setSelectedGenres] = useState<Set<string>>(new Set())
   const [page, setPage] = useState(0)
 
-  const availablePlatforms = platformsByCategory[selectedCategory]
-  const availableGenres = genresByCategory[selectedCategory]
+  // API에서 장르 목록 가져오기
+  const { data: genresData } = useGenres(selectedCategory.toUpperCase())
+  const availableGenres = genresData || []
+
+  // API에서 플랫폼 목록 가져오기
+  const { data: platformsData } = usePlatforms(selectedCategory.toUpperCase())
+  const availablePlatforms = (platformsData || []).map(platformName => ({
+    id: platformName.toLowerCase(),
+    name: platformName,
+    icon: platformIcons[platformName.toLowerCase()] || '📦',
+  }))
 
   // 선택된 플랫폼과 장르를 문자열로 변환 (첫 번째 선택된 항목만 사용)
   const selectedPlatform = selectedPlatforms.size > 0 ? Array.from(selectedPlatforms)[0] : undefined

@@ -58,3 +58,31 @@ export const useUpcomingReleases = (
     ...options,
   })
 }
+
+/**
+ * 장르 목록 조회 hook
+ */
+export const useGenres = (
+  domain?: string,
+  options?: Omit<UseQueryOptions<string[]>, 'queryKey' | 'queryFn'>
+) => {
+  return useQuery<string[]>({
+    queryKey: ['genres', domain],
+    queryFn: () => workApi.getGenres(domain),
+    ...options,
+  })
+}
+
+/**
+ * 플랫폼 목록 조회 hook
+ */
+export const usePlatforms = (
+  domain?: string,
+  options?: Omit<UseQueryOptions<string[]>, 'queryKey' | 'queryFn'>
+) => {
+  return useQuery<string[]>({
+    queryKey: ['platforms', domain],
+    queryFn: () => workApi.getPlatforms(domain),
+    ...options,
+  })
+}

@@ -76,4 +76,24 @@ export const workApi = {
     })
     return data
   },
+
+  /**
+   * 도메인별 사용 가능한 장르 목록 조회
+   */
+  getGenres: async (domain?: string): Promise<string[]> => {
+    const { data } = await apiClient.get<string[]>('/api/works/genres', {
+      params: domain ? { domain } : {},
+    })
+    return data
+  },
+
+  /**
+   * 도메인별 사용 가능한 플랫폼 목록 조회
+   */
+  getPlatforms: async (domain?: string): Promise<string[]> => {
+    const { data } = await apiClient.get<string[]>('/api/works/platforms', {
+      params: domain ? { domain } : {},
+    })
+    return data
+  },
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useRecentReleases, useUpcomingReleases } from '../hooks/useWorks'
+import { useRecentReleases, useUpcomingReleases, usePlatforms } from '../hooks/useWorks'
 import styles from './NewReleasesPage.module.css'
 
 type Category = 'av' | 'game' | 'webtoon' | 'webnovel'
@@ -19,17 +19,14 @@ const categories: { id: Category; label: string }[] = [
   { id: 'webnovel', label: '웹소설' },
 ]
 
-const platformsByCategory: Record<Category, Platform[]> = {
-  av: [
-    { id: 'tmdb', name: 'TMDB', icon: '🎬' },
-    { id: 'netflix', name: 'Netflix', icon: '🎥' },
-  ],
-  game: [{ id: 'steam', name: 'Steam', icon: '🎮' }],
-  webtoon: [{ id: 'naver', name: '네이버', icon: '📱' }],
-  webnovel: [
-    { id: 'kakao', name: '카카오', icon: '📚' },
-    { id: 'naverseries', name: '네이버시리즈', icon: '📖' },
-  ],
+// 플랫폼 아이콘 매핑
+const platformIcons: Record<string, string> = {
+  tmdb: '🎬',
+  netflix: '🎥',
+  steam: '🎮',
+  naver: '📱',
+  kakao: '📚',
+  naverseries: '📖',
 }
 
 function NewReleasesPage() {
@@ -49,7 +46,13 @@ function NewReleasesPage() {
     webnovel: 'WEBNOVEL',
   }
 
-  const availablePlatforms = platformsByCategory[selectedCategory]
+  // API에서 플랫폼 목록 가져오기
+  const { data: platformsData } = usePlatforms(domainMap[selectedCategory])
+  const availablePlatforms = (platformsData || []).map(platformName => ({
+    id: platformName.toLowerCase(),
+    name: platformName,
+    icon: platformIcons[platformName.toLowerCase()] || '📦',
+  }))
   
   // 선택된 플랫폼을 문자열로 변환 (첫 번째 선택된 항목만 사용)
   const selectedPlatform = selectedPlatforms.size > 0 ? Array.from(selectedPlatforms)[0] : undefined
