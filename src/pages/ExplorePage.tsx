@@ -50,9 +50,15 @@ function ExplorePage() {
   const availablePlatforms = platformsByCategory[selectedCategory]
   const availableGenres = genresByCategory[selectedCategory]
 
+  // 선택된 플랫폼과 장르를 문자열로 변환 (첫 번째 선택된 항목만 사용)
+  const selectedPlatform = selectedPlatforms.size > 0 ? Array.from(selectedPlatforms)[0] : undefined
+  const selectedGenre = selectedGenres.size > 0 ? Array.from(selectedGenres)[0] : undefined
+
   // API 호출
   const { data, isLoading } = useWorks({
     domain: selectedCategory.toUpperCase(),
+    platform: selectedPlatform,
+    genre: selectedGenre,
     page,
     size: 20,
   })
@@ -72,6 +78,7 @@ function ExplorePage() {
       newSelection.add(platformId)
     }
     setSelectedPlatforms(newSelection)
+    setPage(0) // 필터 변경 시 페이지 초기화
   }
 
   const toggleGenre = (genre: string) => {
@@ -82,6 +89,7 @@ function ExplorePage() {
       newSelection.add(genre)
     }
     setSelectedGenres(newSelection)
+    setPage(0) // 필터 변경 시 페이지 초기화
   }
 
   const handleCardClick = (id: string) => {

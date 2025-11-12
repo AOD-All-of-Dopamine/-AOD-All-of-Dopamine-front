@@ -4,6 +4,8 @@ import { PageResponse, WorkSummary, WorkDetail } from '../types/api'
 export interface WorksQueryParams {
   domain?: string
   keyword?: string
+  platform?: string
+  genre?: string
   page?: number
   size?: number
   sortBy?: string
@@ -12,6 +14,7 @@ export interface WorksQueryParams {
 
 export interface ReleasesQueryParams {
   domain?: string
+  platform?: string
   page?: number
   size?: number
 }
@@ -25,6 +28,8 @@ export const workApi = {
       params: {
         domain: params.domain,
         keyword: params.keyword,
+        platform: params.platform,
+        genre: params.genre,
         page: params.page ?? 0,
         size: params.size ?? 20,
         sortBy: params.sortBy ?? 'masterTitle',
@@ -49,6 +54,7 @@ export const workApi = {
     const { data } = await apiClient.get<PageResponse<WorkSummary>>('/api/works/releases/recent', {
       params: {
         domain: params.domain,
+        platform: params.platform,
         page: params.page ?? 0,
         size: params.size ?? 20,
       },
@@ -63,6 +69,7 @@ export const workApi = {
     const { data } = await apiClient.get<PageResponse<WorkSummary>>('/api/works/releases/upcoming', {
       params: {
         domain: params.domain,
+        platform: params.platform,
         page: params.page ?? 0,
         size: params.size ?? 20,
       },

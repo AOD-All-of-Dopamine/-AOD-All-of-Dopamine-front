@@ -49,6 +49,11 @@ function NewReleasesPage() {
     webnovel: 'WEBNOVEL',
   }
 
+  const availablePlatforms = platformsByCategory[selectedCategory]
+  
+  // 선택된 플랫폼을 문자열로 변환 (첫 번째 선택된 항목만 사용)
+  const selectedPlatform = selectedPlatforms.size > 0 ? Array.from(selectedPlatforms)[0] : undefined
+
   // API 호출
   const {
     data: recentData,
@@ -57,6 +62,7 @@ function NewReleasesPage() {
   } = useRecentReleases(
     {
       domain: domainMap[selectedCategory],
+      platform: selectedPlatform,
       page,
       size: 20,
     },
@@ -70,13 +76,12 @@ function NewReleasesPage() {
   } = useUpcomingReleases(
     {
       domain: domainMap[selectedCategory],
+      platform: selectedPlatform,
       page,
       size: 20,
     },
     { enabled: releaseType === 'upcoming' }
   )
-
-  const availablePlatforms = platformsByCategory[selectedCategory]
   
   // API 데이터 사용
   const isLoading = releaseType === 'released' ? isLoadingRecent : isLoadingUpcoming
@@ -99,6 +104,7 @@ function NewReleasesPage() {
       newSelection.add(platformId)
     }
     setSelectedPlatforms(newSelection)
+    setPage(0) // 필터 변경 시 페이지 초기화
   }
 
   const handleItemClick = (id: number) => {
