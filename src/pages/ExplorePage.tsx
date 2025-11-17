@@ -5,12 +5,6 @@ import styles from './ExplorePage.module.css'
 
 type Category = 'av' | 'game' | 'webtoon' | 'webnovel'
 
-interface Platform {
-  id: string
-  name: string
-  icon: string
-}
-
 const categories: { id: Category; label: string }[] = [
   { id: 'av', label: 'AV' },
   { id: 'game', label: '게임' },
