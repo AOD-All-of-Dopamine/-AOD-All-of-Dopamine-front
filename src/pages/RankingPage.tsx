@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styles from './RankingPage.module.css'
+import { rankingApi, ExternalRanking } from '../api/rankingApi'
 
 type Category = 'av' | 'game' | 'webtoon' | 'webnovel'
 type Period = 'daily' | 'weekly' | 'monthly'
@@ -27,20 +28,47 @@ const periods: { id: Period; label: string }[] = [
   { id: 'monthly', label: '월간' },
 ]
 
-// Mock data
-const mockRankings: RankingItem[] = Array.from({ length: 50 }, (_, i) => ({
-  id: String(i + 1),
-  rank: i + 1,
-  title: `랭킹 ${i + 1}위 작품`,
-  thumbnail: 'https://via.placeholder.com/60x80',
-  score: 9.5 - i * 0.1,
-  change: i < 3 ? 'new' : i % 3 === 0 ? 'up' : i % 3 === 1 ? 'down' : i % 5,
-}))
+const PLATFORM_MAPPING: Record<Category, string> = {
+  av: 'TMDB_MOVIE', // TMDB 영화
+  game: 'STEAM_GAME',
+  webtoon: 'NAVER_WEBTOON',
+  webnovel: 'NAVER_SERIES',
+}
 
 function RankingPage() {
   const navigate = useNavigate()
   const [selectedCategory, setSelectedCategory] = useState<Category>('game')
   const [selectedPeriod, setSelectedPeriod] = useState<Period>('daily')
+  const [rankings, setRankings] = useState<RankingItem[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const fetchRankings = async () => {
+      setLoading(true)
+      try {
+        const platform = PLATFORM_MAPPING[selectedCategory]
+        const data = await rankingApi.getRankingsByPlatform(platform)
+        
+        const mappedData: RankingItem[] = data.map((item: ExternalRanking) => ({
+          id: String(item.contentId),
+          rank: item.ranking,
+          title: item.title,
+          thumbnail: 'https://via.placeholder.com/60x80', // 백엔드 데이터에 썸네일 없음
+          score: 0, // 백엔드 데이터에 점수 없음
+          change: 'new', // 백엔드 데이터에 변동폭 없음
+        }))
+        
+        setRankings(mappedData)
+      } catch (error) {
+        console.error('Failed to fetch rankings:', error)
+        setRankings([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchRankings()
+  }, [selectedCategory])
 
   const handleCardClick = (id: string) => {
     navigate(`/work/${id}`)
@@ -93,9 +121,11 @@ function RankingPage() {
       </div>
 
       <div className={styles.contentArea}>
-        {mockRankings.length > 0 ? (
+        {loading ? (
+          <div style={{ color: 'white', textAlign: 'center', padding: '2rem' }}>Loading...</div>
+        ) : rankings.length > 0 ? (
           <div className={styles.rankingList}>
-            {mockRankings.map((item) => (
+            {rankings.map((item) => (
               <div
                 key={item.id}
                 className={styles.rankingItem}
