@@ -28,11 +28,20 @@ const periods: { id: Period; label: string }[] = [
   { id: 'monthly', label: '월간' },
 ]
 
+// 프론트엔드 내부 상수
 const PLATFORM_MAPPING: Record<Category, string> = {
-  av: 'TMDB_MOVIE', // TMDB 영화
+  av: 'TMDB_MOVIE',
   game: 'STEAM_GAME',
   webtoon: 'NAVER_WEBTOON',
   webnovel: 'NAVER_SERIES',
+}
+
+// 백엔드 API 호출용 변환 맵
+const BACKEND_PLATFORM_MAPPING: Record<string, string> = {
+  'TMDB_MOVIE': 'TMDB_MOVIE',
+  'STEAM_GAME': 'Steam',
+  'NAVER_WEBTOON': 'NaverWebtoon',
+  'NAVER_SERIES': 'NaverSeries',
 }
 
 function RankingPage() {
@@ -46,14 +55,16 @@ function RankingPage() {
     const fetchRankings = async () => {
       setLoading(true)
       try {
-        const platform = PLATFORM_MAPPING[selectedCategory]
-        const data = await rankingApi.getRankingsByPlatform(platform)
+        const frontendPlatform = PLATFORM_MAPPING[selectedCategory]
+        const backendPlatform = BACKEND_PLATFORM_MAPPING[frontendPlatform]
+        const data = await rankingApi.getRankingsByPlatform(backendPlatform)
         
         const mappedData: RankingItem[] = data.map((item: ExternalRanking) => ({
-          id: String(item.contentId),
+          // contentId가 있으면 사용, 없으면 'no-content'로 마킹
+          id: item.contentId ? String(item.contentId) : `no-content-${item.id}`,
           rank: item.ranking,
           title: item.title,
-          thumbnail: 'https://via.placeholder.com/60x80', // 백엔드 데이터에 썸네일 없음
+          thumbnail: item.thumbnailUrl || 'https://via.placeholder.com/60x80',
           score: 0, // 백엔드 데이터에 점수 없음
           change: 'new', // 백엔드 데이터에 변동폭 없음
         }))
@@ -71,6 +82,11 @@ function RankingPage() {
   }, [selectedCategory])
 
   const handleCardClick = (id: string) => {
+    // contentId가 없는 항목 클릭 시 경고
+    if (id.startsWith('no-content-')) {
+      alert('이 작품의 상세 정보가 아직 준비되지 않았습니다.')
+      return
+    }
     navigate(`/work/${id}`)
   }
 
