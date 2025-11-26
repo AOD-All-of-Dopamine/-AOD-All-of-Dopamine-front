@@ -357,3 +357,71 @@
   background-color: #dc2626;
   color: #fff;
 }
+
+/* HTML Content Styles (Steam detailed_description 등) */
+.htmlContent {
+  line-height: 1.7;
+  color: #ccc;
+  font-size: 14px;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+.htmlContent h1,
+.htmlContent h2,
+.htmlContent h3,
+.htmlContent h4 {
+  color: #fff;
+  margin: 16px 0 8px 0;
+}
+
+.htmlContent h1 { font-size: 1.5em; }
+.htmlContent h2 { font-size: 1.3em; }
+.htmlContent h3 { font-size: 1.1em; }
+
+.htmlContent p {
+  margin: 8px 0;
+}
+
+.htmlContent ul,
+.htmlContent ol {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.htmlContent li {
+  margin: 4px 0;
+}
+
+.htmlContent a {
+  color: #646cff;
+  text-decoration: underline;
+}
+
+.htmlContent a:hover {
+  color: #535bf2;
+}
+
+.htmlContent img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  margin: 8px 0;
+}
+
+.htmlContent br {
+  display: block;
+  content: "";
+  margin: 4px 0;
+}
+
+.htmlContent strong,
+.htmlContent b {
+  color: #fff;
+  font-weight: 600;
+}
+
+.htmlContent em,
+.htmlContent i {
+  font-style: italic;
+}

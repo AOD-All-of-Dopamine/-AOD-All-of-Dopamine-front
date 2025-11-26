@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
+import DOMPurify from 'dompurify'
 import { useAuth } from '../contexts/AuthContext'
 import { useWorkDetail } from '../hooks/useWorks'
 import {
@@ -213,22 +214,35 @@ function WorkDetailPage() {
                       {platform}
                     </h3>
                     <div className={styles.infoGrid}>
-                      {Object.entries(info).map(([key, value]) => (
-                        <div key={key} className={styles.infoRow}>
-                          <span className={styles.infoLabel}>{key}</span>
-                          <span className={styles.infoValue}>
-                            {typeof value === 'string' && value.startsWith('http') ? (
-                              <a href={value} target="_blank" rel="noopener noreferrer">
-                                {value}
-                              </a>
-                            ) : typeof value === 'object' ? (
-                              JSON.stringify(value)
-                            ) : (
-                              String(value)
-                            )}
-                          </span>
-                        </div>
-                      ))}
+                      {Object.entries(info).map(([key, value]) => {
+                        // HTML 태그가 포함된 필드들 (Steam의 상세 설명 등)
+                        const htmlFields = ['detailed_description', 'about_the_game', 'short_description']
+                        const isHtmlField = htmlFields.includes(key) && typeof value === 'string'
+                        
+                        return (
+                          <div key={key} className={styles.infoRow}>
+                            <span className={styles.infoLabel}>{key}</span>
+                            <span className={styles.infoValue}>
+                              {isHtmlField ? (
+                                <div
+                                  className={styles.htmlContent}
+                                  dangerouslySetInnerHTML={{
+                                    __html: DOMPurify.sanitize(value as string)
+                                  }}
+                                />
+                              ) : typeof value === 'string' && value.startsWith('http') ? (
+                                <a href={value} target="_blank" rel="noopener noreferrer">
+                                  {value}
+                                </a>
+                              ) : typeof value === 'object' ? (
+                                JSON.stringify(value)
+                              ) : (
+                                String(value)
+                              )}
+                            </span>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 ))}
