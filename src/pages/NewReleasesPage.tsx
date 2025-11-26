@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { useRecentReleases, useUpcomingReleases, usePlatforms } from '../hooks/useWorks'
 import styles from './NewReleasesPage.module.css'
 
-type Category = 'av' | 'game' | 'webtoon' | 'webnovel'
+type Category = 'movie' | 'tv' | 'game' | 'webtoon' | 'webnovel'
 type ReleaseType = 'released' | 'upcoming'
 
 const categories: { id: Category; label: string }[] = [
-  { id: 'av', label: 'AV' },
+  { id: 'movie', label: '영화' },
+  { id: 'tv', label: 'TV' },
   { id: 'game', label: '게임' },
   { id: 'webtoon', label: '웹툰' },
   { id: 'webnovel', label: '웹소설' },
@@ -34,7 +35,8 @@ function NewReleasesPage() {
 
   // 도메인 매핑
   const domainMap: Record<Category, string> = {
-    av: 'AV',
+    movie: 'MOVIE',
+    tv: 'TV',
     game: 'GAME',
     webtoon: 'WEBTOON',
     webnovel: 'WEBNOVEL',

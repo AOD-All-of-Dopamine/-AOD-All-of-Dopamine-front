@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import styles from './RankingPage.module.css'
 import { rankingApi, ExternalRanking } from '../api/rankingApi'
 
-type Category = 'av' | 'game' | 'webtoon' | 'webnovel'
+type Category = 'movie' | 'tv' | 'game' | 'webtoon' | 'webnovel'
 type Period = 'daily' | 'weekly' | 'monthly'
 
 interface RankingItem {
@@ -16,7 +16,8 @@ interface RankingItem {
 }
 
 const categories: { id: Category; label: string }[] = [
-  { id: 'av', label: 'AV' },
+  { id: 'movie', label: '영화' },
+  { id: 'tv', label: 'TV' },
   { id: 'game', label: '게임' },
   { id: 'webtoon', label: '웹툰' },
   { id: 'webnovel', label: '웹소설' },
@@ -30,7 +31,8 @@ const periods: { id: Period; label: string }[] = [
 
 // 프론트엔드 내부 상수
 const PLATFORM_MAPPING: Record<Category, string> = {
-  av: 'TMDB_MOVIE',
+  movie: 'TMDB_MOVIE',
+  tv: 'TMDB_TV',
   game: 'STEAM_GAME',
   webtoon: 'NAVER_WEBTOON',
   webnovel: 'NAVER_SERIES',
@@ -39,6 +41,7 @@ const PLATFORM_MAPPING: Record<Category, string> = {
 // 백엔드 API 호출용 변환 맵
 const BACKEND_PLATFORM_MAPPING: Record<string, string> = {
   'TMDB_MOVIE': 'TMDB_MOVIE',
+  'TMDB_TV': 'TMDB_TV',
   'STEAM_GAME': 'Steam',
   'NAVER_WEBTOON': 'NaverWebtoon',
   'NAVER_SERIES': 'NaverSeries',
