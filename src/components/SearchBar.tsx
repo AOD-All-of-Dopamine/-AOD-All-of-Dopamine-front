@@ -1,33 +1,50 @@
-import { useState } from 'react'
-import styles from './SearchBar.module.css'
+import { useState } from "react";
+import SearchIcon from "../assets/search-gray.svg";
 
 interface SearchBarProps {
-  onSearch?: (query: string) => void
+  onSearch?: (query: string) => void;
 }
 
 function SearchBar({ onSearch }: SearchBarProps) {
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (onSearch && query.trim()) {
-      onSearch(query.trim())
+      onSearch(query.trim());
     }
-  }
+  };
 
   return (
-    <div className={styles.searchBar}>
+    <div className="sticky top-0 z-50 w-screen bg-[#242424] px-4 py-4">
       <form onSubmit={handleSubmit}>
+        <img
+          src={SearchIcon}
+          alt="검색"
+          className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none"
+        />
         <input
           type="text"
-          className={styles.searchInput}
-          placeholder="작품을 검색하세요..."
+          placeholder="작품을 검색하세요"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          className="
+            w-full
+            pl-10
+            pr-4
+            py-3
+            rounded-lg
+            bg-[#363539]
+            text-white
+            placeholder-gray-400
+            text-sm
+            outline-none
+            transition-colors
+          "
         />
       </form>
     </div>
-  )
+  );
 }
 
-export default SearchBar
+export default SearchBar;
