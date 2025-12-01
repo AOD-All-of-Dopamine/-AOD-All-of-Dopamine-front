@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import Header from "../components/common/Header";
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -73,26 +72,29 @@ export default function SignupPage() {
     formData.passwordConfirm;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#242424]">
-      <Header
-        title="회원가입"
-        leftIcon="back"
-        onLeftClick={() => navigate(-1)}
-        bgColor="#242424"
-      />
+    <div className="min-h-screen flex flex-col bg-[var(--blackbackground-primary)]">
+      {/* 헤더 */}
+      <header className="h-[60px] flex items-center px-4">
+        <button onClick={() => navigate(-1)} className="w-6 h-6">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M15 18L9 12L15 6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+        <h1 className="flex-1 text-center text-[18px] font-semibold text-white mr-6">회원가입</h1>
+      </header>
 
-      <div className="flex-1 flex items-center justify-center px-5">
-        <div className="w-full max-w-md rounded-2xl">
+      <div className="flex-1 flex items-center justify-center px-4">
+        <div className="w-full max-w-md">
           {error && (
-            <div className="mb-4 bg-red-100 text-red-700 border border-red-200 rounded-lg p-3 text-sm">
+            <div className="mb-4 bg-[#FF545520] border border-[#FF5455] rounded-lg p-3 text-[14px] text-[#FF5455]">
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {/* 아이디 + 중복확인 */}
-            <div className="flex flex-col gap-1">
-              <label className="font-[PretendardVariable] font-semibold text-gray-200 font-medium">
+            <div className="flex flex-col gap-2">
+              <label className="text-[14px] font-semibold text-white">
                 아이디
               </label>
               <div className="flex gap-2">
@@ -102,22 +104,26 @@ export default function SignupPage() {
                   value={formData.username}
                   onChange={handleChange}
                   placeholder="아이디를 입력하세요"
-                  className="px-4 py-2 rounded-lg bg-[#302F31] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#855BFF] focus:border-transparent border border-[#403F43] border-[1.5px]"
+                  className="flex-1 px-4 py-3 rounded-lg bg-[var(--greygrey-800background-hover)] text-white text-[14px] placeholder-[var(--greygrey-400icon)] focus:outline-none focus:ring-2 focus:ring-[#855BFF] border border-[var(--greygrey-700)]"
                   required
                 />
                 <button
                   type="button"
                   onClick={handleUsernameCheck}
-                  className="px-4 py-2 bg-[#855BFF] text-white rounded-lg text-sm font-semibold hover:bg-[#9CDDFE] transition-colors"
+                  className={`px-4 py-3 rounded-lg text-[14px] font-semibold transition-colors ${
+                    usernameChecked 
+                      ? "bg-[var(--greygrey-700)] text-[var(--greygrey-300text-secondary)]" 
+                      : "bg-[#855BFF] text-white"
+                  }`}
                 >
-                  중복확인
+                  {usernameChecked ? "확인완료" : "중복확인"}
                 </button>
               </div>
             </div>
 
             {/* 이메일 */}
-            <div className="flex flex-col gap-1">
-              <label className="font-[PretendardVariable] font-semibold text-gray-200 font-medium">
+            <div className="flex flex-col gap-2">
+              <label className="text-[14px] font-semibold text-white">
                 이메일
               </label>
               <input
@@ -126,14 +132,14 @@ export default function SignupPage() {
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="example@gmail.com"
-                className="px-4 py-2 rounded-lg bg-[#302F31] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#855BFF] focus:border-transparent border border-[#403F43] border-[1.5px]"
+                className="px-4 py-3 rounded-lg bg-[var(--greygrey-800background-hover)] text-white text-[14px] placeholder-[var(--greygrey-400icon)] focus:outline-none focus:ring-2 focus:ring-[#855BFF] border border-[var(--greygrey-700)]"
                 required
               />
             </div>
 
             {/* 비밀번호 */}
-            <div className="flex flex-col gap-1">
-              <label className="font-[PretendardVariable] font-semibold text-gray-200 font-medium">
+            <div className="flex flex-col gap-2">
+              <label className="text-[14px] font-semibold text-white">
                 비밀번호
               </label>
               <input
@@ -142,14 +148,14 @@ export default function SignupPage() {
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="비밀번호를 입력하세요"
-                className="px-4 py-2 rounded-lg bg-[#302F31] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#855BFF] focus:border-transparent border border-[#403F43] border-[1.5px]"
+                className="px-4 py-3 rounded-lg bg-[var(--greygrey-800background-hover)] text-white text-[14px] placeholder-[var(--greygrey-400icon)] focus:outline-none focus:ring-2 focus:ring-[#855BFF] border border-[var(--greygrey-700)]"
                 required
               />
             </div>
 
             {/* 비밀번호 확인 */}
-            <div className="flex flex-col gap-1">
-              <label className="font-[PretendardVariable] font-semibold text-gray-200 font-medium">
+            <div className="flex flex-col gap-2">
+              <label className="text-[14px] font-semibold text-white">
                 비밀번호 확인
               </label>
               <input
@@ -158,7 +164,7 @@ export default function SignupPage() {
                 value={formData.passwordConfirm}
                 onChange={handleChange}
                 placeholder="비밀번호를 다시 입력하세요"
-                className="px-4 py-2 rounded-lg bg-[#302F31] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#855BFF] focus:border-transparent border border-[#403F43] border-[1.5px]"
+                className="px-4 py-3 rounded-lg bg-[var(--greygrey-800background-hover)] text-white text-[14px] placeholder-[var(--greygrey-400icon)] focus:outline-none focus:ring-2 focus:ring-[#855BFF] border border-[var(--greygrey-700)]"
                 required
               />
             </div>
@@ -167,10 +173,10 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={!isFormComplete || loading}
-              className={`mt-4 py-3 rounded-lg font-semibold text-base text-white transition-transform duration-200 ${
+              className={`mt-4 py-3 rounded-lg text-[16px] font-semibold text-white transition-opacity ${
                 isFormComplete
-                  ? "bg-gradient-to-r from-[#855BFF] to-[#9CDDFE] hover:-translate-y-1"
-                  : "bg-gray-600 cursor-not-allowed"
+                  ? "bg-[#855BFF] hover:opacity-90"
+                  : "bg-[var(--greygrey-700)] cursor-not-allowed"
               }`}
             >
               {loading ? "가입 중..." : "회원가입"}
@@ -178,11 +184,11 @@ export default function SignupPage() {
           </form>
 
           {/* 로그인 링크 */}
-          <div className="mt-6 text-sm text-gray-400 text-center">
+          <div className="mt-6 text-[14px] text-white text-center">
             <span>이미 계정이 있으신가요? </span>
             <Link
               to="/login"
-              className="text-[#855BFF] font-semibold hover:underline"
+              className="text-[#855BFF] font-semibold"
             >
               로그인
             </Link>

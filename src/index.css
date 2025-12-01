@@ -1,26 +1,70 @@
 @import "tailwindcss";
 
 :root {
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
-    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  /* 기본 폰트 설정 */
+  font-family: "Pretendard Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
+  color-scheme: dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  background-color: #242425;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Anima 디자인 시스템 색상 */
+  --bg-primary: #242425;
+  --bg-secondary: #302f31;
+  --bg-hover: #363539;
+  
+  --grey-100: #e8e8e8;
+  --grey-200: #d3d3d3;
+  --grey-300: #b2b1b3;
+  --grey-400: #8d8c8e;
+  --grey-500: #7b7a7c;
+  --grey-600: #525155;
+  --grey-700: #403f43;
+  --grey-800: #363539;
+  --grey-900: #302f31;
+  
+  --purple: #855bff;
+  --purple-light: #e9e1ff;
+  --red: #ff5455;
+  --blue: #6883f5;
+  --dark-blue: #445fd1;
+  --light-blue: #9cddfe;
+  
+  --text-primary: #ffffff;
+  --text-secondary: #b2b1b3;
+  --icon-selected: #e8e8e8;
+  --icon-default: #8d8c8e;
+
+  /* 타이포그래피 */
+  --font-head1: 600 24px/1.38 "Pretendard Variable", sans-serif;
+  --font-head2: 600 18px/1.4 "Pretendard Variable", sans-serif;
+  --font-body1: 400 16px/1.5 "Pretendard Variable", sans-serif;
+  --font-body1-bold: 600 16px/1.6 "Pretendard Variable", sans-serif;
+  --font-body2: 400 14px/1.4 "Pretendard Variable", sans-serif;
+  --font-body2-bold: 600 14px/1.4 "Pretendard Variable", sans-serif;
+  --font-caption: 400 12px/1.4 "Pretendard Variable", sans-serif;
 }
 
 @font-face {
-  font-family: PretendardVariable;
+  font-family: "Pretendard Variable";
   src:
     local("PretendardVariable"),
-    url("/font/PretendardVariable.woff2") format("woff");
+    url("/font/PretendardVariable.woff2") format("woff2");
   font-display: swap;
+}
+
+/* 스크롤바 숨기기 */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }

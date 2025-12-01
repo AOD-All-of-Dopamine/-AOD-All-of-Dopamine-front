@@ -19,119 +19,122 @@ export default function MyReviewsPage() {
   };
 
   if (isLoading) {
-    return <div className="p-5 max-w-3xl mx-auto text-white">로딩 중...</div>;
+    return (
+      <div className="min-h-screen bg-[var(--blackbackground-primary)] flex items-center justify-center text-[var(--greygrey-300text-secondary)]">
+        로딩 중...
+      </div>
+    );
   }
 
   return (
-    <div className="p-5 max-w-3xl mx-auto text-white">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-6 pb-4 border-b-2 border-[#333]">
-        <button
-          onClick={() => navigate(-1)}
-          className="px-4 py-2 bg-transparent text-gray-400 border border-gray-600 rounded-md text-sm transition hover:text-gray-300 hover:border-gray-400"
-        >
-          ← 뒤로
+    <div className="min-h-screen bg-[var(--blackbackground-primary)] pb-20">
+      {/* 헤더 */}
+      <header className="h-[60px] flex items-center px-4">
+        <button onClick={() => navigate(-1)} className="w-6 h-6">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M15 18L9 12L15 6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         </button>
-
-        <h1 className="text-2xl font-bold">작성한 리뷰</h1>
-      </div>
+        <h1 className="flex-1 text-center text-[18px] font-semibold text-white mr-6">
+          작성한 리뷰
+        </h1>
+      </header>
 
       {/* 리뷰 리스트 */}
-      {data && data.content.length > 0 ? (
-        <>
-          <div className="flex flex-col gap-4">
-            {data.content.map((review) => (
-              <div
-                key={review.reviewId}
-                className="p-5 bg-[#2a2a2a] rounded-lg transition hover:bg-[#333]"
-              >
-                {/* Header */}
-                <div className="flex justify-between items-start mb-3">
-                  <h3
-                    className="flex-1 text-lg font-semibold text-indigo-400 cursor-pointer hover:text-indigo-300 hover:underline"
-                    onClick={() => navigate(`/work/${review.contentId}`)}
-                  >
-                    {review.contentTitle}
-                  </h3>
+      <div className="px-4">
+        {data && data.content.length > 0 ? (
+          <>
+            <div className="flex flex-col gap-3">
+              {data.content.map((review) => (
+                <div
+                  key={review.reviewId}
+                  className="p-4 bg-[var(--greygrey-900background-secondary)] rounded-lg"
+                >
+                  {/* 작품 제목 */}
+                  <div className="flex justify-between items-start mb-2">
+                    <h3
+                      className="flex-1 text-[16px] font-semibold text-[#855BFF] cursor-pointer"
+                      onClick={() => navigate(`/work/${review.contentId}`)}
+                    >
+                      {review.contentTitle}
+                    </h3>
 
-                  <button
-                    onClick={() => handleDelete(review.reviewId)}
-                    className="px-3 py-1 bg-red-600/20 text-red-500 border border-red-600 rounded text-xs font-semibold transition hover:bg-red-600 hover:text-white"
-                  >
-                    삭제
-                  </button>
+                    <button
+                      onClick={() => handleDelete(review.reviewId)}
+                      className="text-[12px] text-[#FF5455]"
+                    >
+                      삭제
+                    </button>
+                  </div>
+
+                  {/* 별점 */}
+                  <div className="flex gap-0.5 mb-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <svg key={star} width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path
+                          d="M8 1L10.163 5.279L15 5.944L11.5 9.269L12.326 14L8 11.779L3.674 14L4.5 9.269L1 5.944L5.837 5.279L8 1Z"
+                          fill={star <= review.rating ? "#FFD700" : "#64636B"}
+                        />
+                      </svg>
+                    ))}
+                  </div>
+
+                  {review.title && (
+                    <h4 className="text-[14px] font-semibold text-white mb-2">
+                      {review.title}
+                    </h4>
+                  )}
+
+                  <p className="text-[14px] text-white mb-2">
+                    {review.content}
+                  </p>
+
+                  <div className="text-[12px] text-[var(--greygrey-200text-primary)]">
+                    {new Date(review.createdAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  </div>
                 </div>
-
-                <div className="text-yellow-400 text-lg mb-2">
-                  {"⭐".repeat(review.rating)}
-                </div>
-
-                {review.title && (
-                  <h4 className="text-white font-semibold mb-3 text-base">
-                    {review.title}
-                  </h4>
-                )}
-
-                <p className="text-gray-300 text-sm leading-6 mb-3">
-                  {review.content}
-                </p>
-
-                <div className="text-gray-500 text-xs">
-                  {new Date(review.createdAt).toLocaleDateString()}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Pagination */}
-          {data.totalPages > 1 && (
-            <div className="flex justify-center items-center gap-4 mt-8 pt-6 border-t border-[#333]">
-              <button
-                disabled={page === 0}
-                onClick={() => setPage((p) => p - 1)}
-                className={`px-4 py-2 rounded-md text-sm font-semibold transition 
-                ${
-                  page === 0
-                    ? "bg-[#444] text-gray-600 cursor-not-allowed"
-                    : "bg-indigo-500 text-white hover:bg-indigo-400"
-                }`}
-              >
-                이전
-              </button>
-
-              <span className="text-gray-300 text-sm font-semibold">
-                {page + 1} / {data.totalPages}
-              </span>
-
-              <button
-                disabled={page >= data.totalPages - 1}
-                onClick={() => setPage((p) => p + 1)}
-                className={`px-4 py-2 rounded-md text-sm font-semibold transition 
-                ${
-                  page >= data.totalPages - 1
-                    ? "bg-[#444] text-gray-600 cursor-not-allowed"
-                    : "bg-indigo-500 text-white hover:bg-indigo-400"
-                }`}
-              >
-                다음
-              </button>
+              ))}
             </div>
-          )}
-        </>
-      ) : (
-        <div className="text-center py-16">
-          <p className="text-gray-400 text-base mb-5">
-            아직 작성한 리뷰가 없습니다.
-          </p>
 
-          <button
-            onClick={() => navigate("/explore")}
-            className="px-6 py-3 bg-gradient-to-br from-indigo-400 to-purple-600 text-white rounded-lg text-lg font-semibold transition hover:-translate-y-1 hover:shadow-xl"
-          >
-            작품 둘러보기
-          </button>
-        </div>
-      )}
+            {/* 페이지네이션 */}
+            {data.totalPages > 1 && (
+              <div className="flex justify-center items-center gap-4 mt-6 pt-4 border-t border-[var(--greygrey-700)]">
+                <button
+                  disabled={page === 0}
+                  onClick={() => setPage((p) => p - 1)}
+                  className="px-4 py-2 bg-[#855BFF] text-white rounded text-[14px] font-semibold disabled:bg-[var(--greygrey-700)] disabled:text-[var(--greygrey-400icon)] disabled:cursor-not-allowed"
+                >
+                  이전
+                </button>
+
+                <span className="text-[14px] text-white">
+                  {page + 1} / {data.totalPages}
+                </span>
+
+                <button
+                  disabled={page >= data.totalPages - 1}
+                  onClick={() => setPage((p) => p + 1)}
+                  className="px-4 py-2 bg-[#855BFF] text-white rounded text-[14px] font-semibold disabled:bg-[var(--greygrey-700)] disabled:text-[var(--greygrey-400icon)] disabled:cursor-not-allowed"
+                >
+                  다음
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16">
+            <p className="text-[16px] text-white mb-4">
+              아직 작성한 리뷰가 없습니다.
+            </p>
+            <button
+              onClick={() => navigate("/explore")}
+              className="px-4 py-2 bg-[#855BFF] text-white rounded text-[14px]"
+            >
+              작품 둘러보기
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import Header from "../components/common/Header";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -37,29 +36,31 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#242424] flex flex-col">
+    <div className="min-h-screen bg-[var(--blackbackground-primary)] flex flex-col">
       {/* 헤더 */}
-      <Header
-        title="로그인"
-        leftIcon="back"
-        onLeftClick={() => navigate(-1)}
-        bgColor="#242424"
-      />
+      <header className="h-[60px] flex items-center px-4">
+        <button onClick={() => navigate(-1)} className="w-6 h-6">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M15 18L9 12L15 6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+        <h1 className="flex-1 text-center text-[18px] font-semibold text-white mr-6">로그인</h1>
+      </header>
 
       {/* 본문 */}
-      <div className="flex-1 flex items-center justify-center px-5">
-        <div className="w-full max-w-md rounded-2xl">
+      <div className="flex-1 flex items-center justify-center px-4">
+        <div className="w-full max-w-md">
           {/* 오류 메시지 */}
           {error && (
-            <div className="mb-4 bg-red-100 text-red-700 border border-red-200 rounded-lg p-3 text-sm">
+            <div className="mb-4 bg-[#FF545520] border border-[#FF5455] rounded-lg p-3 text-[14px] text-[#FF5455]">
               {error}
             </div>
           )}
 
           {/* 폼 */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="font-[PretendardVariable] font-semibold text-gray-200 font-medium">
+            <div className="flex flex-col gap-2">
+              <label className="text-[14px] font-semibold text-white">
                 아이디
               </label>
               <input
@@ -69,12 +70,12 @@ export default function LoginPage() {
                 onChange={handleChange}
                 placeholder="아이디를 입력하세요"
                 required
-                className="px-4 py-2 rounded-lg bg-[#302F31] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#855BFF] focus:border-transparent border border-[#403F43] border-[1.5px]"
+                className="px-4 py-3 rounded-lg bg-[var(--greygrey-800background-hover)] text-white text-[14px] placeholder-[var(--greygrey-400icon)] focus:outline-none focus:ring-2 focus:ring-[#855BFF] border border-[var(--greygrey-700)]"
               />
             </div>
 
-            <div className="flex flex-col gap-1">
-              <label className="font-[PretendardVariable] font-semibold text-gray-200 font-medium">
+            <div className="flex flex-col gap-2">
+              <label className="text-[14px] font-semibold text-white">
                 비밀번호
               </label>
               <input
@@ -84,25 +85,25 @@ export default function LoginPage() {
                 onChange={handleChange}
                 placeholder="8자 이상 비밀번호를 입력하세요"
                 required
-                className="px-4 py-2 rounded-lg bg-[#302F31] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#855BFF] focus:border-transparent border border-[#403F43] border-[1.5px]"
+                className="px-4 py-3 rounded-lg bg-[var(--greygrey-800background-hover)] text-white text-[14px] placeholder-[var(--greygrey-400icon)] focus:outline-none focus:ring-2 focus:ring-[#855BFF] border border-[var(--greygrey-700)]"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="font-[PretendardVariable] font-semibold mt-4 py-3 bg-gradient-to-r from-[#855BFF] to-[#9CDDFE] text-white rounded-lg font-semibold text-base transition-transform duration-200 hover:-translate-y-1 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="mt-4 py-3 bg-[#855BFF] text-white rounded-lg text-[16px] font-semibold transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {loading ? "로그인 중..." : "로그인"}
             </button>
           </form>
 
           {/* 회원가입 링크 */}
-          <div className="mt-6 text-sm text-white text-center">
+          <div className="mt-6 text-[14px] text-white text-center">
             <span>아직 계정이 없으신가요? </span>
             <Link
               to="/signup"
-              className="text-[#855BFF] font-semibold hover:underline"
+              className="text-[#855BFF] font-semibold"
             >
               회원가입
             </Link>

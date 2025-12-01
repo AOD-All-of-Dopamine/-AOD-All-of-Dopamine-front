@@ -27,7 +27,7 @@ const publicRoutes: RouteObject[] = [
       { path: "signup", element: <SignupPage /> },
       { path: "explore", element: <ExplorePage /> },
       { path: "ranking", element: <RankingPage /> },
-      { path: "new", element: <NewReleasesPage /> },
+      { path: "new-releases", element: <NewReleasesPage /> },
       { path: "profile", element: <ProfilePage /> },
       { path: "profile/reviews", element: <MyReviewsPage /> },
       { path: "profile/bookmarks", element: <MyBookmarksPage /> },

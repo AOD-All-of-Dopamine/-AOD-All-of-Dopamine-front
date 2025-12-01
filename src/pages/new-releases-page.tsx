@@ -1,116 +1,46 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  useRecentReleases,
-  useUpcomingReleases,
-  usePlatforms,
-} from "../hooks/useWorks";
-import Header from "../components/common/Header";
+import { useRecentReleases } from "../hooks/useWorks";
 
-type Category = "movie" | "tv" | "game" | "webtoon" | "webnovel";
-type ReleaseType = "released" | "upcoming";
+type Category = "av" | "game" | "webtoon" | "webnovel";
 
-const categories: { id: Category; label: string }[] = [
-  { id: "movie", label: "영화" },
-  { id: "tv", label: "TV" },
-  { id: "game", label: "게임" },
-  { id: "webtoon", label: "웹툰" },
-  { id: "webnovel", label: "웹소설" },
+const categories: { id: Category; label: string; domain: string }[] = [
+  { id: "av", label: "AV", domain: "AV" },
+  { id: "game", label: "게임", domain: "GAME" },
+  { id: "webtoon", label: "웹툰", domain: "WEBTOON" },
+  { id: "webnovel", label: "웹소설", domain: "WEBNOVEL" },
 ];
 
-// 플랫폼 아이콘 매핑
-const platformIcons: Record<string, string> = {
-  tmdb: "🎬",
-  netflix: "🎥",
-  steam: "🎮",
-  naver: "📱",
-  kakao: "📚",
-  naverseries: "📖",
-};
+// 스트리밍 서비스 (공개예정 Anima 디자인 참고)
+const streamingServices = [
+  { id: "all", name: "All", icon: null },
+  { id: "netflix", name: "Netflix", icon: "�" },
+  { id: "tving", name: "Tving", icon: "📺" },
+  { id: "wavve", name: "Wavve", icon: "🌊" },
+  { id: "watcha", name: "Watcha", icon: "�" },
+  { id: "disney", name: "Disney+", icon: "🏰" },
+];
 
 export default function NewReleasesPage() {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<Category>("game");
-  const [selectedPlatforms, setSelectedPlatforms] = useState<Set<string>>(
-    new Set(["steam"])
-  );
-  const [releaseType, setReleaseType] = useState<ReleaseType>("released");
+  const [selectedService, setSelectedService] = useState("all");
   const [page, setPage] = useState(0);
 
-  // 도메인 매핑
-  const domainMap: Record<Category, string> = {
-    movie: "MOVIE",
-    tv: "TV",
-    game: "GAME",
-    webtoon: "WEBTOON",
-    webnovel: "WEBNOVEL",
-  };
+  const currentDomain = categories.find(c => c.id === selectedCategory)?.domain || "GAME";
 
-  // API에서 플랫폼 목록 가져오기
-  const { data: platformsData } = usePlatforms(domainMap[selectedCategory]);
-  const availablePlatforms = (platformsData || []).map((platformName) => ({
-    id: platformName.toLowerCase(),
-    name: platformName,
-    icon: platformIcons[platformName.toLowerCase()] || "📦",
-  }));
+  // API 호출 (신작만 표시)
+  const { data, isLoading, error } = useRecentReleases({
+    domain: currentDomain,
+    page,
+    size: 20,
+  });
 
-  // 선택된 플랫폼을 배열로 변환
-  const selectedPlatformsArray =
-    selectedPlatforms.size > 0 ? Array.from(selectedPlatforms) : undefined;
-
-  // API 호출
-  const {
-    data: recentData,
-    isLoading: isLoadingRecent,
-    error: recentError,
-  } = useRecentReleases(
-    {
-      domain: domainMap[selectedCategory],
-      platforms: selectedPlatformsArray,
-      page,
-      size: 20,
-    },
-    { enabled: releaseType === "released" }
-  );
-
-  const {
-    data: upcomingData,
-    isLoading: isLoadingUpcoming,
-    error: upcomingError,
-  } = useUpcomingReleases(
-    {
-      domain: domainMap[selectedCategory],
-      platforms: selectedPlatformsArray,
-      page,
-      size: 20,
-    },
-    { enabled: releaseType === "upcoming" }
-  );
-
-  // API 데이터 사용
-  const isLoading =
-    releaseType === "released" ? isLoadingRecent : isLoadingUpcoming;
-  const error = releaseType === "released" ? recentError : upcomingError;
-  const works =
-    releaseType === "released"
-      ? recentData?.content || []
-      : upcomingData?.content || [];
+  const works = data?.content || [];
 
   const handleCategoryChange = (category: Category) => {
     setSelectedCategory(category);
-    setSelectedPlatforms(new Set());
-    setPage(0); // 카테고리 변경 시 페이지 초기화
-  };
-
-  const togglePlatform = (platformId: string) => {
-    const newSelection = new Set(selectedPlatforms);
-    if (newSelection.has(platformId)) {
-      newSelection.delete(platformId);
-    } else {
-      newSelection.add(platformId);
-    }
-    setSelectedPlatforms(newSelection);
-    setPage(0); // 필터 변경 시 페이지 초기화
+    setPage(0);
   };
 
   const handleItemClick = (id: number) => {
@@ -124,139 +54,179 @@ export default function NewReleasesPage() {
     return `${month}.${day}`;
   };
 
+  // 날짜별로 그룹화
+  const groupedByDate = works.reduce((acc: Record<string, typeof works>, work) => {
+    const dateKey = work.releaseDate ? formatDate(work.releaseDate) : "미정";
+    if (!acc[dateKey]) acc[dateKey] = [];
+    acc[dateKey].push(work);
+    return acc;
+  }, {});
+
   return (
-    <div className="flex flex-col h-screen">
-      <Header
-        title="신작"
-        rightIcon="search"
-        onRightClick={() => navigate("/search")}
-        bgColor="#242424"
-      />
-      <div className="sticky top-[40px] z-[100] bg-[#242424] border-b border-[#333] pb-4 px-5">
-        {/* 카테고리 선택 */}
-        <div className="flex justify-around border-b border-white/0">
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => handleCategoryChange(cat.id)}
-              className={`flex-1 text-center py-3 transition-all select-none ${
-                selectedCategory === cat.id
-                  ? "border-b-2 border-white text-white font-semibold"
-                  : "text-gray-400"
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </div>
+    <div className="flex flex-col min-h-screen bg-[var(--bg-primary)]">
+      {/* 헤더 */}
+      <header className="sticky top-0 z-50 bg-[var(--bg-primary)] h-[60px] flex items-center justify-center">
+        <button
+          className="absolute left-4 w-6 h-6"
+          onClick={() => navigate(-1)}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M15 18L9 12L15 6"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+        <h1 className="text-lg font-semibold text-white">공개예정</h1>
+        <button
+          className="absolute right-4 w-5 h-5"
+          onClick={() => navigate("/explore")}
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path
+              d="M9.16667 15.8333C12.8486 15.8333 15.8333 12.8486 15.8333 9.16667C15.8333 5.48477 12.8486 2.5 9.16667 2.5C5.48477 2.5 2.5 5.48477 2.5 9.16667C2.5 12.8486 5.48477 15.8333 9.16667 15.8333Z"
+              stroke="white"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M17.5 17.5L13.875 13.875"
+              stroke="white"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      </header>
 
-        {/* 플랫폼 */}
-        <div className="px-5 pb-4 mt-2">
-          <span className="block text-white text-sm font-semibold mb-3">
-            플랫폼
-          </span>
-          <div className="flex gap-4 overflow-x-auto no-scrollbar">
-            {availablePlatforms.map((platform) => (
-              <div
-                key={platform.id}
-                className={`flex flex-col items-center gap-1 cursor-pointer shrink-0
-              ${selectedPlatforms.has(platform.id) ? "text-[#646cff] font-semibold" : ""}`}
-                onClick={() => togglePlatform(platform.id)}
-              >
-                <div
-                  className={`w-15 h-15 flex items-center justify-center rounded-full border-2 text-2xl transition
-              ${
-                selectedPlatforms.has(platform.id)
-                  ? "border-[#646cff] bg-[#646cff22]"
-                  : "border-[#444] bg-[#2a2a2a]"
-              }`}
-                >
-                  {platform.icon}
-                </div>
-                <span
-                  className={`text-xs transition
-                ${selectedPlatforms.has(platform.id) ? "text-[#646cff]" : "text-[#888]"}`}
-                >
-                  {platform.name}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* 카테고리 탭 */}
+      <nav className="flex w-full border-b border-[var(--grey-700)]">
+        {categories.map((cat) => (
+          <button
+            key={cat.id}
+            onClick={() => handleCategoryChange(cat.id)}
+            className={`flex-1 py-2 text-center transition-all ${
+              selectedCategory === cat.id
+                ? "border-b-2 border-white text-white font-semibold"
+                : "text-[var(--grey-300)]"
+            }`}
+          >
+            {cat.label}
+          </button>
+        ))}
+      </nav>
 
-        {/* 신작 / 예정 탭 */}
-        <div className="flex gap-2 px-5">
+      {/* 스트리밍 서비스 필터 */}
+      <div className="flex gap-3 px-4 py-3 overflow-x-auto scrollbar-hide">
+        {streamingServices.map((service) => (
           <button
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition
-          ${
-            releaseType === "released"
-              ? "bg-[#646cff] text-white"
-              : "bg-[#2a2a2a] text-[#888]"
-          }`}
-            onClick={() => setReleaseType("released")}
+            key={service.id}
+            onClick={() => setSelectedService(service.id)}
+            className={`flex-shrink-0 w-[42px] h-[42px] rounded-full flex items-center justify-center text-xs transition-all ${
+              selectedService === service.id
+                ? "bg-[var(--purple)] text-white border-2 border-[var(--purple)]"
+                : "bg-[var(--bg-secondary)] border border-[var(--grey-700)] text-[var(--grey-100)]"
+            }`}
           >
-            신작
+            {service.icon || service.name}
           </button>
-          <button
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition
-          ${
-            releaseType === "upcoming"
-              ? "bg-[#646cff] text-white"
-              : "bg-[#2a2a2a] text-[#888]"
-          }`}
-            onClick={() => setReleaseType("upcoming")}
-          >
-            공개 예정
-          </button>
-        </div>
+        ))}
       </div>
 
-      {/* 콘텐츠 영역 */}
-      <div className="flex-1 overflow-y-auto p-5">
+      {/* 콘텐츠 */}
+      <div className="flex-1 px-4 pb-24">
         {isLoading ? (
-          <div className="text-center text-[#888] py-20 text-sm">
-            로딩 중...
+          <div className="flex items-center justify-center py-12">
+            <div className="w-8 h-8 border-2 border-[var(--purple)] border-t-transparent rounded-full animate-spin"></div>
           </div>
         ) : error ? (
-          <div className="text-center text-[#888] py-20 text-sm">
+          <div className="text-center text-[var(--grey-300)] py-12">
             데이터를 불러올 수 없습니다.
           </div>
         ) : works.length > 0 ? (
-          <div className="flex flex-col gap-3">
-            {works.map((work) => (
-              <div
-                key={work.id}
-                className="flex items-center gap-4 p-3 bg-[#2a2a2a] rounded-lg cursor-pointer transition hover:bg-[#333] hover:translate-x-1"
-                onClick={() => handleItemClick(work.id)}
-              >
-                <div
-                  className={`min-w-[80px] text-center text-sm font-semibold
-                ${releaseType === "upcoming" ? "text-[#fbbf24]" : "text-[#646cff]"}`}
-                >
-                  {work.releaseDate ? formatDate(work.releaseDate) : "-"}
-                </div>
-
-                <img
-                  src={work.thumbnail || "https://via.placeholder.com/60x80"}
-                  className="w-[60px] h-[80px] rounded-md object-cover bg-[#444] shrink-0"
-                  alt={work.title}
-                />
-
-                <div className="flex-1 text-white text-base font-medium overflow-hidden text-ellipsis whitespace-nowrap">
-                  {work.title}
-                </div>
-
-                {releaseType === "upcoming" && (
-                  <span className="px-3 py-1 rounded-xl text-xs font-semibold bg-[#646cff22] text-[#646cff]">
-                    예정
+          <div className="flex flex-col gap-6">
+            {Object.entries(groupedByDate).map(([date, dateWorks]) => (
+              <div key={date}>
+                {/* 날짜 헤더 */}
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-lg font-semibold text-white">{date}</span>
+                  <span className="text-sm text-[var(--grey-300)]">
+                    {dateWorks.length}개
                   </span>
-                )}
+                </div>
+                
+                {/* 작품 리스트 */}
+                <div className="flex flex-col gap-2">
+                  {dateWorks.map((work) => (
+                    <div
+                      key={work.id}
+                      className="flex items-center gap-3 py-2 cursor-pointer"
+                      onClick={() => handleItemClick(work.id)}
+                    >
+                      {/* 썸네일 */}
+                      <div className="w-[60px] h-[84px] bg-[var(--bg-secondary)] rounded overflow-hidden flex-shrink-0">
+                        <img
+                          src={work.thumbnail || "https://via.placeholder.com/60x84"}
+                          alt={work.title}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = "https://via.placeholder.com/60x84?text=No";
+                          }}
+                        />
+                      </div>
+                      
+                      {/* 정보 */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base text-white truncate">{work.title}</h3>
+                        <p className="text-sm text-[var(--grey-300)]">
+                          {work.domain || selectedCategory}
+                        </p>
+                        <div className="flex items-center gap-0.5 mt-1">
+                          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                            <path
+                              d="M7 1L8.545 4.635L12.5 5.027L9.5 7.772L10.09 11.7L7 9.985L3.91 11.7L4.5 7.772L1.5 5.027L5.455 4.635L7 1Z"
+                              fill="var(--purple)"
+                            />
+                          </svg>
+                          <span className="text-sm text-[var(--purple)]">
+                            {(work.score || 0).toFixed(1)}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* 알림 버튼 */}
+                      <button className="w-8 h-8 flex items-center justify-center">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                          <path
+                            d="M15 6.667C15 5.34 14.473 4.067 13.535 3.13C12.598 2.192 11.326 1.667 10 1.667C8.674 1.667 7.402 2.192 6.464 3.13C5.527 4.067 5 5.34 5 6.667C5 12.5 2.5 14.167 2.5 14.167H17.5C17.5 14.167 15 12.5 15 6.667Z"
+                            stroke="var(--grey-400)"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M11.442 17.5C11.288 17.766 11.065 17.986 10.797 18.138C10.529 18.29 10.227 18.369 9.92 18.369C9.612 18.369 9.31 18.29 9.042 18.138C8.774 17.986 8.552 17.766 8.398 17.5"
+                            stroke="var(--grey-400)"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-center text-[#888] py-20 text-sm">
-            데이터가 없습니다.
+          <div className="text-center text-[var(--grey-300)] py-12">
+            공개 예정 작품이 없습니다.
           </div>
         )}
       </div>

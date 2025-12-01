@@ -9,106 +9,112 @@ export default function MyLikesPage() {
 
   if (isLoading) {
     return (
-      <div className="p-5 max-w-[1200px] mx-auto text-white">로딩 중...</div>
+      <div className="min-h-screen bg-[var(--blackbackground-primary)] flex items-center justify-center text-[var(--greygrey-300text-secondary)]">
+        로딩 중...
+      </div>
     );
   }
 
   return (
-    <div className="p-5 max-w-[1200px] mx-auto">
-      {/* HEADER */}
-      <div className="flex items-center gap-4 mb-6 pb-4 border-b-2 border-[#333]">
-        <button
-          onClick={() => navigate(-1)}
-          className="px-4 py-2 bg-transparent text-gray-400 border border-gray-600 rounded-md text-sm hover:border-gray-500 hover:text-gray-300 transition"
-        >
-          ← 뒤로
+    <div className="min-h-screen bg-[var(--blackbackground-primary)] pb-20">
+      {/* 헤더 */}
+      <header className="h-[60px] flex items-center px-4">
+        <button onClick={() => navigate(-1)} className="w-6 h-6">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M15 18L9 12L15 6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         </button>
-        <h1 className="text-2xl font-bold text-white m-0">
+        <h1 className="flex-1 text-center text-[18px] font-semibold text-white mr-6">
           좋아요 표시한 작품
         </h1>
-      </div>
+      </header>
 
-      {/* CONTENT */}
-      {data && data.content.length > 0 ? (
-        <>
-          {/* GRID */}
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-5">
-            {data.content.map((work: any) => (
-              <div
-                key={work.id}
-                className="cursor-pointer transition-transform hover:-translate-y-1"
-                onClick={() => navigate(`/work/${work.id}`)}
-              >
-                <div className="w-full aspect-[2/3] bg-[#333] rounded-lg overflow-hidden mb-2">
-                  {work.thumbnail ? (
-                    <img
-                      src={work.thumbnail}
-                      alt={work.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-5xl">
-                      🎬
-                    </div>
-                  )}
+      {/* 컨텐츠 */}
+      <div className="px-4">
+        {data && data.content.length > 0 ? (
+          <>
+            {/* 그리드 */}
+            <div className="grid grid-cols-3 gap-2">
+              {data.content.map((work: any) => (
+                <div
+                  key={work.id}
+                  className="cursor-pointer"
+                  onClick={() => navigate(`/work/${work.id}`)}
+                >
+                  <div className="w-full aspect-[105/147] bg-[var(--greygrey-900background-secondary)] rounded overflow-hidden mb-1">
+                    {work.thumbnail ? (
+                      <img
+                        src={work.thumbnail}
+                        alt={work.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-3xl">
+                        🎬
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-0.5">
+                    <h3 className="text-[14px] font-semibold text-white line-clamp-1">
+                      {work.title}
+                    </h3>
+                    {work.domain && (
+                      <div className="text-[12px] text-[var(--greygrey-200text-primary)]">{work.domain}</div>
+                    )}
+                    {work.score && (
+                      <div className="flex items-center gap-0.5">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                          <path d="M7 1L8.854 4.604L13 5.182L10 8.012L10.708 12L7 10.104L3.292 12L4 8.012L1 5.182L5.146 4.604L7 1Z" fill="#855BFF"/>
+                        </svg>
+                        <span className="text-[12px] text-[#855BFF]">{work.score.toFixed(1)}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-
-                <div className="flex flex-col gap-1">
-                  <h3 className="text-sm font-semibold text-white line-clamp-2 m-0">
-                    {work.title}
-                  </h3>
-                  {work.domain && (
-                    <div className="text-xs text-gray-400">{work.domain}</div>
-                  )}
-                  {work.score && (
-                    <div className="text-xs text-yellow-400">
-                      ⭐ {work.score.toFixed(1)}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* PAGINATION */}
-          {data.totalPages > 1 && (
-            <div className="flex justify-center items-center gap-4 mt-8 pt-6 border-t border-[#333]">
-              <button
-                disabled={page === 0}
-                onClick={() => setPage((p) => p - 1)}
-                className="px-4 py-2 bg-[#646cff] text-white rounded-md text-sm font-semibold disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed hover:bg-[#535bf2] transition"
-              >
-                이전
-              </button>
-
-              <span className="text-gray-300 text-sm font-semibold">
-                {page + 1} / {data.totalPages}
-              </span>
-
-              <button
-                disabled={page >= data.totalPages - 1}
-                onClick={() => setPage((p) => p + 1)}
-                className="px-4 py-2 bg-[#646cff] text-white rounded-md text-sm font-semibold disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed hover:bg-[#535bf2] transition"
-              >
-                다음
-              </button>
+              ))}
             </div>
-          )}
-        </>
-      ) : (
-        /* EMPTY STATE */
-        <div className="text-center py-16 px-5">
-          <p className="text-gray-400 text-lg mb-5">
-            아직 좋아요 표시한 작품이 없습니다.
-          </p>
-          <button
-            onClick={() => navigate("/explore")}
-            className="px-6 py-3 bg-gradient-to-r from-indigo-400 to-purple-600 text-white rounded-lg text-lg font-semibold transition hover:-translate-y-1 hover:shadow-[0_4px_12px_rgba(102,126,234,0.4)]"
-          >
-            작품 둘러보기
-          </button>
-        </div>
-      )}
+
+            {/* 페이지네이션 */}
+            {data.totalPages > 1 && (
+              <div className="flex justify-center items-center gap-4 mt-6 pt-4 border-t border-[var(--greygrey-700)]">
+                <button
+                  disabled={page === 0}
+                  onClick={() => setPage((p) => p - 1)}
+                  className="px-4 py-2 bg-[#855BFF] text-white rounded text-[14px] font-semibold disabled:bg-[var(--greygrey-700)] disabled:text-[var(--greygrey-400icon)] disabled:cursor-not-allowed"
+                >
+                  이전
+                </button>
+
+                <span className="text-[14px] text-white">
+                  {page + 1} / {data.totalPages}
+                </span>
+
+                <button
+                  disabled={page >= data.totalPages - 1}
+                  onClick={() => setPage((p) => p + 1)}
+                  className="px-4 py-2 bg-[#855BFF] text-white rounded text-[14px] font-semibold disabled:bg-[var(--greygrey-700)] disabled:text-[var(--greygrey-400icon)] disabled:cursor-not-allowed"
+                >
+                  다음
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
+          /* 빈 상태 */
+          <div className="flex flex-col items-center justify-center py-16">
+            <p className="text-[16px] text-white mb-4">
+              아직 좋아요 표시한 작품이 없습니다.
+            </p>
+            <button
+              onClick={() => navigate("/explore")}
+              className="px-4 py-2 bg-[#855BFF] text-white rounded text-[14px]"
+            >
+              작품 둘러보기
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
