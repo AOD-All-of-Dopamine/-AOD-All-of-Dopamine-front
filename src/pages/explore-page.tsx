@@ -2,10 +2,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useWorks, useGenres } from "../hooks/useWorks";
 
-type Category = "av" | "game" | "webtoon" | "webnovel";
+type Category = "movie" | "tv" | "game" | "webtoon" | "webnovel";
 
 const categories: { id: Category; label: string; domain: string }[] = [
-  { id: "av", label: "AV", domain: "AV" },
+  { id: "movie", label: "영화", domain: "MOVIE" },
+  { id: "tv", label: "TV", domain: "TV" },
   { id: "game", label: "게임", domain: "GAME" },
   { id: "webtoon", label: "웹툰", domain: "WEBTOON" },
   { id: "webnovel", label: "웹소설", domain: "WEBNOVEL" },
@@ -20,13 +21,13 @@ const sortOptions = [
 
 export default function ExplorePage() {
   const navigate = useNavigate();
-  const [selectedCategory, setSelectedCategory] = useState<Category>("game");
+  const [selectedCategory, setSelectedCategory] = useState<Category>("movie");
   const [selectedGenres, setSelectedGenres] = useState<Set<string>>(new Set());
   const [selectedSort, setSelectedSort] = useState(sortOptions[0]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [page, setPage] = useState(0);
 
-  const currentDomain = categories.find(c => c.id === selectedCategory)?.domain || "GAME";
+  const currentDomain = categories.find(c => c.id === selectedCategory)?.domain || "MOVIE";
 
   const { data: genresData } = useGenres(currentDomain);
   const availableGenres = genresData || [];
