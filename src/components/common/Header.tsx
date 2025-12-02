@@ -61,7 +61,7 @@ const Header = ({
 
   return (
     <header
-      className={`fixed top-0 w-full z-50 h-[50px] flex items-center justify-between px-4`}
+      className={`fixed max-w-2xl right-0 left-0 mx-auto top-0 w-full z-50 h-[50px] flex items-center justify-between px-4`}
       style={{ backgroundColor: bgColor || "#F8F8F8" }}
     >
       <div className="flex items-center justify-start w-1/4">
