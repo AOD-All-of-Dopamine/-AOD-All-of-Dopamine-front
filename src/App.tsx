@@ -26,6 +26,7 @@ const publicRoutes: RouteObject[] = [
       { path: "home", element: <HomePage /> },
       { path: "login", element: <LoginPage /> },
       { path: "signup", element: <SignupPage /> },
+      { path: "explore", element: <ExplorePage /> },
       { path: "ranking", element: <RankingPage /> },
       { path: "internal/ranking", element: <InternalRankingPage /> },
       { path: "new", element: <NewReleasesPage /> },
