@@ -16,6 +16,7 @@ import SignupPage from "./pages/signup-page";
 import MyReviewsPage from "./pages/my-reviews-page";
 import MyBookmarksPage from "./pages/my-bookmarks-page";
 import MyLikesPage from "./pages/my-likes-page";
+import InternalRankingPage from "./pages/internal-ranking-page";
 
 const publicRoutes: RouteObject[] = [
   {
@@ -25,9 +26,10 @@ const publicRoutes: RouteObject[] = [
       { path: "home", element: <HomePage /> },
       { path: "login", element: <LoginPage /> },
       { path: "signup", element: <SignupPage /> },
-      { path: "explore", element: <ExplorePage /> },
       { path: "ranking", element: <RankingPage /> },
+      { path: "internal/ranking", element: <InternalRankingPage /> },
       { path: "new", element: <NewReleasesPage /> },
+      { path: "profile", element: <ProfilePage /> },
       { path: "profile", element: <ProfilePage /> },
       { path: "profile/reviews", element: <MyReviewsPage /> },
       { path: "profile/bookmarks", element: <MyBookmarksPage /> },
