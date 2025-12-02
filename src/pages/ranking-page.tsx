@@ -15,6 +15,7 @@ interface RankingItem {
   score: number;
   change?: "up" | "down" | "new" | number;
   watchProviders?: string[];
+  platform?: string;
 }
 
 const categories: { id: Category; label: string }[] = [
@@ -55,13 +56,37 @@ const OTT_PLATFORMS = [
   "왓챠",
   "티빙",
   "쿠팡플레이",
+  "애플TV",
 ];
 
+const WEBNOVEL_PLATFORMS = [
+  "전체",
+  "네이버시리즈",
+  "카카오페이지",
+];
+
+// 한글-영어 OTT 플랫폼 매핑 (백엔드 데이터 형식에 맞춤)
+const OTT_NAME_MAPPING: Record<string, string> = {
+  "넷플릭스": "Netflix",
+  "웨이브": "wavve",
+  "디즈니+": "Disney Plus",
+  "왓챠": "Watcha",
+  "티빙": "TVING",
+  "쿠팡플레이": "Coupang Play",
+  "애플TV": "Apple TV",
+};
+
+// 웹소설 플랫폼 매핑
+const WEBNOVEL_PLATFORM_MAPPING: Record<string, string> = {
+  "네이버시리즈": "NaverSeries",
+  "카카오페이지": "KakaoPage",
+};
 export default function RankingPage() {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<Category>("game");
   const [selectedPeriod, setSelectedPeriod] = useState<Period>("daily");
   const [selectedOTT, setSelectedOTT] = useState<string>("전체");
+  const [selectedWebnovel, setSelectedWebnovel] = useState<string>("전체");
   const [rankings, setRankings] = useState<RankingItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -80,13 +105,27 @@ export default function RankingPage() {
           score: 0,
           change: "new",
           watchProviders: item.watchProviders,
+          platform: item.platform,
         }));
 
         // OTT 필터링 (TMDB만 해당)
         if (selectedOTT !== "전체" && (selectedCategory === "movie" || selectedCategory === "tv")) {
-          mappedData = mappedData.filter(
-            (item) => item.watchProviders && item.watchProviders.includes(selectedOTT)
-          );
+          const englishOTTName = OTT_NAME_MAPPING[selectedOTT];
+          if (englishOTTName) {
+            mappedData = mappedData.filter(
+              (item) => item.watchProviders && item.watchProviders.includes(englishOTTName)
+            );
+          }
+        }
+
+        // 웹소설 플랫폼 필터링
+        if (selectedWebnovel !== "전체" && selectedCategory === "webnovel") {
+          const platformName = WEBNOVEL_PLATFORM_MAPPING[selectedWebnovel];
+          if (platformName) {
+            mappedData = mappedData.filter(
+              (item) => item.platform === platformName
+            );
+          }
         }
 
         setRankings(mappedData);
@@ -99,7 +138,7 @@ export default function RankingPage() {
     };
 
     fetchRankings();
-  }, [selectedCategory, selectedOTT]);
+  }, [selectedCategory, selectedOTT, selectedWebnovel]);
 
   const handleCardClick = (id: string) => {
     if (id.startsWith("no-content-")) {
@@ -188,6 +227,25 @@ export default function RankingPage() {
                 }`}
               >
                 {ott}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* 웹소설 플랫폼 필터 */}
+        {selectedCategory === "webnovel" && (
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide py-3">
+            {WEBNOVEL_PLATFORMS.map((platform) => (
+              <button
+                key={platform}
+                onClick={() => setSelectedWebnovel(platform)}
+                className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
+                  selectedWebnovel === platform
+                    ? "bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white"
+                    : "text-gray-400 border border-[#444]"
+                }`}
+              >
+                {platform}
               </button>
             ))}
           </div>
