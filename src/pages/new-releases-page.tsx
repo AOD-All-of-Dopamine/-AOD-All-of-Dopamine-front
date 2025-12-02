@@ -132,26 +132,27 @@ export default function NewReleasesPage() {
         onRightClick={() => navigate("/search")}
         bgColor="#242424"
       />
-      <div className="sticky top-[40px] z-[100] bg-[#242424] border-b border-[#333] pb-4 px-5">
-        {/* 카테고리 선택 */}
-        <div className="flex justify-around border-b border-white/0">
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => handleCategoryChange(cat.id)}
-              className={`flex-1 text-center py-3 transition-all select-none ${
-                selectedCategory === cat.id
-                  ? "border-b-2 border-white text-white font-semibold"
-                  : "text-gray-400"
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
+      <div className="w-full max-w-2xl mx-auto px-5">
+        <div className="sticky top-[40px] z-[100] bg-[#242424] border-b border-[#333] pt-3">
+          {/* 카테고리 선택 */}
+          <div className="flex justify-around border-b border-white/0">
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => handleCategoryChange(cat.id)}
+                className={`flex-1 text-center py-3 transition-all select-none ${
+                  selectedCategory === cat.id
+                    ? "border-b-2 border-white text-white font-semibold"
+                    : "text-gray-400"
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
         </div>
-
         {/* 플랫폼 */}
-        <div className="px-5 pb-4 mt-2">
+        <div className="pb-4 mt-15">
           <span className="block text-white text-sm font-semibold mb-3">
             플랫폼
           </span>
@@ -182,83 +183,83 @@ export default function NewReleasesPage() {
               </div>
             ))}
           </div>
-        </div>
 
-        {/* 신작 / 예정 탭 */}
-        <div className="flex gap-2 px-5">
-          <button
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition
+          {/* 신작 / 예정 탭 */}
+          <div className="flex gap-2">
+            <button
+              className={`flex-1 py-2 rounded-lg text-sm font-medium transition
           ${
             releaseType === "released"
               ? "bg-[#646cff] text-white"
               : "bg-[#2a2a2a] text-[#888]"
           }`}
-            onClick={() => setReleaseType("released")}
-          >
-            신작
-          </button>
-          <button
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition
+              onClick={() => setReleaseType("released")}
+            >
+              신작
+            </button>
+            <button
+              className={`flex-1 py-2 rounded-lg text-sm font-medium transition
           ${
             releaseType === "upcoming"
               ? "bg-[#646cff] text-white"
               : "bg-[#2a2a2a] text-[#888]"
           }`}
-            onClick={() => setReleaseType("upcoming")}
-          >
-            공개 예정
-          </button>
+              onClick={() => setReleaseType("upcoming")}
+            >
+              공개 예정
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* 콘텐츠 영역 */}
-      <div className="flex-1 overflow-y-auto p-5">
-        {isLoading ? (
-          <div className="text-center text-[#888] py-20 text-sm">
-            로딩 중...
-          </div>
-        ) : error ? (
-          <div className="text-center text-[#888] py-20 text-sm">
-            데이터를 불러올 수 없습니다.
-          </div>
-        ) : works.length > 0 ? (
-          <div className="flex flex-col gap-3">
-            {works.map((work) => (
-              <div
-                key={work.id}
-                className="flex items-center gap-4 p-3 bg-[#2a2a2a] rounded-lg cursor-pointer transition hover:bg-[#333] hover:translate-x-1"
-                onClick={() => handleItemClick(work.id)}
-              >
+        {/* 콘텐츠 영역 */}
+        <div className="flex-1 overflow-y-auto p-5">
+          {isLoading ? (
+            <div className="text-center text-[#888] py-20 text-sm">
+              로딩 중...
+            </div>
+          ) : error ? (
+            <div className="text-center text-[#888] py-20 text-sm">
+              데이터를 불러올 수 없습니다.
+            </div>
+          ) : works.length > 0 ? (
+            <div className="flex flex-col gap-3">
+              {works.map((work) => (
                 <div
-                  className={`min-w-[80px] text-center text-sm font-semibold
-                ${releaseType === "upcoming" ? "text-[#fbbf24]" : "text-[#646cff]"}`}
+                  key={work.id}
+                  className="flex items-center gap-4 p-3 bg-[#2a2a2a] rounded-lg cursor-pointer transition hover:bg-[#333] hover:translate-x-1"
+                  onClick={() => handleItemClick(work.id)}
                 >
-                  {work.releaseDate ? formatDate(work.releaseDate) : "-"}
+                  <div
+                    className={`min-w-[80px] text-center text-sm font-semibold
+                ${releaseType === "upcoming" ? "text-[#fbbf24]" : "text-[#646cff]"}`}
+                  >
+                    {work.releaseDate ? formatDate(work.releaseDate) : "-"}
+                  </div>
+
+                  <img
+                    src={work.thumbnail || "https://via.placeholder.com/60x80"}
+                    className="w-[60px] h-[80px] rounded-md object-cover bg-[#444] shrink-0"
+                    alt={work.title}
+                  />
+
+                  <div className="flex-1 text-white text-base font-medium overflow-hidden text-ellipsis whitespace-nowrap">
+                    {work.title}
+                  </div>
+
+                  {releaseType === "upcoming" && (
+                    <span className="px-3 py-1 rounded-xl text-xs font-semibold bg-[#646cff22] text-[#646cff]">
+                      예정
+                    </span>
+                  )}
                 </div>
-
-                <img
-                  src={work.thumbnail || "https://via.placeholder.com/60x80"}
-                  className="w-[60px] h-[80px] rounded-md object-cover bg-[#444] shrink-0"
-                  alt={work.title}
-                />
-
-                <div className="flex-1 text-white text-base font-medium overflow-hidden text-ellipsis whitespace-nowrap">
-                  {work.title}
-                </div>
-
-                {releaseType === "upcoming" && (
-                  <span className="px-3 py-1 rounded-xl text-xs font-semibold bg-[#646cff22] text-[#646cff]">
-                    예정
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center text-[#888] py-20 text-sm">
-            데이터가 없습니다.
-          </div>
-        )}
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-[#888] py-20 text-sm">
+              데이터가 없습니다.
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

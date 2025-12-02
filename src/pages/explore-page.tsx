@@ -90,118 +90,120 @@ export default function ExplorePage() {
         onRightClick={() => navigate("/search")}
         bgColor="#242424"
       />
-      <div className="sticky top-[40px] z-50 bg-[#242424] border-b border-[#333] pt-3 px-5">
-        {/* 카테고리 탭 */}
-        <div className="flex justify-around border-b border-white/0">
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => handleCategoryChange(cat.id)}
-              className={`flex-1 text-center py-3 transition-all select-none ${
-                selectedCategory === cat.id
-                  ? "border-b-2 border-white text-white font-semibold"
-                  : "text-gray-400"
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 필터 & 컨텐츠 영역 */}
-      <div className="flex-1 overflow-y-auto p-5 mt-[40px]">
-        {/* 플랫폼 필터 */}
-        <div className="mb-4">
-          <span className="text-sm font-semibold text-white mb-2 block">
-            플랫폼
-          </span>
-          <div className="flex gap-4 overflow-x-auto scrollbar-hide">
-            {availablePlatforms.map((platform) => (
-              <div
-                key={platform.id}
-                onClick={() => togglePlatform(platform.id)}
-                className="flex flex-col items-center gap-1 cursor-pointer flex-shrink-0"
-              >
-                <div
-                  className={`w-14 h-14 rounded-full border-2 flex items-center justify-center text-xl transition-all ${
-                    selectedPlatforms.has(platform.id)
-                      ? "border-[#646cff] bg-[#646cff22]"
-                      : "border-gray-700 bg-[#2a2a2a]"
-                  }`}
-                >
-                  {platform.icon}
-                </div>
-                <span
-                  className={`text-xs transition-colors ${
-                    selectedPlatforms.has(platform.id)
-                      ? "text-[#646cff] font-semibold"
-                      : "text-gray-500"
-                  }`}
-                >
-                  {platform.name}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 장르 필터 */}
-        <div className="mb-4">
-          <span className="text-sm font-semibold text-white mb-2 block">
-            장르
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {availableGenres.map((genre) => (
+      <div className="w-full max-w-2xl mx-auto px-5">
+        <div className="sticky top-[40px] z-50 bg-[#242424] border-b border-[#333] pt-3">
+          {/* 카테고리 탭 */}
+          <div className="flex justify-around border-b border-white/0">
+            {categories.map((cat) => (
               <button
-                key={genre}
-                onClick={() => toggleGenre(genre)}
-                className={`px-4 py-1 rounded-full text-xs font-medium border transition-all ${
-                  selectedGenres.has(genre)
-                    ? "border-[#646cff] bg-[#646cff22] text-[#646cff]"
-                    : "border-gray-700 bg-[#2a2a2a] text-gray-500 hover:border-gray-500"
+                key={cat.id}
+                onClick={() => handleCategoryChange(cat.id)}
+                className={`flex-1 text-center py-3 transition-all select-none ${
+                  selectedCategory === cat.id
+                    ? "border-b-2 border-white text-white font-semibold"
+                    : "text-gray-400"
                 }`}
               >
-                {genre}
+                {cat.label}
               </button>
             ))}
           </div>
         </div>
 
-        {/* 작품 목록 */}
-        {isLoading ? (
-          <div className="text-center text-gray-500 py-20">로딩 중...</div>
-        ) : data && data.content.length > 0 ? (
-          <>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-5">
-              {data.content.map((work) => (
+        {/* 필터 & 컨텐츠 영역 */}
+        <div className="flex-1 overflow-y-auto py-5 mt-[40px]">
+          {/* 플랫폼 필터 */}
+          <div className="mb-4">
+            <span className="text-sm font-semibold text-white mb-2 block">
+              플랫폼
+            </span>
+            <div className="flex gap-4 overflow-x-auto scrollbar-hide">
+              {availablePlatforms.map((platform) => (
                 <div
-                  key={work.id}
-                  onClick={() => handleCardClick(String(work.id))}
-                  className="cursor-pointer transition-transform hover:-translate-y-1"
+                  key={platform.id}
+                  onClick={() => togglePlatform(platform.id)}
+                  className="flex flex-col items-center gap-1 cursor-pointer flex-shrink-0"
                 >
-                  <img
-                    src={
-                      work.thumbnail || "https://via.placeholder.com/160x220"
-                    }
-                    alt={work.title}
-                    className="w-full h-[220px] rounded-lg object-cover mb-2 bg-gray-700"
-                  />
-                  <div className="text-white text-sm font-medium line-clamp-2">
-                    {work.title}
+                  <div
+                    className={`w-14 h-14 rounded-full border-2 flex items-center justify-center text-xl transition-all ${
+                      selectedPlatforms.has(platform.id)
+                        ? "border-[#646cff] bg-[#646cff22]"
+                        : "border-gray-700 bg-[#2a2a2a]"
+                    }`}
+                  >
+                    {platform.icon}
                   </div>
-                  <div className="text-yellow-400 text-xs font-semibold">
-                    ⭐ {(work.score || 0).toFixed(1)}
-                  </div>
+                  <span
+                    className={`text-xs transition-colors ${
+                      selectedPlatforms.has(platform.id)
+                        ? "text-[#646cff] font-semibold"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    {platform.name}
+                  </span>
                 </div>
               ))}
             </div>
-          </>
-        ) : (
-          <div className="text-center text-gray-500 py-20">
-            선택한 필터에 맞는 작품이 없습니다.
           </div>
-        )}
+
+          {/* 장르 필터 */}
+          <div className="mb-4">
+            <span className="text-sm font-semibold text-white mb-2 block">
+              장르
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {availableGenres.map((genre) => (
+                <button
+                  key={genre}
+                  onClick={() => toggleGenre(genre)}
+                  className={`px-4 py-1 rounded-full text-xs font-medium border transition-all ${
+                    selectedGenres.has(genre)
+                      ? "border-[#646cff] bg-[#646cff22] text-[#646cff]"
+                      : "border-gray-700 bg-[#2a2a2a] text-gray-500 hover:border-gray-500"
+                  }`}
+                >
+                  {genre}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 작품 목록 */}
+          {isLoading ? (
+            <div className="text-center text-gray-500 py-20">로딩 중...</div>
+          ) : data && data.content.length > 0 ? (
+            <>
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-5">
+                {data.content.map((work) => (
+                  <div
+                    key={work.id}
+                    onClick={() => handleCardClick(String(work.id))}
+                    className="cursor-pointer transition-transform hover:-translate-y-1"
+                  >
+                    <img
+                      src={
+                        work.thumbnail || "https://via.placeholder.com/160x220"
+                      }
+                      alt={work.title}
+                      className="w-full h-[220px] rounded-lg object-cover mb-2 bg-gray-700"
+                    />
+                    <div className="text-white text-sm font-medium line-clamp-2">
+                      {work.title}
+                    </div>
+                    <div className="text-yellow-400 text-xs font-semibold">
+                      ⭐ {(work.score || 0).toFixed(1)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="text-center text-gray-500 py-20">
+              선택한 필터에 맞는 작품이 없습니다.
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

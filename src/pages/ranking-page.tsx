@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { rankingApi, ExternalRanking } from "../api/rankingApi";
 import Header from "../components/common/Header";
+import PurpleStar from "../assets/purple-star.svg";
 
 type Category = "movie" | "tv" | "game" | "webtoon" | "webnovel";
 type Period = "daily" | "weekly" | "monthly";
@@ -107,99 +108,102 @@ export default function RankingPage() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#242424] text-white pt-[40px]">
+    <div className="flex flex-col h-screen">
       <Header
         title="랭킹"
         rightIcon="search"
         onRightClick={() => alert("검색 기능 준비 중")}
         bgColor="#242424"
       />
-      {/* 필터 섹션 */}
-      <div className="sticky top-0 z-50 bg-[#242424] border-b border-[#333] pb-2">
-        {/* 기간 탭 */}
-        <div className="flex justify-center px-5">
-          {periods.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => setSelectedPeriod(p.id)}
-              className={`flex-1 text-center py-4 cursor-pointer transition-all select-none ${
-                selectedPeriod === p.id
-                  ? "border-b-2 border-white text-white font-semibold"
-                  : "text-gray-400"
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
+      <div className="w-full max-w-2xl mx-auto px-5">
+        {/* 필터 섹션 */}
+        <div className="sticky top-[40px] z-50 bg-[#242424] border-b border-[#333] pt-3">
+          {/* 기간 탭 */}
+          <div className="flex justify-center">
+            {periods.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setSelectedPeriod(p.id)}
+                className={`flex-1 text-center py-3 cursor-pointer transition-all select-none ${
+                  selectedPeriod === p.id
+                    ? "border-b-2 border-white text-white font-semibold"
+                    : "text-gray-400"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* 카테고리 */}
-        <div className="flex gap-2 px-5 overflow-x-auto scrollbar-hide py-3">
+        <div className="flex gap-4 overflow-x-auto scrollbar-hide py-3 mt-10">
           {categories.map((cat) => (
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
               className={`flex-shrink-0 px-5 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
                 selectedCategory === cat.id
-                  ? "bg-[#646cff] text-white"
-                  : "bg-[#2a2a2a] text-gray-400"
+                  ? "bg-[#855BFF] text-white"
+                  : "text-[#D3D3D3] border border-[#333]"
               }`}
             >
               {cat.label}
             </button>
           ))}
         </div>
-      </div>
 
-      {/* 콘텐츠 */}
-      <div className="flex-1 overflow-y-auto p-5">
-        {loading ? (
-          <div className="text-center py-12 text-gray-400">Loading...</div>
-        ) : rankings.length > 0 ? (
-          <div className="flex flex-col gap-3">
-            {rankings.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center gap-4 p-3 bg-[#242424] rounded-md cursor-pointer transition-transform hover:bg-[#242424] hover:translate-x-1"
-                onClick={() => handleCardClick(item.id)}
-              >
+        {/* 콘텐츠 */}
+        <div className="flex-1 overflow-y-auto p-5">
+          {loading ? (
+            <div className="text-center py-12 text-gray-400">Loading...</div>
+          ) : rankings.length > 0 ? (
+            <div className="flex flex-col gap-3">
+              {rankings.map((item) => (
                 <div
-                  className={`w-10 text-center font-bold text-xl ${
-                    item.rank === 1
-                      ? "text-yellow-400"
-                      : item.rank === 2
-                        ? "text-gray-300"
-                        : item.rank === 3
-                          ? "text-[#cd7f32]"
-                          : "text-[#646cff]"
-                  }`}
+                  key={item.id}
+                  className="flex items-center gap-4 p-3 bg-[#242424] rounded-md cursor-pointer transition-transform hover:bg-[#242424] hover:translate-x-1"
+                  onClick={() => handleCardClick(item.id)}
                 >
-                  {item.rank}
-                </div>
-                <img
-                  src={item.thumbnail}
-                  alt={item.title}
-                  className="w-15 h-20 rounded-md object-cover bg-[#242424] flex-shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm mb-1 truncate">
-                    {item.title}
+                  <div
+                    className={`w-10 text-center font-bold text-xl ${
+                      item.rank === 1
+                        ? "text-yellow-400"
+                        : item.rank === 2
+                          ? "text-gray-300"
+                          : item.rank === 3
+                            ? "text-[#cd7f32]"
+                            : "text-[#646cff]"
+                    }`}
+                  >
+                    {item.rank}
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-gray-400">
-                    <span className="text-yellow-400 font-semibold">
-                      ⭐ {item.score.toFixed(1)}
-                    </span>
-                    {renderChange(item.change)}
+                  <img
+                    src={item.thumbnail}
+                    alt={item.title}
+                    className="w-15 h-20 rounded-md object-cover bg-[#242424] flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm mb-1 truncate">
+                      {item.title}
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-gray-400">
+                      <span className="font-[PretendardVariable] text-[#855BFF] font-semibold">
+                        <img src={PurpleStar} alt="평점" className="w-4 h-4" />
+                        {item.score.toFixed(1)}
+                      </span>
+                      {renderChange(item.change)}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center text-gray-400 py-12">
-            랭킹 데이터가 없습니다.
-          </div>
-        )}
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-gray-400 py-12">
+              랭킹 데이터가 없습니다.
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
