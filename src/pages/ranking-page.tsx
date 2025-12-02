@@ -5,7 +5,6 @@ import Header from "../components/common/Header";
 import PurpleStar from "../assets/purple-star.svg";
 
 type Category = "movie" | "tv" | "game" | "webtoon" | "webnovel";
-type Period = "daily" | "weekly" | "monthly";
 
 interface RankingItem {
   id: string;
@@ -24,12 +23,6 @@ const categories: { id: Category; label: string }[] = [
   { id: "game", label: "게임" },
   { id: "webtoon", label: "웹툰" },
   { id: "webnovel", label: "웹소설" },
-];
-
-const periods: { id: Period; label: string }[] = [
-  { id: "daily", label: "일간" },
-  { id: "weekly", label: "주간" },
-  { id: "monthly", label: "월간" },
 ];
 
 const PLATFORM_MAPPING: Record<Category, string> = {
@@ -84,7 +77,6 @@ const WEBNOVEL_PLATFORM_MAPPING: Record<string, string> = {
 export default function RankingPage() {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<Category>("game");
-  const [selectedPeriod, setSelectedPeriod] = useState<Period>("daily");
   const [selectedOTT, setSelectedOTT] = useState<string>("전체");
   const [selectedWebnovel, setSelectedWebnovel] = useState<string>("전체");
   const [rankings, setRankings] = useState<RankingItem[]>([]);
@@ -176,26 +168,6 @@ export default function RankingPage() {
         bgColor="#242424"
       />
       <div className="w-full max-w-2xl mx-auto px-5">
-        {/* 필터 섹션 */}
-        <div className="sticky top-[40px] z-50 bg-[#242424] border-b border-[#333] pt-3">
-          {/* 기간 탭 */}
-          <div className="flex justify-center">
-            {periods.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => setSelectedPeriod(p.id)}
-                className={`flex-1 text-center py-3 cursor-pointer transition-all select-none ${
-                  selectedPeriod === p.id
-                    ? "border-b-2 border-white text-white font-semibold"
-                    : "text-gray-400"
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* 카테고리 */}
         <div className="flex gap-4 overflow-x-auto scrollbar-hide py-3 mt-10">
           {categories.map((cat) => (
