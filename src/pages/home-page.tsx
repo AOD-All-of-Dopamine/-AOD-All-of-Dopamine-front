@@ -151,10 +151,6 @@ export default function HomePage() {
     navigate(`/explore?keyword=${encodeURIComponent(query)}`);
   };
 
-  const handleAIRecommendationClick = () => {
-    console.log("Navigate to AI recommendations");
-  };
-
   const handleRankingClick = () => {
     navigate("/ranking");
   };
