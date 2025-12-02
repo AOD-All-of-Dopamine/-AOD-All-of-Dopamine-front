@@ -16,7 +16,7 @@ function SearchBar({ onSearch }: SearchBarProps) {
   };
 
   return (
-    <div className="sticky top-0 z-50 w-screen bg-[#242424] px-4 py-4">
+    <div className="fixed max-w-2xl right-0 left-0 mx-auto top-0 w-full z-50 bg-[#242424] items-center justify-between px-4 py-4">
       <form onSubmit={handleSubmit}>
         <img
           src={SearchIcon}
@@ -35,8 +35,8 @@ function SearchBar({ onSearch }: SearchBarProps) {
             py-3
             rounded-lg
             bg-[#363539]
-            text-white
-            placeholder-gray-400
+            text-[#D3D3D3]
+            placeholder-[#D3D3D3]
             text-sm
             outline-none
             transition-colors

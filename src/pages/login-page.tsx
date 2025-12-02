@@ -28,7 +28,7 @@ export default function LoginPage() {
 
     try {
       await login(formData.username, formData.password);
-      navigate("/"); // 로그인 성공 시 홈으로
+      navigate("/profile"); // 로그인 성공 시 홈으로
     } catch (err: any) {
       setError(err.message || "로그인에 실패했습니다.");
     } finally {

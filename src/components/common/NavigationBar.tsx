@@ -11,15 +11,13 @@ const NavigationBar: React.FC = () => {
   const isActive = (pattern: string) =>
     !!matchPath({ path: pattern, end: false }, location.pathname);
   return (
-    <nav className="fixed bottom-0 left-0 w-full mx-auto right-0 bg-[#242424] flex justify-around items-center h-20 z-[1000]">
+    <nav className="fixed max-w-2xl bottom-0 left-0 w-full mx-auto right-0 bg-[#242424] flex justify-around items-center h-20 z-[1000]">
       <button
         onClick={() => navigate("/home")}
         className="flex flex-col items-center gap-1 text-xs"
       >
         <HomeIcon color={isActive("/home/*") ? "white" : "gray"} />
-        <span
-          className={isActive("/home/*") ? "text-white pr-1" : "text-gray-400"}
-        >
+        <span className={isActive("/home/*") ? "text-white" : "text-gray-400"}>
           홈
         </span>
       </button>
