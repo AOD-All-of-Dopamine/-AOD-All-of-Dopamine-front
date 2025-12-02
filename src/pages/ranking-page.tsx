@@ -14,6 +14,7 @@ interface RankingItem {
   thumbnail: string;
   score: number;
   change?: "up" | "down" | "new" | number;
+  watchProviders?: string[];
 }
 
 const categories: { id: Category; label: string }[] = [
@@ -46,10 +47,21 @@ const BACKEND_PLATFORM_MAPPING: Record<string, string> = {
   NAVER_SERIES: "NaverSeries",
 };
 
+const OTT_PLATFORMS = [
+  "전체",
+  "넷플릭스",
+  "웨이브",
+  "디즈니+",
+  "왓챠",
+  "티빙",
+  "쿠팡플레이",
+];
+
 export default function RankingPage() {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<Category>("game");
   const [selectedPeriod, setSelectedPeriod] = useState<Period>("daily");
+  const [selectedOTT, setSelectedOTT] = useState<string>("전체");
   const [rankings, setRankings] = useState<RankingItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -60,14 +72,23 @@ export default function RankingPage() {
         const frontendPlatform = PLATFORM_MAPPING[selectedCategory];
         const backendPlatform = BACKEND_PLATFORM_MAPPING[frontendPlatform];
         const data = await rankingApi.getRankingsByPlatform(backendPlatform);
-        const mappedData: RankingItem[] = data.map((item: ExternalRanking) => ({
+        let mappedData: RankingItem[] = data.map((item: ExternalRanking) => ({
           id: item.contentId ? String(item.contentId) : `no-content-${item.id}`,
           rank: item.ranking,
           title: item.title,
           thumbnail: item.thumbnailUrl || "https://via.placeholder.com/60x80",
           score: 0,
           change: "new",
+          watchProviders: item.watchProviders,
         }));
+
+        // OTT 필터링 (TMDB만 해당)
+        if (selectedOTT !== "전체" && (selectedCategory === "movie" || selectedCategory === "tv")) {
+          mappedData = mappedData.filter(
+            (item) => item.watchProviders && item.watchProviders.includes(selectedOTT)
+          );
+        }
+
         setRankings(mappedData);
       } catch (error) {
         console.error(error);
@@ -78,7 +99,7 @@ export default function RankingPage() {
     };
 
     fetchRankings();
-  }, [selectedCategory]);
+  }, [selectedCategory, selectedOTT]);
 
   const handleCardClick = (id: string) => {
     if (id.startsWith("no-content-")) {
@@ -152,6 +173,25 @@ export default function RankingPage() {
             </button>
           ))}
         </div>
+
+        {/* OTT 필터 (영화/TV만 표시) */}
+        {(selectedCategory === "movie" || selectedCategory === "tv") && (
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide py-3">
+            {OTT_PLATFORMS.map((ott) => (
+              <button
+                key={ott}
+                onClick={() => setSelectedOTT(ott)}
+                className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
+                  selectedOTT === ott
+                    ? "bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white"
+                    : "text-gray-400 border border-[#444]"
+                }`}
+              >
+                {ott}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* 콘텐츠 */}
         <div className="flex-1 overflow-y-auto p-5">
