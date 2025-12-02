@@ -15,6 +15,7 @@ export interface ExternalRanking {
   platform: string
   thumbnailUrl: string
   content?: ContentInfo           // 상세 정보 (선택적)
+  watchProviders?: string[]       // OTT 플랫폼 정보 (TMDB만 해당)
 }
 
 export const rankingApi = {
