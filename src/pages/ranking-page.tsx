@@ -5,7 +5,6 @@ import Header from "../components/common/Header";
 import PurpleStar from "../assets/purple-star.svg";
 
 type Category = "movie" | "tv" | "game" | "webtoon" | "webnovel";
-type Period = "daily" | "weekly" | "monthly";
 
 interface RankingItem {
   id: string;
@@ -14,6 +13,8 @@ interface RankingItem {
   thumbnail: string;
   score: number;
   change?: "up" | "down" | "new" | number;
+  watchProviders?: string[];
+  platform?: string;
 }
 
 const categories: { id: Category; label: string }[] = [
@@ -22,12 +23,6 @@ const categories: { id: Category; label: string }[] = [
   { id: "game", label: "게임" },
   { id: "webtoon", label: "웹툰" },
   { id: "webnovel", label: "웹소설" },
-];
-
-const periods: { id: Period; label: string }[] = [
-  { id: "daily", label: "일간" },
-  { id: "weekly", label: "주간" },
-  { id: "monthly", label: "월간" },
 ];
 
 const PLATFORM_MAPPING: Record<Category, string> = {
@@ -46,12 +41,79 @@ const BACKEND_PLATFORM_MAPPING: Record<string, string> = {
   NAVER_SERIES: "NaverSeries",
 };
 
+const OTT_PLATFORMS = [
+  "전체",
+  "넷플릭스",
+  "웨이브",
+  "디즈니+",
+  "왓챠",
+  "티빙",
+  "쿠팡플레이",
+  "애플TV",
+];
+
+const WEBNOVEL_PLATFORMS = [
+  "전체",
+  "네이버시리즈",
+  "카카오페이지",
+];
+
+// 한글-영어 OTT 플랫폼 매핑 (백엔드 데이터 형식에 맞춤)
+const OTT_NAME_MAPPING: Record<string, string> = {
+  "넷플릭스": "Netflix",
+  "웨이브": "wavve",
+  "디즈니+": "Disney Plus",
+  "왓챠": "Watcha",
+  "티빙": "TVING",
+  "쿠팡플레이": "Coupang Play",
+  "애플TV": "Apple TV",
+};
+
+// 웹소설 플랫폼 매핑
+const WEBNOVEL_PLATFORM_MAPPING: Record<string, string> = {
+  "네이버시리즈": "NaverSeries",
+  "카카오페이지": "KakaoPage",
+};
 export default function RankingPage() {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<Category>("game");
-  const [selectedPeriod, setSelectedPeriod] = useState<Period>("daily");
+  const [selectedOTTs, setSelectedOTTs] = useState<Set<string>>(new Set());
+  const [selectedWebnovels, setSelectedWebnovels] = useState<Set<string>>(new Set());
   const [rankings, setRankings] = useState<RankingItem[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // 카테고리 변경 시 필터 초기화
+  const handleCategoryChange = (category: Category) => {
+    setSelectedCategory(category);
+    setSelectedOTTs(new Set());
+    setSelectedWebnovels(new Set());
+  };
+
+  // OTT 필터 토글
+  const toggleOTT = (ott: string) => {
+    setSelectedOTTs((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(ott)) {
+        newSet.delete(ott);
+      } else {
+        newSet.add(ott);
+      }
+      return newSet;
+    });
+  };
+
+  // 웹소설 플랫폼 필터 토글
+  const toggleWebnovel = (platform: string) => {
+    setSelectedWebnovels((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(platform)) {
+        newSet.delete(platform);
+      } else {
+        newSet.add(platform);
+      }
+      return newSet;
+    });
+  };
 
   useEffect(() => {
     const fetchRankings = async () => {
@@ -60,14 +122,37 @@ export default function RankingPage() {
         const frontendPlatform = PLATFORM_MAPPING[selectedCategory];
         const backendPlatform = BACKEND_PLATFORM_MAPPING[frontendPlatform];
         const data = await rankingApi.getRankingsByPlatform(backendPlatform);
-        const mappedData: RankingItem[] = data.map((item: ExternalRanking) => ({
+        let mappedData: RankingItem[] = data.map((item: ExternalRanking) => ({
           id: item.contentId ? String(item.contentId) : `no-content-${item.id}`,
           rank: item.ranking,
           title: item.title,
           thumbnail: item.thumbnailUrl || "https://via.placeholder.com/60x80",
           score: 0,
           change: "new",
+          watchProviders: item.watchProviders,
+          platform: item.platform,
         }));
+
+        // OTT 필터링 (TMDB만 해당) - 다중 선택 지원
+        if (selectedOTTs.size > 0 && (selectedCategory === "movie" || selectedCategory === "tv")) {
+          const englishOTTNames = Array.from(selectedOTTs).map((ott) => OTT_NAME_MAPPING[ott]).filter(Boolean);
+          if (englishOTTNames.length > 0) {
+            mappedData = mappedData.filter(
+              (item) => item.watchProviders && englishOTTNames.some((name) => item.watchProviders!.includes(name))
+            );
+          }
+        }
+
+        // 웹소설 플랫폼 필터링 - 다중 선택 지원
+        if (selectedWebnovels.size > 0 && selectedCategory === "webnovel") {
+          const platformNames = Array.from(selectedWebnovels).map((p) => WEBNOVEL_PLATFORM_MAPPING[p]).filter(Boolean);
+          if (platformNames.length > 0) {
+            mappedData = mappedData.filter(
+              (item) => platformNames.includes(item.platform || "")
+            );
+          }
+        }
+
         setRankings(mappedData);
       } catch (error) {
         console.error(error);
@@ -78,7 +163,7 @@ export default function RankingPage() {
     };
 
     fetchRankings();
-  }, [selectedCategory]);
+  }, [selectedCategory, selectedOTTs, selectedWebnovels]);
 
   const handleCardClick = (id: string) => {
     if (id.startsWith("no-content-")) {
@@ -116,32 +201,12 @@ export default function RankingPage() {
         bgColor="#242424"
       />
       <div className="w-full max-w-2xl mx-auto px-5">
-        {/* 필터 섹션 */}
-        <div className="sticky top-[40px] z-50 bg-[#242424] border-b border-[#333] pt-3">
-          {/* 기간 탭 */}
-          <div className="flex justify-center">
-            {periods.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => setSelectedPeriod(p.id)}
-                className={`flex-1 text-center py-3 cursor-pointer transition-all select-none ${
-                  selectedPeriod === p.id
-                    ? "border-b-2 border-white text-white font-semibold"
-                    : "text-gray-400"
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* 카테고리 */}
         <div className="flex gap-4 overflow-x-auto scrollbar-hide py-3 mt-10">
           {categories.map((cat) => (
             <button
               key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
+              onClick={() => handleCategoryChange(cat.id)}
               className={`flex-shrink-0 px-5 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
                 selectedCategory === cat.id
                   ? "bg-[#855BFF] text-white"
@@ -152,6 +217,60 @@ export default function RankingPage() {
             </button>
           ))}
         </div>
+
+        {/* OTT 필터 (영화/TV만 표시) - 다중 선택 */}
+        {(selectedCategory === "movie" || selectedCategory === "tv") && (
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide py-3">
+            {OTT_PLATFORMS.filter((ott) => ott !== "전체").map((ott) => (
+              <button
+                key={ott}
+                onClick={() => toggleOTT(ott)}
+                className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
+                  selectedOTTs.has(ott)
+                    ? "bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white"
+                    : "text-gray-400 border border-[#444]"
+                }`}
+              >
+                {ott}
+              </button>
+            ))}
+            {selectedOTTs.size > 0 && (
+              <button
+                onClick={() => setSelectedOTTs(new Set())}
+                className="flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap text-red-400 border border-red-400/50 hover:bg-red-400/10"
+              >
+                초기화
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* 웹소설 플랫폼 필터 - 다중 선택 */}
+        {selectedCategory === "webnovel" && (
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide py-3">
+            {WEBNOVEL_PLATFORMS.filter((p) => p !== "전체").map((platform) => (
+              <button
+                key={platform}
+                onClick={() => toggleWebnovel(platform)}
+                className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
+                  selectedWebnovels.has(platform)
+                    ? "bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white"
+                    : "text-gray-400 border border-[#444]"
+                }`}
+              >
+                {platform}
+              </button>
+            ))}
+            {selectedWebnovels.size > 0 && (
+              <button
+                onClick={() => setSelectedWebnovels(new Set())}
+                className="flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap text-red-400 border border-red-400/50 hover:bg-red-400/10"
+              >
+                초기화
+              </button>
+            )}
+          </div>
+        )}
 
         {/* 콘텐츠 */}
         <div className="flex-1 overflow-y-auto p-5">
