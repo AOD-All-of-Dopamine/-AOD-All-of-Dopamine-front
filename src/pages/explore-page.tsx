@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useWorks, useGenres, usePlatforms } from "../hooks/useWorks";
+import { useWorks, useGenresWithCount, usePlatforms } from "../hooks/useWorks";
 import Header from "../components/common/Header";
 
 type Category = "movie" | "tv" | "game" | "webtoon" | "webnovel";
@@ -30,9 +30,22 @@ export default function ExplorePage() {
   );
   const [selectedGenres, setSelectedGenres] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
+  const [showAllGenres, setShowAllGenres] = useState(false); // 장르 더보기 상태
 
-  const { data: genresData } = useGenres(selectedCategory.toUpperCase());
-  const availableGenres = genresData || [];
+  const GENRE_DISPLAY_LIMIT = 10; // 기본 표시 개수
+
+  const { data: genresWithCountData } = useGenresWithCount(selectedCategory.toUpperCase());
+  
+  // 장르를 작품 수 기준 내림차순으로 정렬
+  const sortedGenres = genresWithCountData
+    ? Object.entries(genresWithCountData)
+        .sort(([, countA], [, countB]) => countB - countA)
+    : [];
+
+  // 표시할 장르 목록 (더보기 상태에 따라)
+  const displayedGenres = showAllGenres
+    ? sortedGenres
+    : sortedGenres.slice(0, GENRE_DISPLAY_LIMIT);
 
   const { data: platformsData } = usePlatforms(selectedCategory.toUpperCase());
   const availablePlatforms = (platformsData || []).map((platformName) => ({
@@ -149,11 +162,19 @@ export default function ExplorePage() {
 
           {/* 장르 필터 */}
           <div className="mb-4">
-            <span className="text-sm font-semibold text-white mb-2 block">
-              장르
-            </span>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-semibold text-white">장르</span>
+              {sortedGenres.length > GENRE_DISPLAY_LIMIT && (
+                <button
+                  onClick={() => setShowAllGenres(!showAllGenres)}
+                  className="text-xs text-[#646cff] hover:text-[#7d84ff] transition-colors"
+                >
+                  {showAllGenres ? "접기 ▲" : `더보기 (${sortedGenres.length - GENRE_DISPLAY_LIMIT}개) ▼`}
+                </button>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
-              {availableGenres.map((genre) => (
+              {displayedGenres.map(([genre, count]) => (
                 <button
                   key={genre}
                   onClick={() => toggleGenre(genre)}
@@ -163,7 +184,7 @@ export default function ExplorePage() {
                       : "border-gray-700 bg-[#2a2a2a] text-gray-500 hover:border-gray-500"
                   }`}
                 >
-                  {genre}
+                  {genre} <span className="text-[10px] opacity-60">({count})</span>
                 </button>
               ))}
             </div>

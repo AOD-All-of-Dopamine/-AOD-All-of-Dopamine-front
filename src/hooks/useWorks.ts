@@ -74,6 +74,20 @@ export const useGenres = (
 }
 
 /**
+ * 장르별 작품 수 조회 hook (작품 수 기준 내림차순 정렬)
+ */
+export const useGenresWithCount = (
+  domain?: string,
+  options?: Omit<UseQueryOptions<Record<string, number>>, 'queryKey' | 'queryFn'>
+) => {
+  return useQuery<Record<string, number>>({
+    queryKey: ['genres-with-count', domain],
+    queryFn: () => workApi.getGenresWithCount(domain),
+    ...options,
+  })
+}
+
+/**
  * 플랫폼 목록 조회 hook
  */
 export const usePlatforms = (

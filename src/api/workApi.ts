@@ -88,6 +88,16 @@ export const workApi = {
   },
 
   /**
+   * 도메인별 장르별 작품 수 조회 (작품 수 내림차순)
+   */
+  getGenresWithCount: async (domain?: string): Promise<Record<string, number>> => {
+    const { data } = await apiClient.get<Record<string, number>>('/api/works/genres-with-count', {
+      params: domain ? { domain } : {},
+    })
+    return data
+  },
+
+  /**
    * 도메인별 사용 가능한 플랫폼 목록 조회
    */
   getPlatforms: async (domain?: string): Promise<string[]> => {
