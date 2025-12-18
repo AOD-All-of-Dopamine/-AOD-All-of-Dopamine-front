@@ -10,10 +10,16 @@ const NavigationBar: React.FC = () => {
   const location = useLocation();
   const isActive = (pattern: string) =>
     !!matchPath({ path: pattern, end: false }, location.pathname);
+
+  const handleNavigation = (path: string) => {
+    navigate(path);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <nav className="fixed max-w-2xl bottom-0 left-0 w-full mx-auto right-0 bg-[#242424] flex justify-around items-center h-20 z-[1000]">
       <button
-        onClick={() => navigate("/home")}
+        onClick={() => handleNavigation("/home")}
         className="flex flex-col items-center gap-1 text-xs"
       >
         <HomeIcon color={isActive("/home/*") ? "white" : "gray"} />
@@ -22,7 +28,7 @@ const NavigationBar: React.FC = () => {
         </span>
       </button>
       <button
-        onClick={() => navigate("/explore")}
+        onClick={() => handleNavigation("/explore")}
         className="flex flex-col items-center gap-1 text-xs"
       >
         <SearchIcon color={isActive("/explore/*") ? "white" : "gray"} />
@@ -33,7 +39,7 @@ const NavigationBar: React.FC = () => {
         </span>
       </button>
       <button
-        onClick={() => navigate("/ranking")}
+        onClick={() => handleNavigation("/ranking")}
         className="flex flex-col items-center gap-1 text-xs"
       >
         <RankingIcon color={isActive("/ranking/*") ? "white" : "gray"} />
@@ -44,7 +50,7 @@ const NavigationBar: React.FC = () => {
         </span>
       </button>
       <button
-        onClick={() => navigate("/new")}
+        onClick={() => handleNavigation("/new")}
         className="flex flex-col items-center gap-1 text-xs"
       >
         <SearchIcon color={isActive("/new/*") ? "white" : "gray"} />
@@ -53,7 +59,7 @@ const NavigationBar: React.FC = () => {
         </span>
       </button>
       <button
-        onClick={() => navigate("/profile")}
+        onClick={() => handleNavigation("/profile")}
         className="flex flex-col items-center gap-1 text-xs"
       >
         <MyIcon color={isActive("/profile/*") ? "white" : "gray"} />
