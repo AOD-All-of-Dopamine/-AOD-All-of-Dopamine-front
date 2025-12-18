@@ -2,6 +2,7 @@ import React from "react";
 import HomeIcon from "../../assets/home-icon.tsx";
 import RankingIcon from "../../assets/ranking-icon.tsx";
 import SearchIcon from "../../assets/search-icon.tsx";
+import CalendarIcon from "../../assets/calendar-icon.tsx";
 import MyIcon from "../../assets/my-icon.tsx";
 import { useLocation, useNavigate, matchPath } from "react-router-dom";
 
@@ -53,7 +54,7 @@ const NavigationBar: React.FC = () => {
         onClick={() => handleNavigation("/new")}
         className="flex flex-col items-center gap-1 text-xs"
       >
-        <SearchIcon color={isActive("/new/*") ? "white" : "gray"} />
+        <CalendarIcon color={isActive("/new/*") ? "white" : "gray"} />
         <span className={isActive("/new/*") ? "text-white" : "text-gray-400"}>
           신작
         </span>
