@@ -292,35 +292,6 @@ export default function ExplorePage() {
                       });
                     })()}
                   </div>
-                  
-                  {/* 이전/다음 버튼 */}
-                  <div className="flex items-center gap-4">
-                    <button
-                      onClick={() => setPage(page - 1)}
-                      disabled={page === 0}
-                      className={`px-4 py-2 rounded-lg font-medium transition ${
-                        page === 0
-                          ? "bg-gray-800 text-gray-600 cursor-not-allowed"
-                          : "bg-[#646cff] text-white hover:bg-[#7d84ff]"
-                      }`}
-                    >
-                      이전
-                    </button>
-                    <span className="text-white text-sm">
-                      {page + 1} / {data.totalPages}
-                    </span>
-                    <button
-                      onClick={() => setPage(page + 1)}
-                      disabled={page >= data.totalPages - 1}
-                      className={`px-4 py-2 rounded-lg font-medium transition ${
-                        page >= data.totalPages - 1
-                          ? "bg-gray-800 text-gray-600 cursor-not-allowed"
-                          : "bg-[#646cff] text-white hover:bg-[#7d84ff]"
-                      }`}
-                    >
-                      다음
-                    </button>
-                  </div>
                 </div>
               )}
             </>

@@ -2,6 +2,7 @@ import {
   RouteObject,
   createBrowserRouter,
   RouterProvider,
+  Navigate,
 } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import PublicLayout from "./layouts/public-layout";
@@ -23,6 +24,7 @@ const publicRoutes: RouteObject[] = [
     path: "/",
     element: <PublicLayout />,
     children: [
+      { index: true, element: <Navigate to="/home" /> },
       { path: "home", element: <HomePage /> },
       { path: "login", element: <LoginPage /> },
       { path: "signup", element: <SignupPage /> },
