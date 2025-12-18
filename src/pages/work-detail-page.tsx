@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
 import { useAuth } from "../contexts/AuthContext";
@@ -13,6 +13,7 @@ import {
   useBookmarkStatus,
   useToggleBookmark,
 } from "../hooks/useInteractions";
+import { getFieldLabel, getPlatformLabel, formatFieldValue } from "../utils/field-labels";
 
 type TabType = "info" | "reviews";
 
@@ -21,6 +22,11 @@ export default function WorkDetailPage() {
   const navigate = useNavigate();
   const contentId = id ? Number(id) : 0;
   const { isAuthenticated } = useAuth();
+
+  // 페이지 진입 시 스크롤 맨 위로
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [contentId]);
 
   const [activeTab, setActiveTab] = useState<TabType>("info");
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -104,55 +110,57 @@ export default function WorkDetailPage() {
 
   return (
     <div className="min-h-screen bg-[var(--blackbackground-primary)] pb-20">
-      {/* 배경 블러 이미지 */}
-      <div className="absolute top-0 left-0 w-full h-[333px] overflow-hidden">
-        <img
-          src={work.thumbnail || "https://via.placeholder.com/375x333"}
-          alt=""
-          className="w-full h-full object-cover blur-sm opacity-30"
-        />
-        <div className="absolute bottom-0 left-0 w-full h-[108px] bg-gradient-to-t from-[var(--blackbackground-primary)] to-transparent" />
-      </div>
-
-      {/* 헤더 */}
-      <header className="relative z-10 h-[60px] flex items-center justify-between px-4">
-        <button onClick={() => navigate(-1)} className="w-6 h-6">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M15 18L9 12L15 6"
-              stroke="white"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
-        <button className="w-5 h-5">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <circle cx="9" cy="9" r="7" stroke="white" strokeWidth="2" />
-            <path
-              d="M14 14L18 18"
-              stroke="white"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
-      </header>
-
-      {/* 포스터 */}
-      <div className="relative z-10 mx-4 mt-4">
-        <div className="w-[120px] h-[168px] bg-[var(--greygrey-900background-secondary)] rounded overflow-hidden">
+      {/* 최대 너비 제한 wrapper */}
+      <div className="w-full max-w-2xl mx-auto relative">
+        {/* 배경 블러 이미지 */}
+        <div className="absolute top-0 left-0 w-full h-[333px] overflow-hidden">
           <img
-            src={work.thumbnail || "https://via.placeholder.com/120x168"}
-            alt={work.title}
-            className="w-full h-full object-cover"
+            src={work.thumbnail || "https://via.placeholder.com/375x333"}
+            alt=""
+            className="w-full h-full object-cover blur-sm opacity-30"
           />
+          <div className="absolute bottom-0 left-0 w-full h-[108px] bg-gradient-to-t from-[var(--blackbackground-primary)] to-transparent" />
         </div>
-      </div>
 
-      {/* 작품 정보 섹션 */}
-      <div className="relative z-10 px-4 mt-4">
+        {/* 헤더 */}
+        <header className="relative z-10 h-[60px] flex items-center justify-between px-4">
+          <button onClick={() => navigate(-1)} className="w-6 h-6">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M15 18L9 12L15 6"
+                stroke="white"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+          <button className="w-5 h-5">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <circle cx="9" cy="9" r="7" stroke="white" strokeWidth="2" />
+              <path
+                d="M14 14L18 18"
+                stroke="white"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        </header>
+
+        {/* 포스터 */}
+        <div className="relative z-10 mx-4 mt-4">
+          <div className="w-[120px] h-[168px] bg-[var(--greygrey-900background-secondary)] rounded overflow-hidden">
+            <img
+              src={work.thumbnail || "https://via.placeholder.com/120x168"}
+              alt={work.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+
+        {/* 작품 정보 섹션 */}
+        <div className="relative z-10 px-4 mt-4">
         {/* 제목 및 기본 정보 */}
         <div className="flex items-center gap-3 mb-1">
           <h1 className="text-[18px] font-semibold text-white">{work.title}</h1>
@@ -365,6 +373,11 @@ export default function WorkDetailPage() {
               </div>
             )}
 
+            {/* 구분선 */}
+            {work.synopsis && work.domainInfo && Object.keys(work.domainInfo).length > 0 && (
+              <div className="border-t border-[var(--greygrey-800)] mb-6"></div>
+            )}
+
             {work.domainInfo && Object.keys(work.domainInfo).length > 0 && (
               <div className="mb-6">
                 <h2 className="text-[16px] font-semibold text-white mb-3">
@@ -377,17 +390,21 @@ export default function WorkDetailPage() {
                       className="flex p-3 bg-[var(--greygrey-900background-secondary)] rounded-lg"
                     >
                       <span className="text-[14px] text-[var(--greygrey-300text-secondary)] min-w-[80px]">
-                        {key}
+                        {getFieldLabel(key, "domain")}
                       </span>
                       <span className="text-[14px] text-white flex-1">
-                        {typeof value === "object"
-                          ? JSON.stringify(value)
-                          : String(value)}
+                        {formatFieldValue(key, value)}
                       </span>
                     </div>
                   ))}
                 </div>
               </div>
+            )}
+
+            {/* 구분선 */}
+            {work.domainInfo && Object.keys(work.domainInfo).length > 0 && 
+             work.platformInfo && Object.keys(work.platformInfo).length > 0 && (
+              <div className="border-t border-[var(--greygrey-800)] mb-6"></div>
             )}
 
             {work.platformInfo && Object.keys(work.platformInfo).length > 0 && (
@@ -398,7 +415,7 @@ export default function WorkDetailPage() {
                 {Object.entries(work.platformInfo).map(([platform, info]) => (
                   <div key={platform} className="mb-4">
                     <h3 className="text-[14px] font-semibold text-white mb-2">
-                      {platform}
+                      {getPlatformLabel(platform)}
                     </h3>
                     <div className="flex flex-col gap-2">
                       {Object.entries(info).map(([key, value]) => {
@@ -409,18 +426,22 @@ export default function WorkDetailPage() {
                         ];
                         const isHtmlField =
                           htmlFields.includes(key) && typeof value === "string";
+                        
+                        const formattedValue = formatFieldValue(key, value);
+                        const isMultiline = formattedValue.includes("\n") || formattedValue.length > 100;
+                        
                         return (
                           <div
                             key={key}
                             className="p-3 bg-[var(--greygrey-900background-secondary)] rounded-lg"
                           >
                             <span className="text-[12px] text-[var(--greygrey-300text-secondary)] block mb-1">
-                              {key}
+                              {getFieldLabel(key, "platform")}
                             </span>
-                            <span className="text-[14px] text-white">
+                            <div className="text-[14px] text-white">
                               {isHtmlField ? (
                                 <div
-                                  className="prose prose-invert prose-sm"
+                                  className="prose prose-invert prose-sm max-w-none"
                                   dangerouslySetInnerHTML={{
                                     __html: DOMPurify.sanitize(value as string),
                                   }}
@@ -431,16 +452,18 @@ export default function WorkDetailPage() {
                                   href={value}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-[#855BFF] underline"
+                                  className="text-[#855BFF] underline break-all"
                                 >
                                   {value}
                                 </a>
-                              ) : typeof value === "object" ? (
-                                JSON.stringify(value)
+                              ) : isMultiline ? (
+                                <pre className="whitespace-pre-wrap font-sans text-[14px]">
+                                  {formattedValue}
+                                </pre>
                               ) : (
-                                String(value)
+                                formattedValue
                               )}
-                            </span>
+                            </div>
                           </div>
                         );
                       })}
@@ -731,6 +754,7 @@ export default function WorkDetailPage() {
           </>
         )}
       </div>
+      </div> {/* max-w-2xl wrapper 닫기 */}
     </div>
   );
 }
