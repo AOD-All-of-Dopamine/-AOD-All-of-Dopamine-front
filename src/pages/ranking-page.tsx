@@ -197,83 +197,86 @@ export default function RankingPage() {
       <Header
         title="랭킹"
         rightIcon="search"
-        onRightClick={() => alert("검색 기능 준비 중")}
+        onRightClick={() => navigate("/search")}
         bgColor="#242424"
       />
       <div className="w-full max-w-2xl mx-auto px-5">
-        {/* 카테고리 */}
-        <div className="flex gap-4 overflow-x-auto scrollbar-hide py-3 mt-10">
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => handleCategoryChange(cat.id)}
-              className={`flex-shrink-0 px-5 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
-                selectedCategory === cat.id
-                  ? "bg-[#855BFF] text-white"
-                  : "text-[#D3D3D3] border border-[#333]"
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
+        <div className="sticky top-[40px] z-50 bg-[#242424] border-b border-[#333] pt-3">
+          {/* 카테고리 탭 */}
+          <div className="flex justify-around border-b border-white/0">
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => handleCategoryChange(cat.id)}
+                className={`flex-1 text-center py-3 transition-all select-none ${
+                  selectedCategory === cat.id
+                    ? "border-b-2 border-white text-white font-semibold"
+                    : "text-gray-400"
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* OTT 필터 (영화/TV만 표시) - 다중 선택 */}
-        {(selectedCategory === "movie" || selectedCategory === "tv") && (
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide py-3">
-            {OTT_PLATFORMS.filter((ott) => ott !== "전체").map((ott) => (
-              <button
-                key={ott}
-                onClick={() => toggleOTT(ott)}
-                className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
-                  selectedOTTs.has(ott)
-                    ? "bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white"
-                    : "text-gray-400 border border-[#444]"
-                }`}
-              >
-                {ott}
-              </button>
-            ))}
-            {selectedOTTs.size > 0 && (
-              <button
-                onClick={() => setSelectedOTTs(new Set())}
-                className="flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap text-red-400 border border-red-400/50 hover:bg-red-400/10"
-              >
-                초기화
-              </button>
-            )}
-          </div>
-        )}
+        {/* 필터 & 컨텐츠 영역 */}
+        <div className="flex-1 overflow-y-auto py-5 mt-[40px]">
+          {/* OTT 필터 (영화/TV만 표시) - 다중 선택 */}
+          {(selectedCategory === "movie" || selectedCategory === "tv") && (
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-4">
+              {OTT_PLATFORMS.filter((ott) => ott !== "전체").map((ott) => (
+                <button
+                  key={ott}
+                  onClick={() => toggleOTT(ott)}
+                  className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
+                    selectedOTTs.has(ott)
+                      ? "bg-[#646cff] text-white"
+                      : "text-gray-400 border border-[#444]"
+                  }`}
+                >
+                  {ott}
+                </button>
+              ))}
+              {selectedOTTs.size > 0 && (
+                <button
+                  onClick={() => setSelectedOTTs(new Set())}
+                  className="flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap text-red-400 border border-red-400/50 hover:bg-red-400/10"
+                >
+                  초기화
+                </button>
+              )}
+            </div>
+          )}
 
-        {/* 웹소설 플랫폼 필터 - 다중 선택 */}
-        {selectedCategory === "webnovel" && (
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide py-3">
-            {WEBNOVEL_PLATFORMS.filter((p) => p !== "전체").map((platform) => (
-              <button
-                key={platform}
-                onClick={() => toggleWebnovel(platform)}
-                className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
-                  selectedWebnovels.has(platform)
-                    ? "bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white"
-                    : "text-gray-400 border border-[#444]"
-                }`}
-              >
-                {platform}
-              </button>
-            ))}
-            {selectedWebnovels.size > 0 && (
-              <button
-                onClick={() => setSelectedWebnovels(new Set())}
-                className="flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap text-red-400 border border-red-400/50 hover:bg-red-400/10"
-              >
-                초기화
-              </button>
-            )}
-          </div>
-        )}
+          {/* 웹소설 플랫폼 필터 - 다중 선택 */}
+          {selectedCategory === "webnovel" && (
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-4">
+              {WEBNOVEL_PLATFORMS.filter((p) => p !== "전체").map((platform) => (
+                <button
+                  key={platform}
+                  onClick={() => toggleWebnovel(platform)}
+                  className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
+                    selectedWebnovels.has(platform)
+                      ? "bg-[#646cff] text-white"
+                      : "text-gray-400 border border-[#444]"
+                  }`}
+                >
+                  {platform}
+                </button>
+              ))}
+              {selectedWebnovels.size > 0 && (
+                <button
+                  onClick={() => setSelectedWebnovels(new Set())}
+                  className="flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap text-red-400 border border-red-400/50 hover:bg-red-400/10"
+                >
+                  초기화
+                </button>
+              )}
+            </div>
+          )}
 
-        {/* 콘텐츠 */}
-        <div className="flex-1 overflow-y-auto p-5">
+          {/* 콘텐츠 */}
           {loading ? (
             <div className="text-center py-12 text-gray-400">Loading...</div>
           ) : rankings.length > 0 ? (
@@ -281,7 +284,7 @@ export default function RankingPage() {
               {rankings.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center gap-4 p-3 bg-[#242424] rounded-md cursor-pointer transition-transform hover:bg-[#242424] hover:translate-x-1"
+                  className="flex items-center gap-4 p-3 bg-[#2a2a2a] rounded-lg cursor-pointer transition hover:bg-[#333] hover:translate-x-1"
                   onClick={() => handleCardClick(item.id)}
                 >
                   <div
@@ -300,14 +303,14 @@ export default function RankingPage() {
                   <img
                     src={item.thumbnail}
                     alt={item.title}
-                    className="w-15 h-20 rounded-md object-cover bg-[#242424] flex-shrink-0"
+                    className="w-15 h-20 rounded-md object-cover bg-[#444] flex-shrink-0"
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-sm mb-1 truncate">
+                    <div className="font-semibold text-white text-sm mb-1 truncate">
                       {item.title}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-gray-400">
-                      <span className="font-[PretendardVariable] text-[#855BFF] font-semibold">
+                      <span className="flex items-center gap-1 text-[#646cff] font-semibold">
                         <img src={PurpleStar} alt="평점" className="w-4 h-4" />
                         {item.score.toFixed(1)}
                       </span>

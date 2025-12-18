@@ -31,6 +31,7 @@ export default function ExplorePage() {
   const [selectedGenres, setSelectedGenres] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
   const [showAllGenres, setShowAllGenres] = useState(false); // 장르 더보기 상태
+  // const [sortBy, setSortBy] = useState<"latest" | "reviews" | "rating">("latest"); // 정렬 기준 - 일단 최신순만 지원
 
   const GENRE_DISPLAY_LIMIT = 10; // 기본 표시 개수
 
@@ -59,12 +60,15 @@ export default function ExplorePage() {
   const selectedGenresArray =
     selectedGenres.size > 0 ? Array.from(selectedGenres) : undefined;
 
+  // 정렬 옵션 - 최신순만 지원
   const { data, isLoading } = useWorks({
     domain: selectedCategory.toUpperCase(),
     platforms: selectedPlatformsArray,
     genres: selectedGenresArray,
     page,
     size: 20,
+    sortBy: "releaseDate",
+    sortDirection: "desc",
   });
 
   const handleCategoryChange = (category: Category) => {
@@ -190,6 +194,18 @@ export default function ExplorePage() {
             </div>
           </div>
 
+          {/* 총 개수 및 정렬 */}
+          {data && data.content.length > 0 && (
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-gray-400 text-sm">
+                총 <span className="text-white font-semibold">{data.totalElements?.toLocaleString() || 0}</span>개
+              </span>
+              <div className="text-gray-400 text-sm">
+                최신순
+              </div>
+            </div>
+          )}
+
           {/* 작품 목록 */}
           {isLoading ? (
             <div className="text-center text-gray-500 py-20">로딩 중...</div>
@@ -221,32 +237,90 @@ export default function ExplorePage() {
 
               {/* 페이지네이션 */}
               {data && data.totalPages > 1 && (
-                <div className="flex items-center justify-center gap-4 mt-8 mb-4">
-                  <button
-                    onClick={() => setPage(page - 1)}
-                    disabled={page === 0}
-                    className={`px-4 py-2 rounded-lg font-medium transition ${
-                      page === 0
-                        ? "bg-gray-800 text-gray-600 cursor-not-allowed"
-                        : "bg-[#646cff] text-white hover:bg-[#7d84ff]"
-                    }`}
-                  >
-                    이전
-                  </button>
-                  <span className="text-white text-sm">
-                    {page + 1} / {data.totalPages}
-                  </span>
-                  <button
-                    onClick={() => setPage(page + 1)}
-                    disabled={page >= data.totalPages - 1}
-                    className={`px-4 py-2 rounded-lg font-medium transition ${
-                      page >= data.totalPages - 1
-                        ? "bg-gray-800 text-gray-600 cursor-not-allowed"
-                        : "bg-[#646cff] text-white hover:bg-[#7d84ff]"
-                    }`}
-                  >
-                    다음
-                  </button>
+                <div className="flex flex-col items-center gap-3 mt-8 mb-4">
+                  {/* 페이지 번호 버튼들 */}
+                  <div className="flex items-center gap-1 flex-wrap justify-center">
+                    {(() => {
+                      const totalPages = data.totalPages;
+                      const currentPage = page;
+                      const pageNumbers = [];
+                      
+                      // 항상 첫 페이지
+                      pageNumbers.push(0);
+                      
+                      // 현재 페이지 주변 (앞뒤 2개씩)
+                      const start = Math.max(1, currentPage - 2);
+                      const end = Math.min(totalPages - 2, currentPage + 2);
+                      
+                      // ... 표시 여부
+                      if (start > 1) pageNumbers.push(-1); // -1은 ... 표시용
+                      
+                      for (let i = start; i <= end; i++) {
+                        if (i > 0 && i < totalPages - 1) {
+                          pageNumbers.push(i);
+                        }
+                      }
+                      
+                      // ... 표시 여부
+                      if (end < totalPages - 2) pageNumbers.push(-2); // -2도 ... 표시용
+                      
+                      // 항상 마지막 페이지
+                      if (totalPages > 1) pageNumbers.push(totalPages - 1);
+                      
+                      return pageNumbers.map((pageNum, idx) => {
+                        if (pageNum < 0) {
+                          return (
+                            <span key={`ellipsis-${idx}`} className="text-gray-500 px-2">
+                              ...
+                            </span>
+                          );
+                        }
+                        
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setPage(pageNum)}
+                            className={`min-w-[36px] h-9 px-2 rounded-lg font-medium transition ${
+                              pageNum === currentPage
+                                ? "bg-[#646cff] text-white"
+                                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                            }`}
+                          >
+                            {pageNum + 1}
+                          </button>
+                        );
+                      });
+                    })()}
+                  </div>
+                  
+                  {/* 이전/다음 버튼 */}
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => setPage(page - 1)}
+                      disabled={page === 0}
+                      className={`px-4 py-2 rounded-lg font-medium transition ${
+                        page === 0
+                          ? "bg-gray-800 text-gray-600 cursor-not-allowed"
+                          : "bg-[#646cff] text-white hover:bg-[#7d84ff]"
+                      }`}
+                    >
+                      이전
+                    </button>
+                    <span className="text-white text-sm">
+                      {page + 1} / {data.totalPages}
+                    </span>
+                    <button
+                      onClick={() => setPage(page + 1)}
+                      disabled={page >= data.totalPages - 1}
+                      className={`px-4 py-2 rounded-lg font-medium transition ${
+                        page >= data.totalPages - 1
+                          ? "bg-gray-800 text-gray-600 cursor-not-allowed"
+                          : "bg-[#646cff] text-white hover:bg-[#7d84ff]"
+                      }`}
+                    >
+                      다음
+                    </button>
+                  </div>
                 </div>
               )}
             </>
