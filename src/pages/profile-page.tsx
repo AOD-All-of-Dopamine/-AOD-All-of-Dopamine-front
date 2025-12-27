@@ -7,8 +7,9 @@ import {
 } from "../hooks/useInteractions";
 import Header from "../components/common/Header";
 import whiteCat from "../assets/white-cat.png";
+import { useEffect } from "react";
 
-function ProfilePage() {
+export default function ProfilePage() {
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuth();
 
@@ -20,6 +21,18 @@ function ProfilePage() {
   const reviewCount = reviewsData?.totalElements || 0;
   const likeCount = likesData?.totalElements || 0;
   const bookmarkCount = bookmarksData?.totalElements || 0;
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "auto";
+    }
+
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, [isAuthenticated]);
 
   // 로그인하지 않은 경우
   if (!isAuthenticated) {
@@ -35,12 +48,12 @@ function ProfilePage() {
             <h2 className="font-[PretendardVariable] font-semibold text-[20px] mb-1 text-white">
               로그인이 필요합니다
             </h2>
-            <p className="font-[PretendardVariable] font-light text-gray-400 mb-3">
+            <p className="font-[PretendardVariable] font-light text-[#D3D3D3] mb-3">
               프로필을 보려면 로그인해주세요.
             </p>
             <button
               onClick={() => navigate("/login")}
-              className="px-4 py-2 bg-gradient-to-br from-indigo-500 to-purple-600 font-[PretendardVariable] font-semibold text-white text-lg rounded-md hover:-translate-y-1 transition-transform"
+              className="px-4 py-2 bg-[#855BFF] hover:bg-[#6F45E6] font-[PretendardVariable] font-medium text-white hover:text-[#D3D3D3] text-md rounded-md transition-colors duration-300"
             >
               로그인 하기
             </button>
@@ -224,5 +237,3 @@ function ProfilePage() {
     </div>
   );
 }
-
-export default ProfilePage;
