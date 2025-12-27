@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import Header from "../components/common/Header";
@@ -36,8 +36,16 @@ export default function LoginPage() {
     }
   };
 
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen bg-[#242424] flex flex-col">
+    <div className="flex flex-col min-h-screen">
       {/* 헤더 */}
       <Header
         title="로그인"
@@ -59,7 +67,7 @@ export default function LoginPage() {
           {/* 폼 */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
-              <label className="font-[PretendardVariable] font-semibold text-gray-200 font-medium">
+              <label className="font-[PretendardVariable] font-semibold text-gray-200 font-medium text-lg">
                 아이디
               </label>
               <input
@@ -69,12 +77,12 @@ export default function LoginPage() {
                 onChange={handleChange}
                 placeholder="아이디를 입력하세요"
                 required
-                className="px-4 py-2 rounded-lg bg-[#302F31] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#855BFF] focus:border-transparent border border-[#403F43] border-[1.5px]"
+                className="px-2.5 py-2.5 rounded-lg bg-[#302F31] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#855BFF] focus:border-transparent border border-[#403F43] border-[1.5px]"
               />
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="font-[PretendardVariable] font-semibold text-gray-200 font-medium">
+              <label className="font-[PretendardVariable] font-semibold text-gray-200 font-medium text-lg">
                 비밀번호
               </label>
               <input
@@ -84,14 +92,14 @@ export default function LoginPage() {
                 onChange={handleChange}
                 placeholder="8자 이상 비밀번호를 입력하세요"
                 required
-                className="px-4 py-2 rounded-lg bg-[#302F31] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#855BFF] focus:border-transparent border border-[#403F43] border-[1.5px]"
+                className="px-2.5 py-2.5 rounded-lg bg-[#302F31] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#855BFF] focus:border-transparent border border-[#403F43] border-[1.5px]"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="font-[PretendardVariable] font-semibold mt-4 py-3 bg-gradient-to-r from-[#855BFF] to-[#9CDDFE] text-white rounded-lg font-semibold text-base transition-transform duration-200 hover:-translate-y-1 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="font-[PretendardVariable] font-semibold mt-4 py-3 bg-gradient-to-r from-[#855BFF] to-[#9CDDFE] hover:from-[#6F45E6] hover:to-[#7FC8F0] text-white rounded-lg font-semibold text-base transition-transform duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {loading ? "로그인 중..." : "로그인"}
             </button>
