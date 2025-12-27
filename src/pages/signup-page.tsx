@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import Header from "../components/common/Header";
@@ -72,6 +72,14 @@ export default function SignupPage() {
     formData.password &&
     formData.passwordConfirm;
 
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col bg-[#242424]">
       <Header
@@ -92,23 +100,23 @@ export default function SignupPage() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {/* 아이디 + 중복확인 */}
             <div className="flex flex-col gap-1">
-              <label className="font-[PretendardVariable] font-semibold text-gray-200 font-medium">
-                아이디
+              <label className="font-[PretendardVariable] font-semibold text-gray-200 font-medium text-lg">
+                아이디 *
               </label>
-              <div className="flex gap-2">
+              <div className="flex gap-2 w-full">
                 <input
                   type="text"
                   name="username"
                   value={formData.username}
                   onChange={handleChange}
                   placeholder="아이디를 입력하세요"
-                  className="px-4 py-2 rounded-lg bg-[#302F31] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#855BFF] focus:border-transparent border border-[#403F43] border-[1.5px]"
+                  className="flex-1 px-2.5 py-2.5 rounded-lg bg-[#302F31] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#855BFF] focus:border-transparent border border-[#403F43] border-[1.5px]"
                   required
                 />
                 <button
                   type="button"
                   onClick={handleUsernameCheck}
-                  className="px-4 py-2 bg-[#855BFF] text-white rounded-lg text-sm font-semibold hover:bg-[#9CDDFE] transition-colors"
+                  className="px-4 py-2 bg-[#855BFF] text-white rounded-lg text-sm font-semibold hover:bg-[#6F45E6] transition-colors"
                 >
                   중복확인
                 </button>
@@ -117,8 +125,8 @@ export default function SignupPage() {
 
             {/* 이메일 */}
             <div className="flex flex-col gap-1">
-              <label className="font-[PretendardVariable] font-semibold text-gray-200 font-medium">
-                이메일
+              <label className="font-[PretendardVariable] font-semibold text-gray-200 font-medium text-lg">
+                이메일 *
               </label>
               <input
                 type="email"
@@ -126,15 +134,15 @@ export default function SignupPage() {
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="example@gmail.com"
-                className="px-4 py-2 rounded-lg bg-[#302F31] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#855BFF] focus:border-transparent border border-[#403F43] border-[1.5px]"
+                className="px-2.5 py-2.5 rounded-lg bg-[#302F31] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#855BFF] focus:border-transparent border border-[#403F43] border-[1.5px]"
                 required
               />
             </div>
 
             {/* 비밀번호 */}
             <div className="flex flex-col gap-1">
-              <label className="font-[PretendardVariable] font-semibold text-gray-200 font-medium">
-                비밀번호
+              <label className="font-[PretendardVariable] font-semibold text-gray-200 font-medium text-lg">
+                비밀번호 *
               </label>
               <input
                 type="password"
@@ -142,15 +150,15 @@ export default function SignupPage() {
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="비밀번호를 입력하세요"
-                className="px-4 py-2 rounded-lg bg-[#302F31] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#855BFF] focus:border-transparent border border-[#403F43] border-[1.5px]"
+                className="px-2.5 py-2.5 rounded-lg bg-[#302F31] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#855BFF] focus:border-transparent border border-[#403F43] border-[1.5px]"
                 required
               />
             </div>
 
             {/* 비밀번호 확인 */}
             <div className="flex flex-col gap-1">
-              <label className="font-[PretendardVariable] font-semibold text-gray-200 font-medium">
-                비밀번호 확인
+              <label className="font-[PretendardVariable] font-semibold text-gray-200 font-medium text-lg">
+                비밀번호 확인 *
               </label>
               <input
                 type="password"
@@ -158,7 +166,7 @@ export default function SignupPage() {
                 value={formData.passwordConfirm}
                 onChange={handleChange}
                 placeholder="비밀번호를 다시 입력하세요"
-                className="px-4 py-2 rounded-lg bg-[#302F31] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#855BFF] focus:border-transparent border border-[#403F43] border-[1.5px]"
+                className="px-2.5 py-2.5 rounded-lg bg-[#302F31] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#855BFF] focus:border-transparent border border-[#403F43] border-[1.5px]"
                 required
               />
             </div>
@@ -169,7 +177,7 @@ export default function SignupPage() {
               disabled={!isFormComplete || loading}
               className={`mt-4 py-3 rounded-lg font-semibold text-base text-white transition-transform duration-200 ${
                 isFormComplete
-                  ? "bg-gradient-to-r from-[#855BFF] to-[#9CDDFE] hover:-translate-y-1"
+                  ? "bg-gradient-to-r from-[#855BFF] to-[#9CDDFE] hover:from-[#6F45E6] hover:to-[#7FC8F0]"
                   : "bg-gray-600 cursor-not-allowed"
               }`}
             >
