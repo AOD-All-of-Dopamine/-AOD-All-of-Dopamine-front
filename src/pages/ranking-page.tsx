@@ -52,33 +52,31 @@ const OTT_PLATFORMS = [
   "애플TV",
 ];
 
-const WEBNOVEL_PLATFORMS = [
-  "전체",
-  "네이버시리즈",
-  "카카오페이지",
-];
+const WEBNOVEL_PLATFORMS = ["전체", "네이버시리즈", "카카오페이지"];
 
 // 한글-영어 OTT 플랫폼 매핑 (백엔드 데이터 형식에 맞춤)
 const OTT_NAME_MAPPING: Record<string, string> = {
-  "넷플릭스": "Netflix",
-  "웨이브": "wavve",
+  넷플릭스: "Netflix",
+  웨이브: "wavve",
   "디즈니+": "Disney Plus",
-  "왓챠": "Watcha",
-  "티빙": "TVING",
-  "쿠팡플레이": "Coupang Play",
-  "애플TV": "Apple TV",
+  왓챠: "Watcha",
+  티빙: "TVING",
+  쿠팡플레이: "Coupang Play",
+  애플TV: "Apple TV",
 };
 
 // 웹소설 플랫폼 매핑
 const WEBNOVEL_PLATFORM_MAPPING: Record<string, string> = {
-  "네이버시리즈": "NaverSeries",
-  "카카오페이지": "KakaoPage",
+  네이버시리즈: "NaverSeries",
+  카카오페이지: "KakaoPage",
 };
 export default function RankingPage() {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<Category>("game");
   const [selectedOTTs, setSelectedOTTs] = useState<Set<string>>(new Set());
-  const [selectedWebnovels, setSelectedWebnovels] = useState<Set<string>>(new Set());
+  const [selectedWebnovels, setSelectedWebnovels] = useState<Set<string>>(
+    new Set()
+  );
   const [rankings, setRankings] = useState<RankingItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -134,21 +132,32 @@ export default function RankingPage() {
         }));
 
         // OTT 필터링 (TMDB만 해당) - 다중 선택 지원
-        if (selectedOTTs.size > 0 && (selectedCategory === "movie" || selectedCategory === "tv")) {
-          const englishOTTNames = Array.from(selectedOTTs).map((ott) => OTT_NAME_MAPPING[ott]).filter(Boolean);
+        if (
+          selectedOTTs.size > 0 &&
+          (selectedCategory === "movie" || selectedCategory === "tv")
+        ) {
+          const englishOTTNames = Array.from(selectedOTTs)
+            .map((ott) => OTT_NAME_MAPPING[ott])
+            .filter(Boolean);
           if (englishOTTNames.length > 0) {
             mappedData = mappedData.filter(
-              (item) => item.watchProviders && englishOTTNames.some((name) => item.watchProviders!.includes(name))
+              (item) =>
+                item.watchProviders &&
+                englishOTTNames.some((name) =>
+                  item.watchProviders!.includes(name)
+                )
             );
           }
         }
 
         // 웹소설 플랫폼 필터링 - 다중 선택 지원
         if (selectedWebnovels.size > 0 && selectedCategory === "webnovel") {
-          const platformNames = Array.from(selectedWebnovels).map((p) => WEBNOVEL_PLATFORM_MAPPING[p]).filter(Boolean);
+          const platformNames = Array.from(selectedWebnovels)
+            .map((p) => WEBNOVEL_PLATFORM_MAPPING[p])
+            .filter(Boolean);
           if (platformNames.length > 0) {
-            mappedData = mappedData.filter(
-              (item) => platformNames.includes(item.platform || "")
+            mappedData = mappedData.filter((item) =>
+              platformNames.includes(item.platform || "")
             );
           }
         }
@@ -193,7 +202,7 @@ export default function RankingPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col min-h-screen">
       <Header
         title="랭킹"
         rightIcon="search"
@@ -252,19 +261,21 @@ export default function RankingPage() {
           {/* 웹소설 플랫폼 필터 - 다중 선택 */}
           {selectedCategory === "webnovel" && (
             <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-4">
-              {WEBNOVEL_PLATFORMS.filter((p) => p !== "전체").map((platform) => (
-                <button
-                  key={platform}
-                  onClick={() => toggleWebnovel(platform)}
-                  className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
-                    selectedWebnovels.has(platform)
-                      ? "bg-[#646cff] text-white"
-                      : "text-gray-400 border border-[#444]"
-                  }`}
-                >
-                  {platform}
-                </button>
-              ))}
+              {WEBNOVEL_PLATFORMS.filter((p) => p !== "전체").map(
+                (platform) => (
+                  <button
+                    key={platform}
+                    onClick={() => toggleWebnovel(platform)}
+                    className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
+                      selectedWebnovels.has(platform)
+                        ? "bg-[#646cff] text-white"
+                        : "text-gray-400 border border-[#444]"
+                    }`}
+                  >
+                    {platform}
+                  </button>
+                )
+              )}
               {selectedWebnovels.size > 0 && (
                 <button
                   onClick={() => setSelectedWebnovels(new Set())}
