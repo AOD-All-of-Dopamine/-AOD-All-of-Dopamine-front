@@ -11,7 +11,7 @@ function PublicLayout() {
 
   return (
     <div className="flex justify-center min-h-screen">
-      <div className="relative w-full min-h-screen pb-410">
+      <div className="relative w-full min-h-screen pb-15">
         {/* pb-32 = 128px padding-bottom (NavigationBar 높이 + 충분한 여유 공간) */}
         <Outlet />
         {showNavBar && <NavigationBar />}
