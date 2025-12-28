@@ -1,38 +1,25 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  useRecentReleases,
-  useUpcomingReleases,
-  usePlatforms,
-} from "../hooks/useWorks";
+import { useRecentReleases, useUpcomingReleases } from "../hooks/useWorks";
 import Header from "../components/common/Header";
+import { DOMAIN_PLATFORMS, PLATFORM_META } from "../constants/platforms";
 
 type Category = "movie" | "tv" | "game" | "webtoon" | "webnovel";
 type ReleaseType = "released" | "upcoming";
 
 const categories: { id: Category; label: string }[] = [
   { id: "movie", label: "영화" },
-  { id: "tv", label: "TV" },
+  { id: "tv", label: "시리즈" },
   { id: "game", label: "게임" },
   { id: "webtoon", label: "웹툰" },
   { id: "webnovel", label: "웹소설" },
 ];
 
-// 플랫폼 아이콘 매핑
-const platformIcons: Record<string, string> = {
-  tmdb: "🎬",
-  netflix: "🎥",
-  steam: "🎮",
-  naver: "📱",
-  kakao: "📚",
-  naverseries: "📖",
-};
-
 export default function NewReleasesPage() {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<Category>("game");
   const [selectedPlatforms, setSelectedPlatforms] = useState<Set<string>>(
-    new Set(["steam"])
+    new Set(["all"])
   );
   const [releaseType, setReleaseType] = useState<ReleaseType>("released");
   const [page, setPage] = useState(0);
@@ -46,17 +33,23 @@ export default function NewReleasesPage() {
     webnovel: "WEBNOVEL",
   };
 
-  // API에서 플랫폼 목록 가져오기
-  const { data: platformsData } = usePlatforms(domainMap[selectedCategory]);
-  const availablePlatforms = (platformsData || []).map((platformName) => ({
-    id: platformName.toLowerCase(),
-    name: platformName,
-    icon: platformIcons[platformName.toLowerCase()] || "📦",
-  }));
+  const domainKey = domainMap[selectedCategory];
+  const platformKeys = DOMAIN_PLATFORMS[domainKey] || [];
+
+  const availablePlatforms = platformKeys.map((key) => {
+    const meta = PLATFORM_META[key];
+    return {
+      id: key.toLowerCase(),
+      key,
+      label: meta?.label ?? key,
+      logo: meta?.logo,
+    };
+  });
 
   // 선택된 플랫폼을 배열로 변환
-  const selectedPlatformsArray =
-    selectedPlatforms.size > 0 ? Array.from(selectedPlatforms) : undefined;
+  const selectedPlatformsArray = selectedPlatforms.has("all")
+    ? undefined
+    : Array.from(selectedPlatforms);
 
   // API 호출
   const {
@@ -104,10 +97,21 @@ export default function NewReleasesPage() {
 
   const togglePlatform = (platformId: string) => {
     const newSelection = new Set(selectedPlatforms);
-    if (newSelection.has(platformId)) {
-      newSelection.delete(platformId);
+
+    if (platformId === "all") {
+      newSelection.clear();
+      newSelection.add("all");
     } else {
-      newSelection.add(platformId);
+      if (newSelection.has(platformId)) {
+        newSelection.delete(platformId);
+      } else {
+        newSelection.add(platformId);
+      }
+      newSelection.delete("all");
+
+      if (newSelection.size === 0) {
+        newSelection.add("all");
+      }
     }
     setSelectedPlatforms(newSelection);
     setPage(0); // 필터 변경 시 페이지 초기화
@@ -152,40 +156,38 @@ export default function NewReleasesPage() {
           </div>
         </div>
         {/* 플랫폼 */}
-        <div className="pb-4 mt-15">
-          <span className="block text-white text-sm font-semibold mb-3">
-            플랫폼
-          </span>
-          <div className="flex gap-4 overflow-x-auto no-scrollbar">
-            {availablePlatforms.map((platform) => (
-              <div
-                key={platform.id}
-                className={`flex flex-col items-center gap-1 cursor-pointer shrink-0
-              ${selectedPlatforms.has(platform.id) ? "text-[#646cff] font-semibold" : ""}`}
-                onClick={() => togglePlatform(platform.id)}
-              >
-                <div
-                  className={`w-15 h-15 flex items-center justify-center rounded-full border-2 text-2xl transition
-              ${
-                selectedPlatforms.has(platform.id)
-                  ? "border-[#646cff] bg-[#646cff22]"
-                  : "border-[#444] bg-[#2a2a2a]"
-              }`}
+        <div className="pb-4 py-5 mt-[30px]">
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide">
+            {availablePlatforms.map((platform) => {
+              const isSelected = selectedPlatforms.has(platform.id);
+
+              return (
+                <button
+                  key={platform.id}
+                  onClick={() => togglePlatform(platform.id)}
+                  className={`flex items-center gap-2 py-1.5 rounded-full border text-sm font-medium transition-all flex-shrink-0
+    ${platform.key === "ALL" ? "px-4" : "px-2"}
+    ${
+      isSelected
+        ? "border-transparent text-white bg-gradient-to-r from-[#855BFF] to-[#445FD1]"
+        : "border-[#403F43] bg-[#2a2a2a] text-[#D3D3D3] hover:border-[#855BFF]"
+    }`}
                 >
-                  {platform.icon}
-                </div>
-                <span
-                  className={`text-xs transition
-                ${selectedPlatforms.has(platform.id) ? "text-[#646cff]" : "text-[#888]"}`}
-                >
-                  {platform.name}
-                </span>
-              </div>
-            ))}
+                  {platform.logo && (
+                    <img
+                      src={platform.logo}
+                      alt={platform.label}
+                      className="w-5 h-5 rounded-full object-contain"
+                    />
+                  )}
+                  <span>{platform.label}</span>
+                </button>
+              );
+            })}
           </div>
 
           {/* 신작 / 예정 탭 */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 pt-3">
             <button
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition
           ${
@@ -212,7 +214,7 @@ export default function NewReleasesPage() {
         </div>
 
         {/* 콘텐츠 영역 */}
-        <div className="flex-1 overflow-y-auto p-5">
+        <div className="flex-1 overflow-y-auto">
           {isLoading ? (
             <div className="text-center text-[#888] py-20 text-sm">
               로딩 중...
@@ -238,7 +240,9 @@ export default function NewReleasesPage() {
                     </div>
 
                     <img
-                      src={work.thumbnail || "https://via.placeholder.com/60x80"}
+                      src={
+                        work.thumbnail || "https://via.placeholder.com/60x80"
+                      }
                       className="w-[60px] h-[80px] rounded-md object-cover bg-[#444] shrink-0"
                       alt={work.title}
                     />
