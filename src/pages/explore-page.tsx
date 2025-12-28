@@ -32,11 +32,8 @@ export default function ExplorePage() {
   );
   const [selectedGenres, setSelectedGenres] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
-  const [showAllGenres, setShowAllGenres] = useState(false); // 장르 더보기 상태
   // const [sortBy, setSortBy] = useState<"latest" | "reviews" | "rating">("latest"); // 정렬 기준 - 일단 최신순만 지원
   const [showGenreFilter, setShowGenreFilter] = useState(false);
-
-  const GENRE_DISPLAY_LIMIT = 10; // 기본 표시 개수
 
   const { data: genresWithCountData } = useGenresWithCount(
     selectedCategory.toUpperCase()
@@ -48,11 +45,6 @@ export default function ExplorePage() {
         ([, countA], [, countB]) => countB - countA
       )
     : [];
-
-  // 표시할 장르 목록 (더보기 상태에 따라)
-  const displayedGenres = showAllGenres
-    ? sortedGenres
-    : sortedGenres.slice(0, GENRE_DISPLAY_LIMIT);
 
   const domainKey = selectedCategory.toUpperCase();
 
