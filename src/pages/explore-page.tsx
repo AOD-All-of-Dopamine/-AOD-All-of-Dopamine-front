@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useWorks, useGenresWithCount } from "../hooks/useWorks";
 import Header from "../components/common/Header";
 import { DOMAIN_PLATFORMS, PLATFORM_META } from "../constants/platforms";
@@ -26,14 +26,48 @@ const domainLabelMap: Record<string, string> = {
 
 export default function ExplorePage() {
   const navigate = useNavigate();
-  const [selectedCategory, setSelectedCategory] = useState<Category>("game");
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [selectedCategory, setSelectedCategory] = useState<Category>(() => {
+    const cat = searchParams.get("category");
+    return (categories.find((c) => c.id === cat)?.id as Category) || "game";
+  });
+
   const [selectedPlatforms, setSelectedPlatforms] = useState<Set<string>>(
-    new Set(["ALL"])
+    () => {
+      const platforms = searchParams.get("platforms");
+      return platforms ? new Set(platforms.split(",")) : new Set(["ALL"]);
+    }
   );
-  const [selectedGenres, setSelectedGenres] = useState<Set<string>>(new Set());
-  const [page, setPage] = useState(0);
-  // const [sortBy, setSortBy] = useState<"latest" | "reviews" | "rating">("latest"); // 정렬 기준 - 일단 최신순만 지원
+
+  const [selectedGenres, setSelectedGenres] = useState<Set<string>>(() => {
+    const genres = searchParams.get("genres");
+    return genres ? new Set(genres.split(",")) : new Set();
+  });
+
+  const [page, setPage] = useState(() => {
+    const p = searchParams.get("page");
+    return p ? parseInt(p, 10) : 0;
+  });
+
   const [showGenreFilter, setShowGenreFilter] = useState(false);
+
+  // URL 동기화
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set("category", selectedCategory);
+    params.set("page", page.toString());
+
+    if (!selectedPlatforms.has("ALL") && selectedPlatforms.size > 0) {
+      params.set("platforms", Array.from(selectedPlatforms).join(","));
+    }
+
+    if (selectedGenres.size > 0) {
+      params.set("genres", Array.from(selectedGenres).join(","));
+    }
+
+    setSearchParams(params, { replace: true });
+  }, [selectedCategory, selectedPlatforms, selectedGenres, page]);
 
   const { data: genresWithCountData } = useGenresWithCount(
     selectedCategory.toUpperCase()
