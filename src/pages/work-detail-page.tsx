@@ -18,6 +18,18 @@ import {
   getPlatformLabel,
   formatFieldValue,
 } from "../utils/field-labels";
+import Back from "../assets/left-arrow.svg";
+import SearchIcon from "../assets/search-icon.svg";
+import PurpleStar from "../assets/purple-star.svg";
+import GreyStar from "../assets/grey-star.svg";
+import WhiteLikeIcon from "../assets/work-detail-icon/white-like-icon.png";
+import WhiteDislikeIcon from "../assets/work-detail-icon/white-dislike-icon.png";
+import GreyLikeIcon from "../assets/work-detail-icon/grey-like-icon.png";
+import ShareIcon from "../assets/work-detail-icon/share-icon.svg";
+import SaveIcon from "../assets/work-detail-icon/save-icon.svg";
+import BookmarkIcon from "../assets/work-detail-icon/bookmark-icon.svg";
+import whiteCat from "../assets/white-cat.png";
+import { PLATFORM_META } from "../constants/platforms";
 
 type TabType = "info" | "reviews";
 
@@ -25,12 +37,7 @@ export default function WorkDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const contentId = id ? Number(id) : 0;
-  const { isAuthenticated } = useAuth();
-
-  // 페이지 진입 시 스크롤 맨 위로
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [contentId]);
+  const isAuthenticated = useAuth(); // true;
 
   const [activeTab, setActiveTab] = useState<TabType>("info");
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -42,29 +49,49 @@ export default function WorkDetailPage() {
     content: "",
   });
 
+  const [isBookmarkAnimating, setIsBookmarkAnimating] = useState(false);
+  const [isRatingOpen, setIsRatingOpen] = useState(false);
+
   const { data: work, isLoading: workLoading } = useWorkDetail(contentId);
   const { data: reviewsData } = useReviews(contentId);
+  const { data: likeStats } = useLikeStats(contentId);
+  const { data: bookmarkStatus } = useBookmarkStatus(contentId);
+
   const createReviewMutation = useCreateReview(contentId);
   const deleteReviewMutation = useDeleteReview(contentId);
-  const { data: likeStats } = useLikeStats(contentId);
   const toggleLikeMutation = useToggleLike(contentId);
   const toggleDislikeMutation = useToggleDislike(contentId);
-  const { data: bookmarkStatus } = useBookmarkStatus(contentId);
   const toggleBookmarkMutation = useToggleBookmark(contentId);
 
-  const handleLike = () => {
-    if (!isAuthenticated) return alert("로그인이 필요합니다.");
-    toggleLikeMutation.mutate();
-  };
+  const [isSynopsisExpanded, setIsSynopsisExpanded] = useState(false);
 
-  const handleDislike = () => {
-    if (!isAuthenticated) return alert("로그인이 필요합니다.");
-    toggleDislikeMutation.mutate();
-  };
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [contentId]);
 
   const handleBookmark = () => {
     if (!isAuthenticated) return alert("로그인이 필요합니다.");
+    setIsBookmarkAnimating(true);
     toggleBookmarkMutation.mutate();
+    setTimeout(() => setIsBookmarkAnimating(false), 500);
+  };
+
+  const handleRatingAction = (type: "like" | "dislike") => {
+    if (!isAuthenticated) {
+      alert("로그인이 필요합니다.");
+      setIsRatingOpen(false);
+      return;
+    }
+
+    if (type === "like") {
+      if (likeStats?.isDisliked) toggleDislikeMutation.mutate();
+      toggleLikeMutation.mutate();
+    } else {
+      if (likeStats?.isLiked) toggleLikeMutation.mutate();
+      toggleDislikeMutation.mutate();
+    }
+
+    setIsRatingOpen(false);
   };
 
   const handleSubmitReview = () => {
@@ -112,46 +139,59 @@ export default function WorkDetailPage() {
   const reviewCount = reviewsData?.totalElements || 0;
   const averageRating = work.score || 0;
 
+  const platformItems = Object.entries(work.platformInfo ?? {})
+    .flatMap(([platformKey, info]) => {
+      const items: string[] = [];
+
+      // 플랫폼 key도 포함
+      items.push(platformKey);
+
+      if (Array.isArray(info.watch_providers)) {
+        items.push(...info.watch_providers);
+      }
+
+      return items;
+    })
+    .filter((v, i, arr) => arr.indexOf(v) === i)
+
+    .filter((key) => PLATFORM_META[key])
+    .map((key) => ({
+      key,
+      ...PLATFORM_META[key],
+    }));
+
   return (
-    <div className="min-h-screen bg-[var(--blackbackground-primary)] pb-20">
-      {/* 배경 블러 이미지 */}
-      <div className="relative w-full h-[333px] overflow-hidden">
+    <div className="relative min-h-screen pb-20">
+      <div className="relative w-full h-80 overflow-hidden">
         <img
-          src={work.thumbnail || "https://via.placeholder.com/375x333"}
+          src={work.thumbnail || "https://via.placeholder.com/1920x380"}
           alt=""
-          className="w-full h-full object-cover blur-sm opacity-15"
+          className="w-full h-full object-cover blur-sm opacity-60 brightness-75 scale-110"
         />
-        <div className="absolute bottom-0 left-0 w-full h-[160px] bg-gradient-to-t from-[var(--blackbackground-primary)] to-transparent" />
+
+        <div
+          className="absolute bottom-0 left-0 w-full h-40
+      bg-gradient-to-t
+      from-[#242424]/100
+      via-[#242424]/80
+      via-[#242424]/40
+      to-transparent"
+        />
       </div>
-      <div className="relative z-10 w-full max-w-2xl mx-auto -mt-[200px]">
+      {/* 2. 메인 컨텐츠 영역: max-w-2xl로 제한 */}
+      <div className="w-full max-w-2xl mx-auto relative -mt-81 z-10">
         {/* 헤더 */}
-        <header className="h-[60px] flex items-center justify-between px-4">
-          <button onClick={() => navigate(-1)} className="w-6 h-6">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M15 18L9 12L15 6"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+        <header className="h-[60px] flex items-center justify-between px-4 mb-4">
+          <button onClick={() => navigate(-1)} className="w-5 h-5">
+            <img src={Back} alt="뒤로가기" className="w-5 h-5" />
           </button>
           <button className="w-5 h-5">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <circle cx="9" cy="9" r="7" stroke="white" strokeWidth="2" />
-              <path
-                d="M14 14L18 18"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
+            <img src={SearchIcon} className="w-5 h-5" />
           </button>
         </header>
 
         {/* 포스터 */}
-        <div className="mx-4 mt-4">
+        <div className="relative z-10 mx-4 mt-10">
           <div className="w-[120px] h-[168px] bg-[var(--greygrey-900background-secondary)] rounded overflow-hidden">
             <img
               src={work.thumbnail || "https://via.placeholder.com/120x168"}
@@ -164,52 +204,47 @@ export default function WorkDetailPage() {
         {/* 작품 정보 섹션 */}
         <div className="relative z-10 px-4 mt-4">
           {/* 제목 및 기본 정보 */}
-          <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-[18px] font-semibold text-white">
+          <div className="flex items-center gap-3">
+            <h1 className="font-[PretendardVariable] text-[18px] font-semibold text-white">
               {work.title}
             </h1>
             {work.domain && (
-              <span className="px-1 py-0.5 bg-[#E9E1FF] rounded text-[12px] text-[#855BFF]">
+              <span className="px-1 bg-[#E9E1FF] rounded text-[12px] text-[#855BFF]">
                 {work.domain}
               </span>
             )}
           </div>
 
-          <p className="text-[14px] text-[var(--greygrey-200text-primary)]">
+          <p className="font-[PretendardVariable] text-[14px] text-[#D3D3D3]">
             {work.domain || "영화"} ·{" "}
             {work.releaseDate
               ? new Date(work.releaseDate).getFullYear()
               : new Date().getFullYear()}
           </p>
 
-          <div className="flex items-center gap-0.5 mt-1">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path
-                d="M8 1L10.163 5.279L15 5.944L11.5 9.269L12.326 14L8 11.779L3.674 14L4.5 9.269L1 5.944L5.837 5.279L8 1Z"
-                fill="#855BFF"
-              />
-            </svg>
-            <span className="text-[14px] text-[#855BFF]">
+          <div className="flex items-center gap-1">
+            <img src={PurpleStar} alt="평점" className="w-3.5 h-3.5" />
+            <span className="font-[PretendardVariable] text-[14px] text-[#855BFF]">
               {averageRating.toFixed(1)}
             </span>
           </div>
 
           {/* 통계 카드 */}
-          <div className="mt-4 bg-[var(--greygrey-900background-secondary)] rounded-lg py-3">
+          <div className="bg-[#302F31] rounded-xl py-3 px-2 backdrop-blur-sm mt-6">
             <div className="flex items-center">
-              <div className="flex-1 flex flex-col items-center border-r border-[var(--greygrey-700)]">
+              <div className="flex-1 flex flex-col items-center border-r border-[#403F43]">
                 <span className="text-[18px] font-semibold text-white">
                   {reviewCount}
                 </span>
-                <span className="text-[14px] text-[var(--greygrey-200text-primary)]">
+                <span className="font-[PretendardVariable] font-medium text-[14px] text-[#D3D3D3]">
                   리뷰
                 </span>
               </div>
-              <div className="flex-1 flex flex-col items-center border-r border-[var(--greygrey-700)]">
+              <div className="flex-1 flex flex-col items-center border-r border-[#403F43]">
                 <span className="text-[18px] font-semibold text-white">
                   {likeStats?.likeCount || 0}
                 </span>
-                <span className="text-[14px] text-[var(--greygrey-200text-primary)]">
+                <span className="font-[PretendardVariable] font-medium text-[14px] text-[#D3D3D3]">
                   좋아요
                 </span>
               </div>
@@ -217,120 +252,158 @@ export default function WorkDetailPage() {
                 <span className="text-[18px] font-semibold text-white">
                   {likeStats?.dislikeCount || 0}
                 </span>
-                <span className="text-[14px] text-[var(--greygrey-200text-primary)]">
+                <span className="font-[PretendardVariable] font-medium text-[14px] text-[#D3D3D3]">
                   싫어요
                 </span>
               </div>
             </div>
           </div>
 
-          {/* 액션 버튼 */}
-          <div className="flex items-center justify-center gap-8 mt-4">
+          {/* 액션 영역 */}
+          <div className="flex items-center justify-center gap-10 mt-6 relative mx-auto max-w-[320px]">
             <button
               onClick={handleBookmark}
-              className="flex flex-col items-center gap-1"
+              className="flex flex-col items-center gap-1.5 min-w-16"
             >
-              <div className="w-6 h-6 flex items-center justify-center">
-                <svg
-                  width="14"
-                  height="19"
-                  viewBox="0 0 14 19"
-                  fill={bookmarkStatus?.isBookmarked ? "#855BFF" : "none"}
-                >
-                  <path
-                    d="M1 3C1 1.89543 1.89543 1 3 1H11C12.1046 1 13 1.89543 13 3V17L7 14L1 17V3Z"
-                    stroke={bookmarkStatus?.isBookmarked ? "#855BFF" : "white"}
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+              <div
+                className={`w-6 h-6 flex items-center justify-center transition-transform duration-500 ${isBookmarkAnimating ? "rotate-[360deg]" : ""}`}
+              >
+                <img
+                  src={bookmarkStatus?.isBookmarked ? BookmarkIcon : SaveIcon}
+                  className="w-6 h-6"
+                  alt="save"
+                />
               </div>
-              <span className="text-[14px] text-white">보고 싶어요</span>
+              <span
+                className={`font-[PretendardVariable] text-[14px] whitespace-nowrap ${bookmarkStatus?.isBookmarked ? "text-[#855BFF]" : "text-[#8D8C8E]"}`}
+              >
+                보고 싶어요
+              </span>
             </button>
 
-            <button
-              onClick={handleLike}
-              className="flex flex-col items-center gap-1"
-            >
-              <div className="w-6 h-6 flex items-center justify-center">
-                <svg
-                  width="19"
-                  height="17"
-                  viewBox="0 0 19 17"
-                  fill={likeStats?.isLiked ? "#855BFF" : "none"}
+            <div className="relative min-w-16 flex justify-center">
+              {!isRatingOpen ? (
+                <button
+                  onClick={() => setIsRatingOpen(true)}
+                  className="flex flex-col items-center gap-1.5"
                 >
-                  <path
-                    d="M1 7H4V16H1V7Z"
-                    stroke={likeStats?.isLiked ? "#855BFF" : "white"}
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                  <div className="w-6 h-6 flex items-center justify-center">
+                    <img src={GreyLikeIcon} className="w-6 h-6" alt="rate" />
+                  </div>
+                  <span className="text-[14px] text-[#8D8C8E]">평가</span>
+                </button>
+              ) : (
+                <>
+                  <div
+                    className="fixed inset-0 bg-black/50 z-40"
+                    onClick={() => setIsRatingOpen(false)}
                   />
-                  <path
-                    d="M4 7L7 1H8C9.10457 1 10 1.89543 10 3V5H15C16.1046 5 17 5.89543 17 7V8.5C17 9 16.5 10 16 10.5L13 15C12.5 15.5 12 16 11 16H4V7Z"
-                    stroke={likeStats?.isLiked ? "#855BFF" : "white"}
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
-              <span className="text-[14px] text-white">좋아요</span>
-            </button>
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex flex-col items-center z-50">
+                    <div className="absolute bottom-12 w-[160px] h-[56px] bg-[#302F31] rounded-full flex items-center justify-around shadow-2xl animate-in fade-in slide-in-from-bottom-3 duration-200 border border-white/10">
+                      <button
+                        onClick={() => {
+                          handleRatingAction("like");
+                        }}
+                        className="flex flex-col items-center px-4"
+                      >
+                        <img
+                          src={WhiteLikeIcon}
+                          className="w-5 h-5 mb-0.5"
+                          alt="like"
+                        />
+                        <span className="font-[PretendardVariable] text-white text-[11px]">
+                          좋아요
+                        </span>
+                      </button>
+                      <div className="w-[1px] h-4 bg-white/20" />
+                      <button
+                        onClick={() => {
+                          handleRatingAction("dislike");
+                        }}
+                        className="flex flex-col items-center px-4"
+                      >
+                        <img
+                          src={WhiteDislikeIcon}
+                          className="w-5 h-5 mb-0.5"
+                          alt="dislike"
+                        />
+                        <span className="font-[PretendardVariable] text-white text-[11px]">
+                          싫어요
+                        </span>
+                      </button>
+                    </div>
 
-            <button
-              onClick={handleDislike}
-              className="flex flex-col items-center gap-1"
-            >
+                    <button
+                      onClick={() => setIsRatingOpen(false)}
+                      className="flex flex-col items-center gap-1.5"
+                    >
+                      <div className="w-7 h-7 flex items-center justify-center bg-[#302F31] rounded-full shadow-lg border border-white/10">
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 12 12"
+                          fill="none"
+                        >
+                          <path
+                            d="M1 1L11 11M11 1L1 11"
+                            stroke="white"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      </div>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <button className="flex flex-col items-center gap-1.5 min-w-16">
               <div className="w-6 h-6 flex items-center justify-center">
-                <svg
-                  width="19"
-                  height="17"
-                  viewBox="0 0 19 17"
-                  fill={likeStats?.isDisliked ? "#FF5455" : "none"}
-                  className="rotate-180"
-                >
-                  <path
-                    d="M1 7H4V16H1V7Z"
-                    stroke={likeStats?.isDisliked ? "#FF5455" : "#9F9EA4"}
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M4 7L7 1H8C9.10457 1 10 1.89543 10 3V5H15C16.1046 5 17 5.89543 17 7V8.5C17 9 16.5 10 16 10.5L13 15C12.5 15.5 12 16 11 16H4V7Z"
-                    stroke={likeStats?.isDisliked ? "#FF5455" : "#9F9EA4"}
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+                <img src={ShareIcon} className="w-6 h-6" alt="share" />
               </div>
-              <span className="text-[14px] text-[var(--greygrey-400icon)]">
-                싫어요
+              <span className="font-[PretendardVariable] text-[14px] text-[#8D8C8E]">
+                공유
               </span>
             </button>
           </div>
 
           {/* 플랫폼 */}
-          {work.platformInfo && Object.keys(work.platformInfo).length > 0 && (
-            <div className="mt-6">
+          {platformItems.length > 0 && (
+            <div className="mt-8">
               <h2 className="text-[16px] font-semibold text-white mb-2">
                 플랫폼
               </h2>
-              <div className="flex items-center gap-3">
-                {Object.keys(work.platformInfo).map((platform) => (
+
+              <div className="flex items-center gap-4">
+                {platformItems.map(({ key, label, logo }) => (
                   <div
-                    key={platform}
+                    key={`${key}-${label}`}
                     className="flex flex-col items-center gap-1"
                   >
-                    <div className="w-10 h-10 bg-[var(--greygrey-900background-secondary)] rounded-full overflow-hidden flex items-center justify-center">
-                      <span className="text-[10px] text-white">
-                        {platform.slice(0, 2)}
-                      </span>
+                    <div
+                      className="
+          w-12 h-12
+          rounded-full
+          bg-[var(--greygrey-900background-secondary)]
+          flex items-center justify-center
+          overflow-hidden
+        "
+                    >
+                      {logo ? (
+                        <img
+                          src={logo}
+                          alt={label}
+                          className="w-12 h-12 object-contain rounded-full"
+                        />
+                      ) : (
+                        <span className="text-[11px] text-white font-medium">
+                          {label.slice(0, 2)}
+                        </span>
+                      )}
                     </div>
-                    <span className="text-[12px] text-white">{platform}</span>
+
+                    <span className="text-[12px] text-white">{label}</span>
                   </div>
                 ))}
               </div>
@@ -339,11 +412,11 @@ export default function WorkDetailPage() {
         </div>
 
         {/* 탭 */}
-        <div className="relative z-10 mt-6 flex border-b border-[var(--greygrey-700)]">
+        <div className="relative z-10 mt-6 flex border-b border-[#403F43]">
           <button
             className={`flex-1 py-3 text-center text-[16px] ${
               activeTab === "info"
-                ? "font-semibold text-white border-b-2 border-white"
+                ? "font-semibold text-white border-b-2 border-white ml-4"
                 : "text-[var(--greygrey-300text-secondary)]"
             }`}
             onClick={() => setActiveTab("info")}
@@ -353,7 +426,7 @@ export default function WorkDetailPage() {
           <button
             className={`flex-1 py-3 text-center text-[16px] ${
               activeTab === "reviews"
-                ? "font-semibold text-white border-b-2 border-white"
+                ? "font-semibold text-white border-b-2 border-white mr-4"
                 : "text-[var(--greygrey-300text-secondary)]"
             }`}
             onClick={() => setActiveTab("reviews")}
@@ -368,12 +441,23 @@ export default function WorkDetailPage() {
             <>
               {work.synopsis && (
                 <div className="mb-6">
-                  <h2 className="text-[16px] font-semibold text-white mb-2">
-                    시놉시스
+                  <h2 className="font-[PretendardVariable] text-[16px] text-[#B2B1B3] mb-2">
+                    작품 설명
                   </h2>
-                  <p className="text-[14px] text-[var(--greygrey-200text-primary)] leading-relaxed">
+                  <p
+                    className={`font-[PretendardVariable] text-[14px] text-[var(--greygrey-200text-primary)] leading-relaxed ${
+                      !isSynopsisExpanded ? "line-clamp-4" : ""
+                    }`}
+                  >
                     {work.synopsis}
                   </p>
+
+                  <button
+                    onClick={() => setIsSynopsisExpanded((prev) => !prev)}
+                    className="mt-2 text-[13px] text-[#855BFF] font-medium"
+                  >
+                    {isSynopsisExpanded ? "접기" : "더보기"}
+                  </button>
                 </div>
               )}
 
@@ -381,24 +465,21 @@ export default function WorkDetailPage() {
               {work.synopsis &&
                 work.domainInfo &&
                 Object.keys(work.domainInfo).length > 0 && (
-                  <div className="border-t border-[var(--greygrey-800)] mb-6"></div>
+                  <div className="border-t border-[#403F43] mb-6"></div>
                 )}
 
               {work.domainInfo && Object.keys(work.domainInfo).length > 0 && (
                 <div className="mb-6">
-                  <h2 className="text-[16px] font-semibold text-white mb-3">
-                    작품 정보
-                  </h2>
                   <div className="flex flex-col gap-2">
                     {Object.entries(work.domainInfo).map(([key, value]) => (
                       <div
                         key={key}
-                        className="flex p-3 bg-[var(--greygrey-900background-secondary)] rounded-lg"
+                        className="flex p-1 bg-[var(--greygrey-900background-secondary)] rounded-lg"
                       >
-                        <span className="text-[14px] text-[var(--greygrey-300text-secondary)] min-w-[80px]">
+                        <span className="font-[PretendardVariable] text-[14px] text-[#B2B1B3] min-w-[80px]">
                           {getFieldLabel(key, "domain")}
                         </span>
-                        <span className="text-[14px] text-white flex-1">
+                        <span className="font-[PretendardVariable] text-[14px] text-white flex-1">
                           {formatFieldValue(key, value)}
                         </span>
                       </div>
@@ -412,13 +493,13 @@ export default function WorkDetailPage() {
                 Object.keys(work.domainInfo).length > 0 &&
                 work.platformInfo &&
                 Object.keys(work.platformInfo).length > 0 && (
-                  <div className="border-t border-[var(--greygrey-800)] mb-6"></div>
+                  <div className="border-t border-[#403F43] mb-6"></div>
                 )}
 
               {work.platformInfo &&
                 Object.keys(work.platformInfo).length > 0 && (
                   <div className="mb-6">
-                    <h2 className="text-[16px] font-semibold text-white mb-3">
+                    <h2 className="text-[16px] text-[#B2B1B3] mb-3">
                       플랫폼 정보
                     </h2>
                     {Object.entries(work.platformInfo).map(
@@ -497,55 +578,42 @@ export default function WorkDetailPage() {
               {/* 내가 쓴 리뷰 섹션 */}
               {isAuthenticated && (
                 <div className="mb-6">
-                  <h2 className="text-[16px] font-semibold text-white mb-2">
+                  <h2 className="font-[PretendardVariable] text-[16px] font-semibold text-white mb-2">
                     내가 쓴 리뷰
                   </h2>
-                  <div className="p-4 border border-[var(--greygrey-700)] rounded-lg">
-                    <p className="text-[14px] text-white text-center mb-3">
+                  <div className="p-4 border border-[#403F43] rounded-lg">
+                    <p className="font-[PretendardVariable] text-[14px] text-white text-center mb-3">
                       이 작품은 어떠셨나요?
                     </p>
 
                     {/* 별점 선택 */}
                     <div className="flex items-center justify-center gap-2 mb-3">
-                      {[1, 2, 3, 4, 5].map((rating) => (
-                        <button
-                          key={rating}
-                          onClick={() => setSelectedRating(rating)}
-                          onMouseEnter={() => setHoveredRating(rating)}
-                          onMouseLeave={() => setHoveredRating(0)}
-                          className="w-8 h-8 transition-transform hover:scale-110"
-                        >
-                          <svg
-                            width="32"
-                            height="32"
-                            viewBox="0 0 32 32"
-                            fill="none"
+                      {[1, 2, 3, 4, 5].map((rating) => {
+                        const isActive =
+                          (hoveredRating || selectedRating) >= rating;
+
+                        return (
+                          <button
+                            key={rating}
+                            onClick={() => setSelectedRating(rating)}
+                            onMouseEnter={() => setHoveredRating(rating)}
+                            onMouseLeave={() => setHoveredRating(0)}
+                            className="w-7 h-7 hover:scale-110"
                           >
-                            <path
-                              d="M16 4L19.708 11.472L28 12.632L22 18.472L23.416 26.728L16 22.848L8.584 26.728L10 18.472L4 12.632L12.292 11.472L16 4Z"
-                              fill={
-                                (hoveredRating || selectedRating) >= rating
-                                  ? "#855BFF"
-                                  : "#64636B"
-                              }
-                              stroke={
-                                (hoveredRating || selectedRating) >= rating
-                                  ? "#855BFF"
-                                  : "#64636B"
-                              }
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
+                            <img
+                              src={isActive ? PurpleStar : GreyStar}
+                              alt="점수"
+                              className="w-full h-full object-contain"
                             />
-                          </svg>
-                        </button>
-                      ))}
+                          </button>
+                        );
+                      })}
                     </div>
 
                     {!showReviewForm ? (
                       <button
                         onClick={() => setShowReviewForm(true)}
-                        className="w-full py-2 bg-[#855BFF] text-white text-[14px] rounded"
+                        className="w-full py-2 bg-[#855BFF] font-[PretendardVariable] text-white text-[14px] rounded mt-2"
                       >
                         리뷰 작성하기
                       </button>
@@ -614,33 +682,28 @@ export default function WorkDetailPage() {
                 </div>
 
                 {/* 평균 평점 카드 */}
-                <div className="bg-[var(--greygrey-900background-secondary)] rounded-lg p-4 mb-4">
+                <div className="bg-[#302F31] rounded-lg p-4 mb-4">
                   <div className="flex items-center justify-between">
                     <div className="flex gap-1">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <svg
-                          key={star}
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                        >
-                          <path
-                            d="M12 2L14.708 8.472L22 9.632L16.5 14.472L17.916 21.728L12 18.848L6.084 21.728L7.5 14.472L2 9.632L9.292 8.472L12 2Z"
-                            fill={
-                              star <= Math.round(averageRating)
-                                ? "#FFD700"
-                                : "#64636B"
-                            }
+                      {[1, 2, 3, 4, 5].map((star) => {
+                        const isActive = star <= Math.round(averageRating);
+
+                        return (
+                          <img
+                            key={star}
+                            src={isActive ? PurpleStar : GreyStar}
+                            alt="평점"
+                            className="w-6 h-6 object-contain"
                           />
-                        </svg>
-                      ))}
+                        );
+                      })}
                     </div>
-                    <span className="text-[24px] font-semibold text-white">
+                    <span className="font-[PretendardVariable] text-[24px] font-semibold text-white">
                       {averageRating.toFixed(1)}
                     </span>
                   </div>
-                  <p className="text-[14px] text-white mt-1">
+
+                  <p className="font-[PretendardVariable] text-[14px] text-white mt-1">
                     총 {reviewCount}개 평점
                   </p>
                 </div>
@@ -652,27 +715,17 @@ export default function WorkDetailPage() {
                       <div key={review.reviewId} className="p-3">
                         <div className="flex items-center gap-2 mb-2">
                           <div className="w-9 h-9 bg-[var(--greygrey-800background-hover)] rounded-full flex items-center justify-center">
-                            <svg
-                              width="16"
-                              height="18"
-                              viewBox="0 0 30 32"
-                              fill="none"
-                            >
-                              <path
-                                d="M15 16C19.4183 16 23 12.4183 23 8C23 3.58172 19.4183 0 15 0C10.5817 0 7 3.58172 7 8C7 12.4183 10.5817 16 15 16Z"
-                                fill="white"
-                              />
-                              <path
-                                d="M15 18C6.71573 18 0 24.7157 0 33H30C30 24.7157 23.2843 18 15 18Z"
-                                fill="white"
-                              />
-                            </svg>
+                            <img
+                              src={whiteCat}
+                              alt="profile"
+                              className="w-6 h-6 object-cover"
+                            />
                           </div>
                           <div>
-                            <span className="text-[14px] font-semibold text-white block">
+                            <span className="font-[PretendardVariable] text-[14px] font-semibold text-white block">
                               {review.username}
                             </span>
-                            <span className="text-[12px] text-[var(--greygrey-200text-primary)]">
+                            <span className="font-[PretendardVariable] text-[12px] text-[var(--greygrey-200text-primary)]">
                               {new Date(review.createdAt).toLocaleDateString(
                                 "ko-KR",
                                 {
@@ -686,74 +739,39 @@ export default function WorkDetailPage() {
                         </div>
 
                         <div className="flex gap-0.5 mb-2">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <svg
-                              key={star}
-                              width="16"
-                              height="16"
-                              viewBox="0 0 16 16"
-                              fill="none"
-                            >
-                              <path
-                                d="M8 1L10.163 5.279L15 5.944L11.5 9.269L12.326 14L8 11.779L3.674 14L4.5 9.269L1 5.944L5.837 5.279L8 1Z"
-                                fill={
-                                  star <= Math.round(review.rating)
-                                    ? "#FFD700"
-                                    : "#64636B"
-                                }
+                          {[1, 2, 3, 4, 5].map((star) => {
+                            const isActive = star <= Math.round(review.rating);
+
+                            return (
+                              <img
+                                key={star}
+                                src={isActive ? PurpleStar : GreyStar}
+                                alt="리뷰 평점"
+                                className="w-4 h-4 object-contain"
                               />
-                            </svg>
-                          ))}
+                            );
+                          })}
                         </div>
 
-                        <p className="text-[14px] text-white mb-2">
+                        <p className="font-[PretendardVariable] text-[14px] text-white mb-2">
                           {review.content}
                         </p>
 
                         <div className="flex items-center gap-2">
                           <button className="flex items-center gap-1.5 px-2.5 py-2 bg-[var(--greygrey-800background-hover)] rounded-md">
-                            <svg
-                              width="16"
-                              height="16"
-                              viewBox="0 0 16 16"
-                              fill="none"
-                            >
-                              <path
-                                d="M1 6H3V14H1V6Z"
-                                stroke="white"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                              <path
-                                d="M3 6L5 1H6C6.55228 1 7 1.44772 7 2V4H11C11.5523 4 12 4.44772 12 5V6C12 6.5 11.5 7 11 7.5L9 11C8.5 11.5 8 12 7 12H3V6Z"
-                                stroke="white"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
+                            <img
+                              src={WhiteLikeIcon}
+                              className="w-4 h-4 mb-0.5"
+                              alt="like"
+                            />
                             <span className="text-[12px] text-white">0</span>
                           </button>
                           <button className="flex items-center gap-1.5 px-2.5 py-2 bg-[var(--greygrey-800background-hover)] rounded-md">
-                            <svg
-                              width="16"
-                              height="16"
-                              viewBox="0 0 16 16"
-                              fill="none"
-                              className="rotate-180"
-                            >
-                              <path
-                                d="M1 6H3V14H1V6Z"
-                                stroke="white"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                              <path
-                                d="M3 6L5 1H6C6.55228 1 7 1.44772 7 2V4H11C11.5523 4 12 4.44772 12 5V6C12 6.5 11.5 7 11 7.5L9 11C8.5 11.5 8 12 7 12H3V6Z"
-                                stroke="white"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
+                            <img
+                              src={WhiteDislikeIcon}
+                              className="w-4 h-4 mb-0.5"
+                              alt="dislike"
+                            />
                             <span className="text-[12px] text-white">0</span>
                           </button>
                           {review.isMyReview && (
@@ -761,7 +779,7 @@ export default function WorkDetailPage() {
                               onClick={() =>
                                 handleDeleteReview(review.reviewId)
                               }
-                              className="ml-auto text-[12px] text-[#FF5455]"
+                              className="ml-auto font-[PretendardVariable] text-[12px] text-[#FF5455]"
                             >
                               삭제
                             </button>
@@ -770,7 +788,7 @@ export default function WorkDetailPage() {
                       </div>
                     ))
                   ) : (
-                    <div className="py-10 text-center text-[14px] text-[var(--greygrey-300text-secondary)]">
+                    <div className="py-10 font-[PretendardVariable] text-center text-[14px] text-[var(--greygrey-300text-secondary)]">
                       아직 리뷰가 없습니다.
                     </div>
                   )}
@@ -780,7 +798,6 @@ export default function WorkDetailPage() {
           )}
         </div>
       </div>{" "}
-      {/* max-w-2xl wrapper 닫기 */}
     </div>
   );
 }
