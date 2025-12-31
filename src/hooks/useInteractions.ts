@@ -95,10 +95,10 @@ export const useToggleLike = (contentId: number) => {
         if (!old) return old;
         return {
           ...old,
-          liked: !old.liked,
-          disliked: false,
-          likeCount: old.liked ? old.likeCount - 1 : old.likeCount + 1,
-          dislikeCount: old.disliked ? old.dislikeCount - 1 : old.dislikeCount,
+          isLiked: !old.isLiked,
+          isDisliked: false,
+          likeCount: old.isLiked ? old.likeCount - 1 : old.likeCount + 1,
+          dislikeCount: old.isDisliked ? old.dislikeCount - 1 : old.dislikeCount,
         };
       });
 
@@ -134,12 +134,12 @@ export const useToggleDislike = (contentId: number) => {
 
         return {
           ...old,
-          disliked: !old.disliked,
-          liked: false,
-          dislikeCount: old.disliked
+          isDisliked: !old.isDisliked,
+          isLiked: false,
+          dislikeCount: old.isDisliked
             ? old.dislikeCount - 1
             : old.dislikeCount + 1,
-          likeCount: old.liked ? old.likeCount - 1 : old.likeCount,
+          likeCount: old.isLiked ? old.likeCount - 1 : old.likeCount,
         };
       });
 
@@ -175,7 +175,36 @@ export const useToggleBookmark = (contentId: number) => {
 
   return useMutation({
     mutationFn: () => interactionApi.toggleBookmark(contentId),
-    onSuccess: () => {
+    onMutate: async () => {
+      await queryClient.cancelQueries({
+        queryKey: ["bookmarkStatus", contentId],
+      });
+
+      const previous = queryClient.getQueryData<any>([
+        "bookmarkStatus",
+        contentId,
+      ]);
+
+      queryClient.setQueryData(
+        ["bookmarkStatus", contentId],
+        (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            isBookmarked: !old.isBookmarked,
+          };
+        }
+      );
+
+      return { previous };
+    },
+    onError: (_err, _var, context) => {
+      queryClient.setQueryData(
+        ["bookmarkStatus", contentId],
+        context?.previous
+      );
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: ["bookmarkStatus", contentId],
       });
