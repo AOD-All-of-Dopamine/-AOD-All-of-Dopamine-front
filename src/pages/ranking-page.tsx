@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { rankingApi, ExternalRanking } from "../api/rankingApi";
 import Header from "../components/common/Header";
 import PurpleStar from "../assets/purple-star.svg";
@@ -72,13 +72,43 @@ const WEBNOVEL_PLATFORM_MAPPING: Record<string, string> = {
 };
 export default function RankingPage() {
   const navigate = useNavigate();
-  const [selectedCategory, setSelectedCategory] = useState<Category>("game");
-  const [selectedOTTs, setSelectedOTTs] = useState<Set<string>>(new Set());
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [selectedCategory, setSelectedCategory] = useState<Category>(() => {
+    const cat = searchParams.get("category");
+    return (categories.find((c) => c.id === cat)?.id as Category) || "game";
+  });
+
+  const [selectedOTTs, setSelectedOTTs] = useState<Set<string>>(() => {
+    const otts = searchParams.get("otts");
+    return otts ? new Set(otts.split(",")) : new Set();
+  });
+
   const [selectedWebnovels, setSelectedWebnovels] = useState<Set<string>>(
-    new Set()
+    () => {
+      const webnovels = searchParams.get("webnovels");
+      return webnovels ? new Set(webnovels.split(",")) : new Set();
+    }
   );
+
   const [rankings, setRankings] = useState<RankingItem[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // URL 동기화
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set("category", selectedCategory);
+
+    if (selectedOTTs.size > 0) {
+      params.set("otts", Array.from(selectedOTTs).join(","));
+    }
+
+    if (selectedWebnovels.size > 0) {
+      params.set("webnovels", Array.from(selectedWebnovels).join(","));
+    }
+
+    setSearchParams(params, { replace: true });
+  }, [selectedCategory, selectedOTTs, selectedWebnovels]);
 
   // 카테고리 변경 시 필터 초기화
   const handleCategoryChange = (category: Category) => {

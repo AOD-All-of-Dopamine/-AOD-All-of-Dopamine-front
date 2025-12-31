@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useRecentReleases, useUpcomingReleases } from "../hooks/useWorks";
 import Header from "../components/common/Header";
 import { DOMAIN_PLATFORMS, PLATFORM_META } from "../constants/platforms";
@@ -17,12 +17,41 @@ const categories: { id: Category; label: string }[] = [
 
 export default function NewReleasesPage() {
   const navigate = useNavigate();
-  const [selectedCategory, setSelectedCategory] = useState<Category>("game");
-  const [selectedPlatforms, setSelectedPlatforms] = useState<Set<string>>(
-    new Set(["all"])
-  );
-  const [releaseType, setReleaseType] = useState<ReleaseType>("released");
-  const [page, setPage] = useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [selectedCategory, setSelectedCategory] = useState<Category>(() => {
+    const cat = searchParams.get("category");
+    return (categories.find((c) => c.id === cat)?.id as Category) || "game";
+  });
+
+  const [selectedPlatforms, setSelectedPlatforms] = useState<Set<string>>(() => {
+    const platforms = searchParams.get("platforms");
+    return platforms ? new Set(platforms.split(",")) : new Set(["all"]);
+  });
+
+  const [releaseType, setReleaseType] = useState<ReleaseType>(() => {
+    const type = searchParams.get("type");
+    return type === "upcoming" ? "upcoming" : "released";
+  });
+
+  const [page, setPage] = useState(() => {
+    const p = searchParams.get("page");
+    return p ? parseInt(p, 10) : 0;
+  });
+
+  // URL 동기화
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set("category", selectedCategory);
+    params.set("type", releaseType);
+    params.set("page", page.toString());
+
+    if (!selectedPlatforms.has("all") && selectedPlatforms.size > 0) {
+      params.set("platforms", Array.from(selectedPlatforms).join(","));
+    }
+
+    setSearchParams(params, { replace: true });
+  }, [selectedCategory, selectedPlatforms, releaseType, page]);
 
   // 도메인 매핑
   const domainMap: Record<Category, string> = {
