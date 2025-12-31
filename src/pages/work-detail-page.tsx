@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
 import { useAuth } from "../contexts/AuthContext";
@@ -33,11 +33,49 @@ import { PLATFORM_META } from "../constants/platforms";
 
 type TabType = "info" | "reviews";
 
+const FlyingIcon = ({
+  icon,
+  start,
+  target,
+}: {
+  icon: string;
+  start: { x: number; y: number };
+  target: { x: number; y: number };
+}) => {
+  const [style, setStyle] = useState({
+    left: `${start.x}px`,
+    top: `${start.y}px`,
+    opacity: 1,
+    transform: "scale(1)",
+  });
+
+  useEffect(() => {
+    // Force reflow/next frame
+    requestAnimationFrame(() => {
+      setStyle({
+        left: `${target.x}px`,
+        top: `${target.y}px`,
+        opacity: 0,
+        transform: "scale(0.5)",
+      });
+    });
+  }, [target.x, target.y]);
+
+  return (
+    <img
+      src={icon}
+      className="fixed w-6 h-6 z-[100] transition-all duration-500 ease-in-out pointer-events-none"
+      style={style}
+      alt=""
+    />
+  );
+};
+
 export default function WorkDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const contentId = id ? Number(id) : 0;
-  const { isAuthenticated } = useAuth(); // true;
+  const isAuthenticated = useAuth(); // true;
 
   const [activeTab, setActiveTab] = useState<TabType>("info");
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -51,6 +89,12 @@ export default function WorkDetailPage() {
 
   const [isBookmarkAnimating, setIsBookmarkAnimating] = useState(false);
   const [isRatingOpen, setIsRatingOpen] = useState(false);
+  const [flyingIcon, setFlyingIcon] = useState<{
+    icon: string;
+    start: { x: number; y: number };
+    target: { x: number; y: number };
+  } | null>(null);
+  const ratingButtonRef = useRef<HTMLDivElement>(null);
 
   const { data: work, isLoading: workLoading } = useWorkDetail(contentId);
   const { data: reviewsData } = useReviews(contentId);
@@ -76,11 +120,32 @@ export default function WorkDetailPage() {
     setTimeout(() => setIsBookmarkAnimating(false), 500);
   };
 
-  const handleRatingAction = (type: "like" | "dislike") => {
+  const handleRatingAction = (
+    type: "like" | "dislike",
+    e: React.MouseEvent<HTMLButtonElement>
+  ) => {
     if (!isAuthenticated) {
       alert("로그인이 필요합니다.");
       setIsRatingOpen(false);
       return;
+    }
+
+    const startRect = e.currentTarget.getBoundingClientRect();
+    const targetRect = ratingButtonRef.current?.getBoundingClientRect();
+
+    if (targetRect) {
+      setFlyingIcon({
+        icon: type === "like" ? WhiteLikeIcon : WhiteDislikeIcon,
+        start: {
+          x: startRect.left + startRect.width / 2 - 12,
+          y: startRect.top,
+        },
+        target: {
+          x: targetRect.left + targetRect.width / 2 - 12,
+          y: targetRect.top + targetRect.height / 2 - 12,
+        },
+      });
+      setTimeout(() => setFlyingIcon(null), 500);
     }
 
     if (type === "like") {
@@ -162,6 +227,13 @@ export default function WorkDetailPage() {
 
   return (
     <div className="relative min-h-screen pb-20">
+      {flyingIcon && (
+        <FlyingIcon
+          icon={flyingIcon.icon}
+          start={flyingIcon.start}
+          target={flyingIcon.target}
+        />
+      )}
       <div className="relative w-full h-80 overflow-hidden">
         <img
           src={work.thumbnail || "https://via.placeholder.com/1920x380"}
@@ -275,13 +347,16 @@ export default function WorkDetailPage() {
                 />
               </div>
               <span
-                className={`font-[PretendardVariable] text-[14px] whitespace-nowrap ${bookmarkStatus?.isBookmarked ? "text-[#855BFF]" : "text-[#8D8C8E]"}`}
+                className={`font-[PretendardVariable] text-[14px] whitespace-nowrap ${bookmarkStatus?.isBookmarked ? "text-white" : "text-[#8D8C8E]"}`}
               >
-                보고 싶어요
+                {bookmarkStatus?.isBookmarked ? "관심 작품" : "보고 싶어요"}
               </span>
             </button>
 
-            <div className="relative min-w-16 flex justify-center">
+            <div
+              ref={ratingButtonRef}
+              className="relative min-w-16 flex justify-center"
+            >
               {!isRatingOpen ? (
                 <button
                   onClick={() => setIsRatingOpen(true)}
@@ -322,10 +397,10 @@ export default function WorkDetailPage() {
                     onClick={() => setIsRatingOpen(false)}
                   />
                   <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex flex-col items-center z-50">
-                    <div className="absolute bottom-12 w-[160px] h-[56px] bg-[#302F31] rounded-full flex items-center justify-around shadow-2xl animate-in fade-in slide-in-from-bottom-3 duration-200 border border-white/10">
+                    <div className="absolute bottom-12 w-[160px] h-[56px] bg-[#302F31] rounded-full flex items-center justify-around shadow-2xl animate-slide-up-fade border border-white/10">
                       <button
-                        onClick={() => {
-                          handleRatingAction("like");
+                        onClick={(e) => {
+                          handleRatingAction("like", e);
                         }}
                         className="flex flex-col items-center px-4"
                       >
@@ -340,8 +415,8 @@ export default function WorkDetailPage() {
                       </button>
                       <div className="w-[1px] h-4 bg-white/20" />
                       <button
-                        onClick={() => {
-                          handleRatingAction("dislike");
+                        onClick={(e) => {
+                          handleRatingAction("dislike", e);
                         }}
                         className="flex flex-col items-center px-4"
                       >
