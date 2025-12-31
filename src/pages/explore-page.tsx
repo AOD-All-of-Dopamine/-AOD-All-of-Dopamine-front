@@ -113,17 +113,6 @@ export default function ExplorePage() {
     navigate(`/work/${id}`);
   };
 
-  const uniqueWorks = data
-    ? Array.from(
-        new Map(
-          data.content.map((work) => [
-            work.title.trim().toLowerCase(), // 제목 기준으로 중복 제거
-            work,
-          ])
-        ).values()
-      )
-    : [];
-
   return (
     <div className="flex flex-col">
       {/* 헤더 */}
@@ -264,10 +253,10 @@ export default function ExplorePage() {
           {/* 작품 목록 */}
           {isLoading ? (
             <div className="text-center text-gray-500 py-20">로딩 중...</div>
-          ) : uniqueWorks && uniqueWorks.length > 0 ? (
+          ) : data && data.content.length > 0 ? (
             <>
               <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-5">
-                {uniqueWorks.map((work) => (
+                {data.content.map((work) => (
                   <div
                     key={work.id}
                     onClick={() => handleCardClick(String(work.id))}
