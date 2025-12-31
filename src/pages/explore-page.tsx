@@ -177,7 +177,7 @@ export default function ExplorePage() {
         </div>
 
         {/* 필터 & 컨텐츠 영역 */}
-        <div className="flex-1 py-5 mt-[30px]">
+        <div className="flex-1 py-5 mt-[30px] pb-40">
           {/* 플랫폼 필터 */}
           <div className="mb-4">
             <div className="flex gap-3 overflow-x-auto scrollbar-hide">

@@ -260,7 +260,7 @@ export default function RankingPage() {
         </div>
 
         {/* 필터 & 컨텐츠 영역 */}
-        <div className="flex-1 overflow-y-auto py-5 mt-[40px]">
+        <div className="flex-1 overflow-y-auto py-5 mt-[40px] pb-40">
           {/* OTT 필터 (영화/TV만 표시) - 다중 선택 */}
           {(selectedCategory === "movie" || selectedCategory === "tv") && (
             <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-4">
@@ -325,7 +325,7 @@ export default function RankingPage() {
               {rankings.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center gap-4 p-3 bg-[#2a2a2a] rounded-lg cursor-pointer transition hover:bg-[#333] hover:translate-x-1"
+                  className="flex items-center gap-4 p-3 rounded-lg cursor-pointer transition hover:bg-[#2a2a2a] hover:translate-x-1"
                   onClick={() => handleCardClick(item.id)}
                 >
                   <div
