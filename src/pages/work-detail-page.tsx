@@ -37,7 +37,7 @@ export default function WorkDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const contentId = id ? Number(id) : 0;
-  const isAuthenticated = useAuth(); // true;
+  const { isAuthenticated } = useAuth(); // true;
 
   const [activeTab, setActiveTab] = useState<TabType>("info");
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -288,9 +288,32 @@ export default function WorkDetailPage() {
                   className="flex flex-col items-center gap-1.5"
                 >
                   <div className="w-6 h-6 flex items-center justify-center">
-                    <img src={GreyLikeIcon} className="w-6 h-6" alt="rate" />
+                    <img
+                      src={
+                        likeStats?.isLiked
+                          ? WhiteLikeIcon
+                          : likeStats?.isDisliked
+                            ? WhiteDislikeIcon
+                            : GreyLikeIcon
+                      }
+                      className="w-6 h-6"
+                      alt="rate"
+                    />
                   </div>
-                  <span className="text-[14px] text-[#8D8C8E]">평가</span>
+
+                  <span
+                    className={`text-[14px] ${
+                      likeStats?.isLiked || likeStats?.isDisliked
+                        ? "text-white"
+                        : "text-[#8D8C8E]"
+                    }`}
+                  >
+                    {likeStats?.isLiked
+                      ? "좋아요"
+                      : likeStats?.isDisliked
+                        ? "싫어요"
+                        : "평가"}
+                  </span>
                 </button>
               ) : (
                 <>
@@ -414,20 +437,21 @@ export default function WorkDetailPage() {
         {/* 탭 */}
         <div className="relative z-10 mt-6 flex border-b border-[#403F43]">
           <button
-            className={`flex-1 py-3 text-center text-[16px] ${
+            className={`flex-1 py-3 text-center text-[16px] border-b-2 ${
               activeTab === "info"
-                ? "font-semibold text-white border-b-2 border-white ml-4"
-                : "text-[var(--greygrey-300text-secondary)]"
+                ? "font-semibold text-white border-white"
+                : "text-[var(--greygrey-300text-secondary)] border-transparent"
             }`}
             onClick={() => setActiveTab("info")}
           >
             작품 정보
           </button>
+
           <button
-            className={`flex-1 py-3 text-center text-[16px] ${
+            className={`flex-1 py-3 text-center text-[16px] border-b-2 ${
               activeTab === "reviews"
-                ? "font-semibold text-white border-b-2 border-white mr-4"
-                : "text-[var(--greygrey-300text-secondary)]"
+                ? "font-semibold text-white border-white"
+                : "text-[var(--greygrey-300text-secondary)] border-transparent"
             }`}
             onClick={() => setActiveTab("reviews")}
           >
@@ -714,7 +738,7 @@ export default function WorkDetailPage() {
                     reviewsData.content.map((review) => (
                       <div key={review.reviewId} className="p-3">
                         <div className="flex items-center gap-2 mb-2">
-                          <div className="w-9 h-9 bg-[var(--greygrey-800background-hover)] rounded-full flex items-center justify-center">
+                          <div className="w-9 h-9 bg-[#363539] rounded-full flex items-center justify-center">
                             <img
                               src={whiteCat}
                               alt="profile"
