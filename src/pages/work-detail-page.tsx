@@ -50,7 +50,6 @@ const FlyingIcon = ({
   });
 
   useEffect(() => {
-    // Force reflow/next frame
     requestAnimationFrame(() => {
       setStyle({
         left: `${target.x}px`,
@@ -149,10 +148,10 @@ export default function WorkDetailPage() {
     }
 
     if (type === "like") {
-      if (likeStats?.isDisliked) toggleDislikeMutation.mutate();
+      if (likeStats?.disliked) toggleDislikeMutation.mutate();
       toggleLikeMutation.mutate();
     } else {
-      if (likeStats?.isLiked) toggleLikeMutation.mutate();
+      if (likeStats?.liked) toggleLikeMutation.mutate();
       toggleDislikeMutation.mutate();
     }
 
@@ -342,15 +341,15 @@ export default function WorkDetailPage() {
                 className={`w-6 h-6 flex items-center justify-center transition-transform duration-500 ${isBookmarkAnimating ? "rotate-[360deg]" : ""}`}
               >
                 <img
-                  src={bookmarkStatus?.isBookmarked ? BookmarkIcon : SaveIcon}
+                  src={bookmarkStatus?.bookmarked ? BookmarkIcon : SaveIcon}
                   className="w-6 h-6"
                   alt="save"
                 />
               </div>
               <span
-                className={`font-[PretendardVariable] text-[14px] whitespace-nowrap ${bookmarkStatus?.isBookmarked ? "text-white" : "text-[#8D8C8E]"}`}
+                className={`font-[PretendardVariable] text-[14px] whitespace-nowrap ${bookmarkStatus?.bookmarked ? "text-white" : "text-[#8D8C8E]"}`}
               >
-                {bookmarkStatus?.isBookmarked ? "관심 작품" : "보고 싶어요"}
+                {bookmarkStatus?.bookmarked ? "관심 작품" : "보고 싶어요"}
               </span>
             </button>
 
@@ -366,9 +365,9 @@ export default function WorkDetailPage() {
                   <div className="w-6 h-6 flex items-center justify-center">
                     <img
                       src={
-                        likeStats?.isLiked
+                        likeStats?.liked
                           ? WhiteLikeIcon
-                          : likeStats?.isDisliked
+                          : likeStats?.disliked
                             ? WhiteDislikeIcon
                             : GreyLikeIcon
                       }
@@ -379,14 +378,14 @@ export default function WorkDetailPage() {
 
                   <span
                     className={`text-[14px] ${
-                      likeStats?.isLiked || likeStats?.isDisliked
+                      likeStats?.liked || likeStats?.disliked
                         ? "text-white"
                         : "text-[#8D8C8E]"
                     }`}
                   >
-                    {likeStats?.isLiked
+                    {likeStats?.liked
                       ? "좋아요"
-                      : likeStats?.isDisliked
+                      : likeStats?.disliked
                         ? "싫어요"
                         : "평가"}
                   </span>

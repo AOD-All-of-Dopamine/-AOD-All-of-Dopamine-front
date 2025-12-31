@@ -24,10 +24,12 @@ export default function NewReleasesPage() {
     return (categories.find((c) => c.id === cat)?.id as Category) || "game";
   });
 
-  const [selectedPlatforms, setSelectedPlatforms] = useState<Set<string>>(() => {
-    const platforms = searchParams.get("platforms");
-    return platforms ? new Set(platforms.split(",")) : new Set(["all"]);
-  });
+  const [selectedPlatforms, setSelectedPlatforms] = useState<Set<string>>(
+    () => {
+      const platforms = searchParams.get("platforms");
+      return platforms ? new Set(platforms.split(",")) : new Set(["all"]);
+    }
+  );
 
   const [releaseType, setReleaseType] = useState<ReleaseType>(() => {
     const type = searchParams.get("type");
@@ -243,7 +245,7 @@ export default function NewReleasesPage() {
         </div>
 
         {/* 콘텐츠 영역 */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto pb-40">
           {isLoading ? (
             <div className="text-center text-[#888] py-20 text-sm">
               로딩 중...

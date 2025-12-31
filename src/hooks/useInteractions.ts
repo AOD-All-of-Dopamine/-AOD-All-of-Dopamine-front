@@ -95,10 +95,10 @@ export const useToggleLike = (contentId: number) => {
         if (!old) return old;
         return {
           ...old,
-          isLiked: !old.isLiked,
-          isDisliked: false,
-          likeCount: old.isLiked ? old.likeCount - 1 : old.likeCount + 1,
-          dislikeCount: old.isDisliked ? old.dislikeCount - 1 : old.dislikeCount,
+          liked: !old.liked,
+          disliked: false,
+          likeCount: old.liked ? old.likeCount - 1 : old.likeCount + 1,
+          dislikeCount: old.disliked ? old.dislikeCount - 1 : old.dislikeCount,
         };
       });
 
@@ -134,12 +134,12 @@ export const useToggleDislike = (contentId: number) => {
 
         return {
           ...old,
-          isDisliked: !old.isDisliked,
-          isLiked: false,
-          dislikeCount: old.isDisliked
+          disliked: !old.disliked,
+          liked: false,
+          dislikeCount: old.disliked
             ? old.dislikeCount - 1
             : old.dislikeCount + 1,
-          likeCount: old.isLiked ? old.likeCount - 1 : old.likeCount,
+          likeCount: old.liked ? old.likeCount - 1 : old.likeCount,
         };
       });
 
@@ -188,10 +188,10 @@ export const useToggleBookmark = (contentId: number) => {
       queryClient.setQueryData(
         ["bookmarkStatus", contentId],
         (old: any) => {
-          if (!old) return old;
+          if (!old) return { bookmarked: true };
           return {
             ...old,
-            isBookmarked: !old.isBookmarked,
+            bookmarked: !old.bookmarked,
           };
         }
       );
