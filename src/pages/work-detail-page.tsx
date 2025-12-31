@@ -75,7 +75,7 @@ export default function WorkDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const contentId = id ? Number(id) : 0;
-  const isAuthenticated = useAuth(); // true;
+  const { isAuthenticated } = useAuth(); // true;
 
   const [activeTab, setActiveTab] = useState<TabType>("info");
   const [showReviewForm, setShowReviewForm] = useState(false);
