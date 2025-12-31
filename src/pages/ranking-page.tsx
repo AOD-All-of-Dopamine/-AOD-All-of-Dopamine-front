@@ -19,7 +19,7 @@ interface RankingItem {
 
 const categories: { id: Category; label: string }[] = [
   { id: "movie", label: "영화" },
-  { id: "tv", label: "TV" },
+  { id: "tv", label: "시리즈" },
   { id: "game", label: "게임" },
   { id: "webtoon", label: "웹툰" },
   { id: "webnovel", label: "웹소설" },
@@ -202,7 +202,7 @@ export default function RankingPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col h-screen">
       <Header
         title="랭킹"
         rightIcon="search"
@@ -210,7 +210,7 @@ export default function RankingPage() {
         bgColor="#242424"
       />
       <div className="w-full max-w-2xl mx-auto px-5">
-        <div className="sticky top-[40px] z-50 bg-[#242424] border-b border-[#333] pt-3">
+        <div className="sticky top-[40px] z-100 bg-[#242424] border-b border-[#333] pt-3">
           {/* 카테고리 탭 */}
           <div className="flex justify-around border-b border-white/0">
             {categories.map((cat) => (

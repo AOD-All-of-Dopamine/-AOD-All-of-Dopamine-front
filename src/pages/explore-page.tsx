@@ -114,7 +114,7 @@ export default function ExplorePage() {
   };
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col h-screen">
       {/* 헤더 */}
       <Header
         title="탐색"
@@ -123,7 +123,7 @@ export default function ExplorePage() {
         bgColor="#242424"
       />
       <div className="w-full max-w-2xl mx-auto px-5">
-        <div className="sticky top-[40px] z-50 bg-[#242424] border-b border-[#333] pt-3">
+        <div className="sticky top-[40px] z-100 bg-[#242424] border-b border-[#333] pt-3">
           {/* 카테고리 탭 */}
           <div className="flex justify-around border-b border-white/0">
             {categories.map((cat) => (
