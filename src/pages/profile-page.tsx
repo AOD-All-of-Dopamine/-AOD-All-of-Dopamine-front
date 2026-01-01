@@ -8,15 +8,27 @@ import {
 import Header from "../components/common/Header";
 import whiteCat from "../assets/white-cat.png";
 import { useEffect } from "react";
+import ViewIcon from "../assets/view-all-icon.svg";
+import HorizontalScroller from "../components/HorizontalScroller";
+
+const mapToWorkItem = (item: any) => ({
+  id: item.id,
+  title: item.title,
+  thumbnail: item.thumbnail,
+  score: item.score,
+  domain: item.domain,
+  year: item.releaseDate,
+});
 
 export default function ProfilePage() {
   const navigate = useNavigate();
-  const { isAuthenticated, user, logout } = useAuth();
+  // const { isAuthenticated, user, logout } = useAuth();
+  const isAuthenticated = useAuth();
+  const { user, logout } = useAuth();
 
-  // 내 데이터 조회 (첫 페이지만, 카운트를 위해)
   const { data: reviewsData } = useMyReviews(0, 1);
-  const { data: bookmarksData } = useMyBookmarks(0, 1);
-  const { data: likesData } = useMyLikes(0, 1);
+  const { data: bookmarksData } = useMyBookmarks(0, 10);
+  const { data: likesData } = useMyLikes(0, 10);
 
   const reviewCount = reviewsData?.totalElements || 0;
   const likeCount = likesData?.totalElements || 0;
@@ -101,10 +113,12 @@ export default function ProfilePage() {
 
               {/* 닉네임 */}
               <div>
-                <div className="text-2xl font-bold text-white">
+                <div className="font-[PretendardVariable] text-2xl font-bold text-white">
                   {user?.username}
                 </div>
-                <div className="text-gray-400 text-sm">@{user?.username}</div>
+                <div className="font-[PretendardVariable] text-gray-400 text-sm">
+                  @{user?.username}
+                </div>
               </div>
             </div>
 
@@ -146,54 +160,38 @@ export default function ProfilePage() {
         </div>
 
         {/* 좋아요 섹션 */}
-        <div className="w-full max-w-2xl mx-auto mt-8 pb-4 border-b border-[var(--greygrey-700)]">
+        <div className="w-full max-w-2xl mx-auto mt-8 pb-4 border-b border-[#403F43]">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-1">
-              <span className="text-[16px] font-semibold text-white">
+              <span className="font-[PretendardVariable] text-[16px] font-semibold text-white">
                 좋아요
               </span>
-              <span className="text-[16px] font-semibold text-white">
+              <span className="font-[PretendardVariable] text-[16px] font-semibold text-white">
                 {likeCount}
               </span>
             </div>
             <button
               onClick={() => navigate("/profile/likes")}
-              className="flex items-center text-[14px] text-[var(--greygrey-300text-secondary)]"
+              className="flex items-center font-[PretendardVariable] font-regular text-[14px] text-[#B2B1B3]"
             >
               전체보기
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                className="ml-0.5"
-              >
-                <path
-                  d="M6 4L10 8L6 12"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              <img src={ViewIcon} alt="전체보기" className="w-3 h-3 ml-1" />
             </button>
           </div>
-          <p className="text-[14px] text-[var(--greygrey-200text-primary)] mb-4">
+          <p className="font-[PretendardVariable] font-regular text-[14px] text-[#B2B1B3] mb-2">
             좋았던 작품을 찜해보세요
           </p>
 
-          {likeCount > 0 ? (
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {/* 좋아요한 작품 카드들이 여기 표시됨 */}
-            </div>
+          {likesData?.content && likesData.content.length > 0 ? (
+            <HorizontalScroller items={likesData.content.map(mapToWorkItem)} />
           ) : (
             <div className="py-8 flex flex-col items-center justify-center">
-              <p className="text-[16px] text-white mb-3">
+              <p className="font-[PretendardVariable] text-[16px] text-white mb-3">
                 아직 등록한 작품이 없어요
               </p>
               <button
                 onClick={() => navigate("/explore")}
-                className="px-3 py-2 bg-[#855BFF] text-white text-[14px] rounded"
+                className="px-3 py-2 bg-[#855BFF] font-[PretendardVariable] text-white text-[14px] rounded"
               >
                 등록하러 가기
               </button>
@@ -203,35 +201,47 @@ export default function ProfilePage() {
 
         {/* 보고 싶은 작품 섹션 */}
         <div className="mt-4">
-          <div className="flex items-center gap-1 mb-1">
-            <span className="text-[16px] font-semibold text-white">
-              보고 싶은 작품
-            </span>
-            <span className="text-[16px] font-semibold text-white">
-              {bookmarkCount}
-            </span>
-          </div>
-          <p className="text-[14px] text-[var(--greygrey-200text-primary)] mb-4">
-            나중에 볼 작품을 등록해요
-          </p>
-
-          {bookmarkCount > 0 ? (
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {/* 북마크한 작품 카드들이 여기 표시됨 */}
-            </div>
-          ) : (
-            <div className="py-8 flex flex-col items-center justify-center">
-              <p className="text-[16px] text-white mb-3">
-                아직 등록한 작품이 없어요
-              </p>
+          <div className="w-full max-w-2xl mx-auto mt-6 pb-4">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-1">
+                <span className="font-[PretendardVariable] text-[16px] font-semibold text-white">
+                  보고 싶은 작품
+                </span>
+                <span className="font-[PretendardVariable] text-[16px] font-semibold text-white">
+                  {bookmarkCount}
+                </span>
+              </div>
               <button
-                onClick={() => navigate("/explore")}
-                className="px-3 py-2 bg-[#855BFF] text-white text-[14px] rounded"
+                onClick={() => navigate("/profile/bookmarks")}
+                className="flex items-center font-[PretendardVariable] font-regular text-[14px] text-[#B2B1B3]"
               >
-                등록하러 가기
+                전체보기
+                <img src={ViewIcon} alt="전체보기" className="w-3 h-3 ml-1" />
               </button>
             </div>
-          )}
+
+            <p className="font-[PretendardVariable] font-regular text-[14px] text-[#B2B1B3] mb-2">
+              나중에 볼 작품을 등록해요
+            </p>
+
+            {bookmarksData?.content && bookmarksData.content.length > 0 ? (
+              <HorizontalScroller
+                items={bookmarksData.content.map(mapToWorkItem)}
+              />
+            ) : (
+              <div className="py-8 flex flex-col items-center justify-center">
+                <p className="font-[PretendardVariable] text-[16px] text-white mb-3">
+                  아직 등록한 작품이 없어요
+                </p>
+                <button
+                  onClick={() => navigate("/explore")}
+                  className="px-3 py-2 bg-[#855BFF] font-[PretendardVariable] text-white text-[14px] rounded"
+                >
+                  등록하러 가기
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
