@@ -160,6 +160,8 @@ export default function HomePage() {
     title: item.title,
     thumbnail: item.thumbnail || "https://via.placeholder.com/160x220",
     score: item.score || 0,
+    domain: item.domain,
+    year: item.releaseDate,
   });
 
   const mapToRankingItem = (item: any) => ({
