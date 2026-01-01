@@ -3,9 +3,10 @@ import SearchIcon from "../assets/search-gray.svg";
 
 interface SearchBarProps {
   onSearch?: (query: string) => void;
+  offsetTop?: number;
 }
 
-function SearchBar({ onSearch }: SearchBarProps) {
+function SearchBar({ onSearch, offsetTop = 0 }: SearchBarProps) {
   const [query, setQuery] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -16,7 +17,11 @@ function SearchBar({ onSearch }: SearchBarProps) {
   };
 
   return (
-    <div className="fixed max-w-2xl right-0 left-0 mx-auto top-0 w-full z-50 bg-[#242424] items-center justify-between px-4 py-4">
+    <div
+      className="fixed
+    left-1/2 -translate-x-1/2 max-w-2xl mx-auto top-0 w-full z-50 bg-[#242424] items-center justify-between px-4 py-4"
+      style={{ top: offsetTop }}
+    >
       <form onSubmit={handleSubmit}>
         <img
           src={SearchIcon}
