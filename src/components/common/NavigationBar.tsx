@@ -18,7 +18,7 @@ const NavigationBar: React.FC = () => {
   };
 
   return (
-    <nav className="fixed max-w-2xl bottom-0 left-0 w-full mx-auto right-0 bg-[#242424] flex justify-around items-center h-20 z-[1000]">
+    <nav className="fixed max-w-2xl bottom-0 left-0 w-full mx-auto right-0 bg-[#242424] flex justify-around items-center h-18 z-[1000]">
       <button
         onClick={() => handleNavigation("/home")}
         className="flex flex-col items-center gap-1 text-xs"
