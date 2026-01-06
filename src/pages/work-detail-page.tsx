@@ -5,7 +5,6 @@ import { useAuth } from "../contexts/AuthContext";
 import { useWorkDetail } from "../hooks/useWorks";
 import {
   useReviews,
-  useCreateReview,
   useDeleteReview,
   useLikeStats,
   useToggleLike,
@@ -74,17 +73,9 @@ export default function WorkDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const contentId = id ? Number(id) : 0;
-  const { isAuthenticated } = useAuth(); // true;
+  const { isAuthenticated } = useAuth();
 
   const [activeTab, setActiveTab] = useState<TabType>("info");
-  const [showReviewForm, setShowReviewForm] = useState(false);
-  const [selectedRating, setSelectedRating] = useState(0);
-  const [hoveredRating, setHoveredRating] = useState(0);
-  const [reviewForm, setReviewForm] = useState({
-    rating: 5,
-    title: "",
-    content: "",
-  });
 
   const [isBookmarkAnimating, setIsBookmarkAnimating] = useState(false);
   const [isRatingOpen, setIsRatingOpen] = useState(false);
@@ -100,13 +91,19 @@ export default function WorkDetailPage() {
   const { data: likeStats } = useLikeStats(contentId);
   const { data: bookmarkStatus } = useBookmarkStatus(contentId);
 
-  const createReviewMutation = useCreateReview(contentId);
   const deleteReviewMutation = useDeleteReview(contentId);
   const toggleLikeMutation = useToggleLike(contentId);
   const toggleDislikeMutation = useToggleDislike(contentId);
   const toggleBookmarkMutation = useToggleBookmark(contentId);
 
   const [isSynopsisExpanded, setIsSynopsisExpanded] = useState(false);
+
+  const userLikeType =
+    likeStats?.userLikeType === "LIKE"
+      ? "like"
+      : likeStats?.userLikeType === "DISLIKE"
+        ? "dislike"
+        : null;
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -156,27 +153,6 @@ export default function WorkDetailPage() {
     }
 
     setIsRatingOpen(false);
-  };
-
-  const handleSubmitReview = () => {
-    if (!isAuthenticated) return alert("로그인이 필요합니다.");
-    if (!reviewForm.content.trim()) return alert("리뷰 내용을 입력해주세요.");
-    if (selectedRating === 0) return alert("별점을 선택해주세요.");
-
-    createReviewMutation.mutate(
-      { ...reviewForm, rating: selectedRating },
-      {
-        onSuccess: () => {
-          setReviewForm({ rating: 5, title: "", content: "" });
-          setSelectedRating(0);
-          setShowReviewForm(false);
-          alert("리뷰가 작성되었습니다.");
-        },
-        onError: (error: any) => {
-          alert(error.response?.data?.error || "리뷰 작성에 실패했습니다.");
-        },
-      }
-    );
   };
 
   const handleDeleteReview = (reviewId: number) => {
@@ -365,9 +341,9 @@ export default function WorkDetailPage() {
                   <div className="w-6 h-6 flex items-center justify-center">
                     <img
                       src={
-                        likeStats?.liked
+                        userLikeType === "like"
                           ? WhiteLikeIcon
-                          : likeStats?.disliked
+                          : userLikeType === "dislike"
                             ? WhiteDislikeIcon
                             : GreyLikeIcon
                       }
@@ -378,14 +354,12 @@ export default function WorkDetailPage() {
 
                   <span
                     className={`text-[14px] ${
-                      likeStats?.liked || likeStats?.disliked
-                        ? "text-white"
-                        : "text-[#8D8C8E]"
+                      userLikeType ? "text-white" : "text-[#8D8C8E]"
                     }`}
                   >
-                    {likeStats?.liked
+                    {userLikeType === "like"
                       ? "좋아요"
-                      : likeStats?.disliked
+                      : userLikeType === "dislike"
                         ? "싫어요"
                         : "평가"}
                   </span>
@@ -749,85 +723,12 @@ export default function WorkDetailPage() {
                         이 작품은 어떠셨나요?
                       </p>
 
-                      <div className="flex items-center justify-center gap-2 mb-3">
-                        {[1, 2, 3, 4, 5].map((rating) => {
-                          const isActive =
-                            (hoveredRating || selectedRating) >= rating;
-
-                          return (
-                            <button
-                              key={rating}
-                              onClick={() => setSelectedRating(rating)}
-                              onMouseEnter={() => setHoveredRating(rating)}
-                              onMouseLeave={() => setHoveredRating(0)}
-                              className="w-7 h-7 hover:scale-110"
-                            >
-                              <img
-                                src={isActive ? PurpleStar : GreyStar}
-                                alt="점수"
-                                className="w-full h-full object-contain"
-                              />
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {!showReviewForm ? (
-                        <button
-                          onClick={() => setShowReviewForm(true)}
-                          className="w-full py-2 bg-[#855BFF] font-[PretendardVariable] text-white text-[14px] rounded mt-2"
-                        >
-                          리뷰 작성하기
-                        </button>
-                      ) : (
-                        <div className="flex flex-col gap-3">
-                          <input
-                            type="text"
-                            placeholder="리뷰 제목 (선택)"
-                            value={reviewForm.title}
-                            onChange={(e) =>
-                              setReviewForm({
-                                ...reviewForm,
-                                title: e.target.value,
-                              })
-                            }
-                            className="w-full p-3 bg-[var(--greygrey-800background-hover)] border border-[var(--greygrey-700)] rounded text-white text-[14px] placeholder-[var(--greygrey-400icon)]"
-                          />
-                          <textarea
-                            placeholder="리뷰 내용을 작성해주세요"
-                            rows={4}
-                            value={reviewForm.content}
-                            onChange={(e) =>
-                              setReviewForm({
-                                ...reviewForm,
-                                content: e.target.value,
-                              })
-                            }
-                            className="w-full p-3 bg-[var(--greygrey-800background-hover)] border border-[var(--greygrey-700)] rounded text-white text-[14px] placeholder-[var(--greygrey-400icon)] resize-none"
-                          />
-                          <div className="flex gap-2">
-                            <button
-                              onClick={handleSubmitReview}
-                              className="flex-1 py-2 bg-[#855BFF] text-white text-[14px] rounded"
-                            >
-                              작성하기
-                            </button>
-                            <button
-                              onClick={() => {
-                                setShowReviewForm(false);
-                                setReviewForm({
-                                  rating: 5,
-                                  title: "",
-                                  content: "",
-                                });
-                              }}
-                              className="flex-1 py-2 border border-[var(--greygrey-700)] text-[var(--greygrey-300text-secondary)] text-[14px] rounded"
-                            >
-                              취소
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                      <button
+                        onClick={() => navigate(`/review/${contentId}`)}
+                        className="w-full py-2 bg-[#855BFF] font-[PretendardVariable] text-white text-[14px] rounded mt-2"
+                      >
+                        리뷰 작성하기
+                      </button>
                     </div>
                   )}
                 </div>

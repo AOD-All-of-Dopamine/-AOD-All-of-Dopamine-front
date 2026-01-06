@@ -18,6 +18,8 @@ import MyReviewsPage from "./pages/my-reviews-page";
 import MyBookmarksPage from "./pages/my-bookmarks-page";
 import MyLikesPage from "./pages/my-likes-page";
 import InternalRankingPage from "./pages/internal-ranking-page";
+import OnboardingPage from "./pages/onboarding-page";
+import ReviewPage from "./pages/review-page";
 
 const publicRoutes: RouteObject[] = [
   {
@@ -38,6 +40,8 @@ const publicRoutes: RouteObject[] = [
       { path: "profile/bookmarks", element: <MyBookmarksPage /> },
       { path: "profile/likes", element: <MyLikesPage /> },
       { path: "work/:id", element: <WorkDetailPage /> },
+      { path: "onboarding", element: <OnboardingPage /> },
+      { path: "review/:id", element: <ReviewPage /> },
     ],
   },
 ];
