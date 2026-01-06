@@ -8,9 +8,10 @@ import { useCreateReview } from "../hooks/useInteractions";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function ReviewPage() {
+  const { id } = useParams();
   const navigate = useNavigate();
+  const contentId = id ? Number(id) : 0;
   const { isAuthenticated } = useAuth();
-  const { contentId } = useParams<{ contentId: string }>();
   const [selectedRating, setSelectedRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [reviewForm, setReviewForm] = useState({
