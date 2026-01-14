@@ -5,6 +5,10 @@ import { useWorks } from "../hooks/useWorks";
 import NewIcon from "../assets/home/new-icon.png";
 import LikeIcon from "../assets/home/likes-icon.svg";
 import BookmarkIcon from "../assets/home/bookmarks-icon.svg";
+import ViewIcon from "../assets/view-all-icon.svg";
+import { useAuth } from "../contexts/AuthContext";
+import Modal from "../components/common/Modal";
+import { useState } from "react";
 
 // 랭킹 아이템 타입
 interface RankingItemProps {
@@ -88,23 +92,15 @@ function RankingSection({ items, onViewAll }: RankingSectionProps) {
   const topItems = items.slice(0, 3);
 
   return (
-    <article className="px-4 mb-6">
+    <article className="mb-6">
       <header className="flex items-center justify-between mb-1.5">
         <h2 className="text-base font-semibold text-white">랭킹</h2>
         <button
-          className="flex items-center gap-0.5 text-sm text-[var(--grey-300)]"
+          className="flex items-center gap-1 font-[PretendardVariable] text-[14px] text-[#B2B1B3]"
           onClick={onViewAll}
         >
           전체보기
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path
-              d="M6 12L10 8L6 4"
-              stroke="var(--grey-300)"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <img src={ViewIcon} alt="전체보기" className="w-3 h-3" />
         </button>
       </header>
       <ul>
@@ -126,6 +122,17 @@ function RankingSection({ items, onViewAll }: RankingSectionProps) {
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  const handleProtectedNavigation = (path: string) => {
+    if (!isAuthenticated) {
+      setIsLoginModalOpen(true);
+      return;
+    }
+    navigate(path);
+  };
 
   // AI 맞춤 추천 - 임시로 GAME 도메인 데이터 사용
   const { data: recommendations, isLoading: isLoadingRecommendations } =
@@ -171,69 +178,105 @@ export default function HomePage() {
   });
 
   return (
-    <div className="flex flex-col min-h-screen w-full max-w-2xl mx-auto px-5">
-      {/* 검색 바 */}
-      <SearchBar onSearch={handleSearch} />
+    <>
+      <div className="flex flex-col min-h-screen w-full max-w-2xl mx-auto px-5">
+        {/* 검색 바 */}
+        <SearchBar onSearch={handleSearch} />
 
-      <div className="pb-20">
-        {/* 하단 동그라미 네비게이션 */}
-        <div className="flex justify-center gap-11 mt-20 mb-10">
-          {[
-            { id: 1, path: "/new", icon: NewIcon, label: "공개예정" },
-            { id: 2, path: "/profile/likes", icon: LikeIcon, label: "좋아요" },
-            {
-              id: 3,
-              path: "/profile/bookmarks",
-              icon: BookmarkIcon,
-              label: "북마크",
-            },
-          ].map((item) => (
-            <button
-              key={item.id}
-              onClick={() => navigate(item.path)}
-              className="flex flex-col items-center gap-2 active:scale-95 transition"
-            >
-              {/* 동그라미 */}
-              <div className="w-13 h-13 rounded-full bg-[#363539] flex items-center justify-center shadow-md">
-                <img
-                  src={item.icon}
-                  alt="nav-icon"
-                  className="w-6 h-6 object-contain"
-                />
-              </div>
-              {/* 라벨 */}
-              <span className="text-sm text-gray-300">{item.label}</span>
-            </button>
-          ))}
-        </div>
+        <div className="pb-20">
+          {/* 하단 동그라미 네비게이션 */}
+          <div className="flex justify-center gap-11 mt-20 mb-10">
+            {[
+              { id: 1, path: "/new", icon: NewIcon, label: "공개예정" },
+              {
+                id: 2,
+                path: "/profile/likes",
+                icon: LikeIcon,
+                label: "좋아요",
+              },
+              {
+                id: 3,
+                path: "/profile/bookmarks",
+                icon: BookmarkIcon,
+                label: "북마크",
+              },
+            ].map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  if (item.path.startsWith("/profile")) {
+                    handleProtectedNavigation(item.path);
+                  } else {
+                    navigate(item.path);
+                  }
+                }}
+                className="flex flex-col items-center gap-2 active:scale-95 transition"
+              >
+                {/* 동그라미 */}
+                <div className="w-13 h-13 rounded-full bg-[#363539] flex items-center justify-center shadow-md">
+                  <img
+                    src={item.icon}
+                    alt="nav-icon"
+                    className="w-6 h-6 object-contain"
+                  />
+                </div>
+                {/* 라벨 */}
+                <span className="text-sm text-gray-300">{item.label}</span>
+              </button>
+            ))}
+          </div>
 
-        {/* 랭킹 */}
-        {!isLoadingRankings &&
-          rankings?.content &&
-          rankings.content.length > 0 && (
-            <RankingSection
-              items={rankings.content.map(mapToRankingItem)}
-              onViewAll={handleRankingClick}
+          {/* 랭킹 */}
+          {!isLoadingRankings &&
+            rankings?.content &&
+            rankings.content.length > 0 && (
+              <RankingSection
+                items={rankings.content.map(mapToRankingItem)}
+                onViewAll={handleRankingClick}
+              />
+            )}
+
+          {/* AI 맞춤 추천 */}
+          {!isLoadingRecommendations && recommendations?.content && (
+            <HorizontalScroller
+              title="모두의도파민님만을 위한 추천"
+              items={recommendations.content.map(mapToWorkItem)}
+              showViewAll
             />
           )}
 
-        {/* AI 맞춤 추천 */}
-        {!isLoadingRecommendations && recommendations?.content && (
-          <HorizontalScroller
-            title="모두의도파민님만을 위한 추천"
-            items={recommendations.content.map(mapToWorkItem)}
-            showViewAll
-          />
-        )}
-
-        {/* 최신 리뷰 작품 */}
-        {!isLoadingRecentReviews && recentReviews?.content && (
-          <HorizontalScroller
-            title="최신 리뷰 작품"
-            items={recentReviews.content.map(mapToWorkItem)}
-          />
-        )}
+          {/* 최신 리뷰 작품 */}
+          {!isLoadingRecentReviews && recentReviews?.content && (
+            <HorizontalScroller
+              title="최신 리뷰 작품"
+              items={recentReviews.content.map(mapToWorkItem)}
+            />
+          )}
+        </div>
       </div>
-    </div>
+
+      {isLoginModalOpen && (
+        <Modal
+          title={
+            <>
+              로그인이 필요한 기능입니다.
+              <br />
+              로그인 후 이용해 주세요.
+            </>
+          }
+          buttons={[
+            {
+              text: "취소",
+              onClick: () => setIsLoginModalOpen(false),
+            },
+            {
+              text: "로그인",
+              variant: "purple",
+              onClick: () => navigate("/login"),
+            },
+          ]}
+        />
+      )}
+    </>
   );
 }
