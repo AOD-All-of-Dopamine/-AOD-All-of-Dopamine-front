@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { rankingApi, ExternalRanking } from "../api/rankingApi";
 import Header from "../components/common/Header";
 import PurpleStar from "../assets/purple-star.svg";
+import InfoIcon from "../assets/info-icon.svg";
+import { DOMAIN_PLATFORMS, PLATFORM_META } from "../constants/platforms";
 
 type Category = "movie" | "tv" | "game" | "webtoon" | "webnovel";
 
@@ -41,35 +43,6 @@ const BACKEND_PLATFORM_MAPPING: Record<string, string> = {
   NAVER_SERIES: "NaverSeries",
 };
 
-const OTT_PLATFORMS = [
-  "전체",
-  "넷플릭스",
-  "웨이브",
-  "디즈니+",
-  "왓챠",
-  "티빙",
-  "쿠팡플레이",
-  "애플TV",
-];
-
-const WEBNOVEL_PLATFORMS = ["전체", "네이버시리즈", "카카오페이지"];
-
-// 한글-영어 OTT 플랫폼 매핑 (백엔드 데이터 형식에 맞춤)
-const OTT_NAME_MAPPING: Record<string, string> = {
-  넷플릭스: "Netflix",
-  웨이브: "wavve",
-  "디즈니+": "Disney Plus",
-  왓챠: "Watcha",
-  티빙: "TVING",
-  쿠팡플레이: "Coupang Play",
-  애플TV: "Apple TV",
-};
-
-// 웹소설 플랫폼 매핑
-const WEBNOVEL_PLATFORM_MAPPING: Record<string, string> = {
-  네이버시리즈: "NaverSeries",
-  카카오페이지: "KakaoPage",
-};
 export default function RankingPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -79,19 +52,22 @@ export default function RankingPage() {
     return (categories.find((c) => c.id === cat)?.id as Category) || "game";
   });
 
-  const [selectedOTTs, setSelectedOTTs] = useState<Set<string>>(() => {
-    const otts = searchParams.get("otts");
-    return otts ? new Set(otts.split(",")) : new Set();
-  });
-
-  const [selectedWebnovels, setSelectedWebnovels] = useState<Set<string>>(
+  const [selectedPlatforms, setSelectedPlatforms] = useState<Set<string>>(
     () => {
-      const webnovels = searchParams.get("webnovels");
-      return webnovels ? new Set(webnovels.split(",")) : new Set();
+      const platforms = searchParams.get("platforms");
+      return platforms ? new Set(platforms.split(",")) : new Set(["ALL"]);
     }
   );
 
+  const todayLabel = (() => {
+    const now = new Date();
+    const month = now.getMonth() + 1;
+    const day = now.getDate();
+    return `${month}.${day}`;
+  })();
+
   const [rankings, setRankings] = useState<RankingItem[]>([]);
+
   const [loading, setLoading] = useState(false);
 
   // URL 동기화
@@ -99,49 +75,61 @@ export default function RankingPage() {
     const params = new URLSearchParams();
     params.set("category", selectedCategory);
 
-    if (selectedOTTs.size > 0) {
-      params.set("otts", Array.from(selectedOTTs).join(","));
-    }
+    if (!selectedPlatforms.has("ALL") && selectedPlatforms.size > 0) {
+      const value = Array.from(selectedPlatforms).join(",");
 
-    if (selectedWebnovels.size > 0) {
-      params.set("webnovels", Array.from(selectedWebnovels).join(","));
+      if (selectedCategory === "movie" || selectedCategory === "tv") {
+        params.set("otts", value);
+      } else if (selectedCategory === "game") {
+        params.set("games", value);
+      } else if (selectedCategory === "webtoon") {
+        params.set("webtoons", value);
+      } else if (selectedCategory === "webnovel") {
+        params.set("webnovels", value);
+      } else {
+        params.set("platforms", value);
+      }
     }
 
     setSearchParams(params, { replace: true });
-  }, [selectedCategory, selectedOTTs, selectedWebnovels]);
+  }, [selectedCategory, selectedPlatforms]);
 
   // 카테고리 변경 시 필터 초기화
   const handleCategoryChange = (category: Category) => {
     setSelectedCategory(category);
-    setSelectedOTTs(new Set());
-    setSelectedWebnovels(new Set());
+    setSelectedPlatforms(new Set(["ALL"]));
   };
 
   // OTT 필터 토글
-  const toggleOTT = (ott: string) => {
-    setSelectedOTTs((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(ott)) {
-        newSet.delete(ott);
+  const togglePlatform = (platformId: string) => {
+    const newSelection = new Set(selectedPlatforms);
+
+    if (platformId === "ALL") {
+      newSelection.clear();
+      newSelection.add("ALL");
+    } else {
+      if (newSelection.has(platformId)) {
+        newSelection.delete(platformId);
       } else {
-        newSet.add(ott);
+        newSelection.add(platformId);
       }
-      return newSet;
-    });
+      newSelection.delete("ALL");
+
+      if (newSelection.size === 0) {
+        newSelection.add("ALL");
+      }
+    }
+
+    setSelectedPlatforms(newSelection);
   };
 
-  // 웹소설 플랫폼 필터 토글
-  const toggleWebnovel = (platform: string) => {
-    setSelectedWebnovels((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(platform)) {
-        newSet.delete(platform);
-      } else {
-        newSet.add(platform);
-      }
-      return newSet;
-    });
-  };
+  const domainKey = selectedCategory.toUpperCase();
+
+  const availablePlatforms =
+    DOMAIN_PLATFORMS[domainKey]?.map((key) => ({
+      key,
+      ...PLATFORM_META[key],
+    })) || [];
 
   useEffect(() => {
     const fetchRankings = async () => {
@@ -162,34 +150,15 @@ export default function RankingPage() {
         }));
 
         // OTT 필터링 (TMDB만 해당) - 다중 선택 지원
-        if (
-          selectedOTTs.size > 0 &&
-          (selectedCategory === "movie" || selectedCategory === "tv")
-        ) {
-          const englishOTTNames = Array.from(selectedOTTs)
-            .map((ott) => OTT_NAME_MAPPING[ott])
-            .filter(Boolean);
-          if (englishOTTNames.length > 0) {
-            mappedData = mappedData.filter(
-              (item) =>
-                item.watchProviders &&
-                englishOTTNames.some((name) =>
-                  item.watchProviders!.includes(name)
-                )
-            );
-          }
-        }
+        const selectedPlatformArray = selectedPlatforms.has("ALL")
+          ? undefined
+          : Array.from(selectedPlatforms);
 
-        // 웹소설 플랫폼 필터링 - 다중 선택 지원
-        if (selectedWebnovels.size > 0 && selectedCategory === "webnovel") {
-          const platformNames = Array.from(selectedWebnovels)
-            .map((p) => WEBNOVEL_PLATFORM_MAPPING[p])
-            .filter(Boolean);
-          if (platformNames.length > 0) {
-            mappedData = mappedData.filter((item) =>
-              platformNames.includes(item.platform || "")
-            );
-          }
+        if (selectedPlatformArray && selectedPlatformArray.length > 0) {
+          mappedData = mappedData.filter(
+            (item) =>
+              item.platform && selectedPlatformArray.includes(item.platform)
+          );
         }
 
         setRankings(mappedData);
@@ -202,7 +171,7 @@ export default function RankingPage() {
     };
 
     fetchRankings();
-  }, [selectedCategory, selectedOTTs, selectedWebnovels]);
+  }, [selectedCategory, selectedPlatforms]);
 
   const handleCardClick = (id: string) => {
     if (id.startsWith("no-content-")) {
@@ -215,16 +184,16 @@ export default function RankingPage() {
   const renderChange = (change?: "up" | "down" | "new" | number) => {
     if (!change) return null;
     if (change === "new")
-      return <span className="text-[#646cff] font-semibold text-xs">NEW</span>;
+      return <span className="text-[#855BFF] font-semibold text-xs">NEW</span>;
     if (change === "up")
-      return <span className="text-green-400 font-semibold text-xs">▲</span>;
+      return <span className="text-[#FF5455] font-semibold text-xs">▲</span>;
     if (change === "down")
-      return <span className="text-red-500 font-semibold text-xs">▼</span>;
+      return <span className="text-[#6883F5] font-semibold text-xs">▼</span>;
     if (typeof change === "number") {
       return change > 0 ? (
-        <span className="text-green-400 font-semibold text-xs">▲ {change}</span>
+        <span className="text-[#FF5455] font-semibold text-xs">▲ {change}</span>
       ) : (
-        <span className="text-red-500 font-semibold text-xs">
+        <span className="text-[#6883F5] font-semibold text-xs">
           ▼ {Math.abs(change)}
         </span>
       );
@@ -260,83 +229,65 @@ export default function RankingPage() {
         </div>
 
         {/* 필터 & 컨텐츠 영역 */}
-        <div className="flex-1 overflow-y-auto py-5 mt-[40px] pb-40">
+        <div className="flex-1 overflow-y-auto py-2.5 mt-[40px] pb-40">
           {/* OTT 필터 (영화/TV만 표시) - 다중 선택 */}
-          {(selectedCategory === "movie" || selectedCategory === "tv") && (
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-4">
-              {OTT_PLATFORMS.filter((ott) => ott !== "전체").map((ott) => (
-                <button
-                  key={ott}
-                  onClick={() => toggleOTT(ott)}
-                  className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
-                    selectedOTTs.has(ott)
-                      ? "bg-[#646cff] text-white"
-                      : "text-gray-400 border border-[#444]"
-                  }`}
-                >
-                  {ott}
-                </button>
-              ))}
-              {selectedOTTs.size > 0 && (
-                <button
-                  onClick={() => setSelectedOTTs(new Set())}
-                  className="flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap text-red-400 border border-red-400/50 hover:bg-red-400/10"
-                >
-                  초기화
-                </button>
-              )}
-            </div>
-          )}
+          {/* 플랫폼 필터 */}
+          <div className="mb-4">
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide">
+              {availablePlatforms.map((platform) => {
+                const isSelected = selectedPlatforms.has(platform.key);
 
-          {/* 웹소설 플랫폼 필터 - 다중 선택 */}
-          {selectedCategory === "webnovel" && (
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-4">
-              {WEBNOVEL_PLATFORMS.filter((p) => p !== "전체").map(
-                (platform) => (
+                return (
                   <button
-                    key={platform}
-                    onClick={() => toggleWebnovel(platform)}
-                    className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
-                      selectedWebnovels.has(platform)
-                        ? "bg-[#646cff] text-white"
-                        : "text-gray-400 border border-[#444]"
-                    }`}
+                    key={platform.key}
+                    onClick={() => togglePlatform(platform.key)}
+                    className={`flex items-center gap-2 py-1.5 rounded-full border font-[PretendardVariable] text-sm font-medium transition-all flex-shrink-0
+            ${platform.key === "ALL" ? "px-4" : "px-2"}
+            ${
+              isSelected
+                ? "border-transparent text-white bg-gradient-to-r from-[#855BFF] to-[#445FD1]"
+                : "border-[#403F43] bg-[#2a2a2a] text-[#D3D3D3] hover:border-[#855BFF]"
+            }`}
                   >
-                    {platform}
+                    {platform.logo && (
+                      <img
+                        src={platform.logo}
+                        alt={platform.label}
+                        className="w-5 h-5 rounded-full object-contain"
+                      />
+                    )}
+                    <span>{platform.label}</span>
                   </button>
-                )
-              )}
-              {selectedWebnovels.size > 0 && (
-                <button
-                  onClick={() => setSelectedWebnovels(new Set())}
-                  className="flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap text-red-400 border border-red-400/50 hover:bg-red-400/10"
-                >
-                  초기화
-                </button>
-              )}
+                );
+              })}
             </div>
-          )}
+          </div>
+
+          <div className="flex items-center gap-1.5 mt-2 text-[#D3D3D3] text-sm font-[PretendardVariable] mb-4">
+            <img src={InfoIcon} className="w-4 h-4" />
+            <span className="text-semibold">{todayLabel} 기준</span>
+          </div>
 
           {/* 콘텐츠 */}
           {loading ? (
             <div className="text-center py-12 text-gray-400">Loading...</div>
           ) : rankings.length > 0 ? (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1">
               {rankings.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center gap-4 p-3 rounded-lg cursor-pointer transition hover:bg-[#2a2a2a] hover:translate-x-1"
+                  className="flex items-center gap-4 p-1 rounded-lg cursor-pointer transition hover:bg-[#2a2a2a] hover:translate-x-1"
                   onClick={() => handleCardClick(item.id)}
                 >
                   <div
-                    className={`w-10 text-center font-bold text-xl ${
+                    className={`w-4 text-center font-[PretendardVariable] font-bold text-xl ${
                       item.rank === 1
                         ? "text-yellow-400"
                         : item.rank === 2
                           ? "text-gray-300"
                           : item.rank === 3
                             ? "text-[#cd7f32]"
-                            : "text-[#646cff]"
+                            : "text-white"
                     }`}
                   >
                     {item.rank}
@@ -347,14 +298,15 @@ export default function RankingPage() {
                     className="w-15 h-20 rounded-md object-cover bg-[#444] flex-shrink-0"
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-white text-sm mb-1 truncate">
+                    <div className="font-[PretendardVariable] font-medium text-white text-sm mb-2 truncate">
                       {item.title}
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-400">
-                      <span className="flex items-center gap-1 text-[#646cff] font-semibold">
+                    <div className="flex items-center gap-3 font-[PretendardVariable] text-xs text-gray-400">
+                      <span className="flex items-center text-[#855BFF] text-sm font-medium gap-1">
                         <img src={PurpleStar} alt="평점" className="w-4 h-4" />
                         {item.score.toFixed(1)}
                       </span>
+
                       {renderChange(item.change)}
                     </div>
                   </div>
@@ -362,7 +314,7 @@ export default function RankingPage() {
               ))}
             </div>
           ) : (
-            <div className="text-center text-gray-400 py-12">
+            <div className="text-center text-gray-400 py-30">
               랭킹 데이터가 없습니다.
             </div>
           )}

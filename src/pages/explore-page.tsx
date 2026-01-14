@@ -313,7 +313,7 @@ export default function ExplorePage() {
                         ` • ${new Date(work.releaseDate).getFullYear()}`}
                     </div>
 
-                    <div className="flex text-[#855BFF] text-xs font-semibold mt-1 gap-1">
+                    <div className="flex items-center text-[#855BFF] text-sm font-medium mt-1 gap-1">
                       <img src={PurpleStar} alt="평점" className="w-4 h-4" />{" "}
                       {(work.score || 0).toFixed(1)}
                     </div>

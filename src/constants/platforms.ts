@@ -4,6 +4,8 @@ import WATCHA_LOGO from "../assets/platform-icon/watcha-logo.png";
 import DISNEY_LOGO from "../assets/platform-icon/disney-logo.png";
 import TVING_LOGO from "../assets/platform-icon/tving-logo.png";
 import WAVVE_LOGO from "../assets/platform-icon/wavve-logo.png";
+import COUPANG_LOGO from "../assets/platform-icon/coupang-logo.png";
+import APPLE_LOGO from "../assets/platform-icon/appletv-logo.png";
 import STEAM_LOGO from "../assets/platform-icon/steam-logo.png";
 import NAVER_WEBTOON_LOGO from "../assets/platform-icon/nwebtoon-logo.png";
 import NAVER_WEBNOVEL_LOGO from "../assets/platform-icon/nnovel-logo.webp";
@@ -18,8 +20,20 @@ export const DOMAIN_PLATFORMS: Record<string, string[]> = {
     "Disney Plus",
     "TVING",
     "wavve",
+    "Coupang Play",
+    "Apple TV",
   ],
-  TV: ["ALL", "TMDB_TV", "Netflix", "Watcha", "Disney Plus", "TVING", "wavve"],
+  TV: [
+    "ALL",
+    "TMDB_TV",
+    "Netflix",
+    "Watcha",
+    "Disney Plus",
+    "TVING",
+    "wavve",
+    "Coupang Play",
+    "Apple TV",
+  ],
   GAME: ["ALL", "Steam"],
   WEBTOON: ["ALL", "NaverWebtoon"],
   WEBNOVEL: ["ALL", "NaverSeries", "KakaoPage"],
@@ -36,6 +50,8 @@ export const PLATFORM_META: Record<string, { label: string; logo?: string }> = {
   "Disney Plus": { label: "디즈니+", logo: DISNEY_LOGO },
   TVING: { label: "티빙", logo: TVING_LOGO },
   wavve: { label: "웨이브", logo: WAVVE_LOGO },
+  "Coupang Play": { label: "쿠팡플레이", logo: COUPANG_LOGO },
+  "Apple TV": { label: "애플TV", logo: APPLE_LOGO },
 
   Steam: { label: "스팀", logo: STEAM_LOGO },
 

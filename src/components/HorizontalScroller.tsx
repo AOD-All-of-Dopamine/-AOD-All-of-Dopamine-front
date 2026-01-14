@@ -35,9 +35,9 @@ function HorizontalScroller({
     <section className="mb-6">
       {/* 헤더 */}
       {title && (
-        <div className="flex justify-between items-center mb-2 px-4">
+        <div className="flex justify-between items-center mb-2">
           <h2
-            className="text-lg font-semibold cursor-pointer select-none"
+            className="text-lg font-[PretendardVariable] font-semibold cursor-pointer select-none"
             onClick={onTitleClick}
           >
             {title}
@@ -68,9 +68,11 @@ function HorizontalScroller({
               alt={item.title}
               className="w-full h-56 object-cover rounded-md mb-2"
             />
-            <div className="text-sm font-medium truncate">{item.title}</div>
+            <div className="text-sm font-[PretendardVariable] font-medium truncate">
+              {item.title}
+            </div>
             {(item.domain || item.year) && (
-              <div className="text-xs text-gray-400 flex items-center gap-1">
+              <div className="font-[PretendardVariable] text-xs text-gray-400 flex items-center gap-1 mt-0.5">
                 {item.domain && (
                   <span>{DOMAIN_LABEL_MAP[item.domain] ?? item.domain}</span>
                 )}
@@ -78,8 +80,8 @@ function HorizontalScroller({
               </div>
             )}
             {typeof item.score === "number" && (
-              <div className="flex items-center gap-1 font-[PretendardVariable] text-[14px] text-[#855BFF]">
-                <img src={PurpleStar} alt="평점" className="w-3 h-3" />{" "}
+              <div className="flex items-center text-[#855BFF] text-sm font-medium gap-1 mt-0.5">
+                <img src={PurpleStar} alt="평점" className="w-4 h-4" />{" "}
                 {item.score.toFixed(1)}
               </div>
             )}
