@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useRecentReleases, useUpcomingReleases } from "../hooks/useWorks";
 import Header from "../components/common/Header";
+import { DOMAIN_LABEL_MAP } from "../constants/domain";
 import { DOMAIN_PLATFORMS, PLATFORM_META } from "../constants/platforms";
 
 type Category = "movie" | "tv" | "game" | "webtoon" | "webnovel";
@@ -148,16 +149,35 @@ export default function NewReleasesPage() {
     setPage(0); // 필터 변경 시 페이지 초기화
   };
 
-  const handleItemClick = (id: number) => {
-    navigate(`/work/${id}`);
+  const formatGroupDate = (dateString: string) => {
+    const d = new Date(dateString);
+    const year = String(d.getFullYear()).slice(2); // 2025 → 25
+    const month = d.getMonth() + 1;
+    const day = d.getDate();
+
+    return `${year} / ${month} / ${day}`;
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    return `${month}.${day}`;
-  };
+  const groupedWorks = works.reduce<Record<string, any[]>>((acc, work) => {
+    if (!work.releaseDate) return acc;
+
+    const key = formatGroupDate(work.releaseDate);
+
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(work);
+
+    return acc;
+  }, {});
+
+  const sortedDates = Object.keys(groupedWorks).sort((a, b) => {
+    const [ay, am, ad] = a.split(" / ").map(Number);
+    const [by, bm, bd] = b.split(" / ").map(Number);
+
+    const aDate = new Date(2000 + ay, am - 1, ad);
+    const bDate = new Date(2000 + by, bm - 1, bd);
+
+    return bDate.getTime() - aDate.getTime();
+  });
 
   return (
     <div className="flex flex-col h-screen">
@@ -220,10 +240,10 @@ export default function NewReleasesPage() {
           {/* 신작 / 예정 탭 */}
           <div className="flex gap-2 pt-3">
             <button
-              className={`flex-1 py-2 rounded-lg text-sm font-medium transition
+              className={`flex-1 py-2 rounded-lg text-sm font-[PretendardVariable] font-medium transition
           ${
             releaseType === "released"
-              ? "bg-[#646cff] text-white"
+              ? "bg-[#855BFF] text-white"
               : "bg-[#2a2a2a] text-[#888]"
           }`}
               onClick={() => setReleaseType("released")}
@@ -231,10 +251,10 @@ export default function NewReleasesPage() {
               신작
             </button>
             <button
-              className={`flex-1 py-2 rounded-lg text-sm font-medium transition
+              className={`flex-1 py-2 rounded-lg text-sm font-[PretendardVariable] font-medium transition
           ${
             releaseType === "upcoming"
-              ? "bg-[#646cff] text-white"
+              ? "bg-[#855BFF] text-white"
               : "bg-[#2a2a2a] text-[#888]"
           }`}
               onClick={() => setReleaseType("upcoming")}
@@ -247,52 +267,57 @@ export default function NewReleasesPage() {
         {/* 콘텐츠 영역 */}
         <div className="flex-1 overflow-y-auto pb-40">
           {isLoading ? (
-            <div className="text-center text-[#888] py-20 text-sm">
-              로딩 중...
-            </div>
+            <div className="text-center text-gray-500 py-20">로딩 중...</div>
           ) : error ? (
-            <div className="text-center text-[#888] py-20 text-sm">
+            <div className="text-center text-gray-500 py-20">
               데이터를 불러올 수 없습니다.
             </div>
           ) : works.length > 0 ? (
-            <>
-              <div className="flex flex-col gap-3">
-                {works.map((work) => (
-                  <div
-                    key={work.id}
-                    className="flex items-center gap-4 p-3 bg-[#2a2a2a] rounded-lg cursor-pointer transition hover:bg-[#333] hover:translate-x-1"
-                    onClick={() => handleItemClick(work.id)}
-                  >
-                    <div
-                      className={`min-w-[80px] text-center text-sm font-semibold
-                ${releaseType === "upcoming" ? "text-[#fbbf24]" : "text-[#646cff]"}`}
-                    >
-                      {work.releaseDate ? formatDate(work.releaseDate) : "-"}
-                    </div>
+            <div className="flex flex-col gap-10">
+              {sortedDates.map((date) => (
+                <section key={date}>
+                  <div className="flex items-center gap-3 mb-4">
+                    {/* 날짜 왼쪽 세로줄 */}
+                    <div className="w-1 h-6 bg-[#8D8C8E]" />
 
-                    <img
-                      src={
-                        work.thumbnail || "https://via.placeholder.com/60x80"
-                      }
-                      className="w-[60px] h-[80px] rounded-md object-cover bg-[#444] shrink-0"
-                      alt={work.title}
-                    />
-
-                    <div className="flex-1 text-white text-base font-medium overflow-hidden text-ellipsis whitespace-nowrap">
-                      {work.title}
-                    </div>
-
-                    {releaseType === "upcoming" && (
-                      <span className="px-3 py-1 rounded-xl text-xs font-semibold bg-[#646cff22] text-[#646cff]">
-                        예정
-                      </span>
-                    )}
+                    {/* 날짜 텍스트 */}
+                    <h3 className="text-white text-lg font-medium">{date}</h3>
                   </div>
-                ))}
-              </div>
-            </>
+
+                  {/* 카드 그리드 */}
+                  <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-5">
+                    {groupedWorks[date].map((work) => (
+                      <div
+                        key={work.id}
+                        onClick={() => navigate(`/work/${work.id}`)}
+                        className="cursor-pointer transition-transform hover:-translate-y-1"
+                      >
+                        <img
+                          src={
+                            work.thumbnail ||
+                            "https://via.placeholder.com/160x220"
+                          }
+                          alt={work.title}
+                          className="w-full h-[220px] rounded-lg object-cover mb-2 bg-gray-700"
+                        />
+
+                        <div className="text-white text-sm font-[PretendardVariable] font-semibold truncate">
+                          {work.title}
+                        </div>
+
+                        <div className="font-[PretendardVariable] text-gray-400 text-xs mt-0.5">
+                          {DOMAIN_LABEL_MAP[work.domain] ?? work.domain}
+                          {work.releaseDate &&
+                            ` • ${new Date(work.releaseDate).getFullYear()}`}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
           ) : (
-            <div className="text-center text-[#888] py-20 text-sm">
+            <div className="text-center text-gray-500 py-20">
               데이터가 없습니다.
             </div>
           )}
