@@ -5,6 +5,7 @@ import Header from "../components/common/Header";
 import PurpleStar from "../assets/purple-star.svg";
 import InfoIcon from "../assets/info-icon.svg";
 import { DOMAIN_PLATFORMS, PLATFORM_META } from "../constants/platforms";
+import Modal from "../components/common/Modal";
 
 type Category = "movie" | "tv" | "game" | "webtoon" | "webnovel";
 
@@ -67,6 +68,8 @@ export default function RankingPage() {
   })();
 
   const [rankings, setRankings] = useState<RankingItem[]>([]);
+
+  const [isNoContentModalOpen, setIsNoContentModalOpen] = useState(false);
 
   const [loading, setLoading] = useState(false);
 
@@ -175,7 +178,7 @@ export default function RankingPage() {
 
   const handleCardClick = (id: string) => {
     if (id.startsWith("no-content-")) {
-      alert("이 작품의 상세 정보가 아직 준비되지 않았습니다.");
+      setIsNoContentModalOpen(true);
       return;
     }
     navigate(`/work/${id}`);
@@ -201,125 +204,149 @@ export default function RankingPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen">
-      <Header
-        title="랭킹"
-        rightIcon="search"
-        onRightClick={() => navigate("/search")}
-        bgColor="#242424"
-      />
-      <div className="w-full max-w-2xl mx-auto px-5">
-        <div className="sticky top-[40px] z-100 bg-[#242424] border-b border-[#333] pt-3">
-          {/* 카테고리 탭 */}
-          <div className="flex justify-around border-b border-white/0">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => handleCategoryChange(cat.id)}
-                className={`flex-1 text-center py-3 transition-all select-none ${
-                  selectedCategory === cat.id
-                    ? "border-b-2 border-white text-white font-semibold"
-                    : "text-gray-400"
-                }`}
-              >
-                {cat.label}
-              </button>
-            ))}
+    <>
+      <div className="flex flex-col h-screen">
+        <Header
+          title="랭킹"
+          rightIcon="search"
+          onRightClick={() => navigate("/search")}
+          bgColor="#242424"
+        />
+        <div className="w-full max-w-2xl mx-auto px-5">
+          <div className="sticky top-[40px] z-100 bg-[#242424] border-b border-[#333] pt-3">
+            {/* 카테고리 탭 */}
+            <div className="flex justify-around border-b border-white/0">
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => handleCategoryChange(cat.id)}
+                  className={`flex-1 text-center py-3 transition-all select-none ${
+                    selectedCategory === cat.id
+                      ? "border-b-2 border-white text-white font-semibold"
+                      : "text-gray-400"
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* 필터 & 컨텐츠 영역 */}
-        <div className="flex-1 overflow-y-auto py-2.5 mt-[40px] pb-40">
-          {/* OTT 필터 (영화/TV만 표시) - 다중 선택 */}
-          {/* 플랫폼 필터 */}
-          <div className="mb-4">
-            <div className="flex gap-3 overflow-x-auto scrollbar-hide">
-              {availablePlatforms.map((platform) => {
-                const isSelected = selectedPlatforms.has(platform.key);
+          {/* 필터 & 컨텐츠 영역 */}
+          <div className="flex-1 overflow-y-auto py-2.5 mt-[40px] pb-40">
+            {/* OTT 필터 (영화/TV만 표시) - 다중 선택 */}
+            {/* 플랫폼 필터 */}
+            <div className="mb-4">
+              <div className="flex gap-3 overflow-x-auto scrollbar-hide">
+                {availablePlatforms.map((platform) => {
+                  const isSelected = selectedPlatforms.has(platform.key);
 
-                return (
-                  <button
-                    key={platform.key}
-                    onClick={() => togglePlatform(platform.key)}
-                    className={`flex items-center gap-2 py-1.5 rounded-full border font-[PretendardVariable] text-sm font-medium transition-all flex-shrink-0
+                  return (
+                    <button
+                      key={platform.key}
+                      onClick={() => togglePlatform(platform.key)}
+                      className={`flex items-center gap-2 py-1.5 rounded-full border font-[PretendardVariable] text-sm font-medium transition-all flex-shrink-0
             ${platform.key === "ALL" ? "px-4" : "px-2"}
             ${
               isSelected
                 ? "border-transparent text-white bg-gradient-to-r from-[#855BFF] to-[#445FD1]"
                 : "border-[#403F43] bg-[#2a2a2a] text-[#D3D3D3] hover:border-[#855BFF]"
             }`}
-                  >
-                    {platform.logo && (
-                      <img
-                        src={platform.logo}
-                        alt={platform.label}
-                        className="w-5 h-5 rounded-full object-contain"
-                      />
-                    )}
-                    <span>{platform.label}</span>
-                  </button>
-                );
-              })}
+                    >
+                      {platform.logo && (
+                        <img
+                          src={platform.logo}
+                          alt={platform.label}
+                          className="w-5 h-5 rounded-full object-contain"
+                        />
+                      )}
+                      <span>{platform.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-1.5 mt-2 text-[#D3D3D3] text-sm font-[PretendardVariable] mb-4">
-            <img src={InfoIcon} className="w-4 h-4" />
-            <span className="text-semibold">{todayLabel} 기준</span>
-          </div>
+            <div className="flex items-center gap-1.5 mt-2 text-[#D3D3D3] text-sm font-[PretendardVariable] mb-4">
+              <img src={InfoIcon} className="w-4 h-4" />
+              <span className="text-semibold">{todayLabel} 기준</span>
+            </div>
 
-          {/* 콘텐츠 */}
-          {loading ? (
-            <div className="text-center py-12 text-gray-400">Loading...</div>
-          ) : rankings.length > 0 ? (
-            <div className="flex flex-col gap-1">
-              {rankings.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-4 p-1 rounded-lg cursor-pointer transition hover:bg-[#2a2a2a] hover:translate-x-1"
-                  onClick={() => handleCardClick(item.id)}
-                >
+            {/* 콘텐츠 */}
+            {loading ? (
+              <div className="text-center py-12 text-gray-400">Loading...</div>
+            ) : rankings.length > 0 ? (
+              <div className="flex flex-col gap-1">
+                {rankings.map((item) => (
                   <div
-                    className={`w-4 text-center font-[PretendardVariable] font-bold text-xl ${
-                      item.rank === 1
-                        ? "text-yellow-400"
-                        : item.rank === 2
-                          ? "text-gray-300"
-                          : item.rank === 3
-                            ? "text-[#cd7f32]"
-                            : "text-white"
-                    }`}
+                    key={item.id}
+                    className="flex items-center gap-4 p-1 rounded-lg cursor-pointer transition hover:bg-[#2a2a2a] hover:translate-x-1"
+                    onClick={() => handleCardClick(item.id)}
                   >
-                    {item.rank}
-                  </div>
-                  <img
-                    src={item.thumbnail}
-                    alt={item.title}
-                    className="w-15 h-20 rounded-md object-cover bg-[#444] flex-shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-[PretendardVariable] font-medium text-white text-sm mb-2 truncate">
-                      {item.title}
+                    <div
+                      className={`w-4 text-center font-[PretendardVariable] font-bold text-xl ${
+                        item.rank === 1
+                          ? "text-yellow-400"
+                          : item.rank === 2
+                            ? "text-gray-300"
+                            : item.rank === 3
+                              ? "text-[#cd7f32]"
+                              : "text-white"
+                      }`}
+                    >
+                      {item.rank}
                     </div>
-                    <div className="flex items-center gap-3 font-[PretendardVariable] text-xs text-gray-400">
-                      <span className="flex items-center text-[#855BFF] text-sm font-medium gap-1">
-                        <img src={PurpleStar} alt="평점" className="w-4 h-4" />
-                        {item.score.toFixed(1)}
-                      </span>
+                    <img
+                      src={item.thumbnail}
+                      alt={item.title}
+                      className="w-15 h-20 rounded-md object-cover bg-[#444] flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-[PretendardVariable] font-medium text-white text-sm mb-2 truncate">
+                        {item.title}
+                      </div>
+                      <div className="flex items-center gap-3 font-[PretendardVariable] text-xs text-gray-400">
+                        <span className="flex items-center text-[#855BFF] text-sm font-medium gap-1">
+                          <img
+                            src={PurpleStar}
+                            alt="평점"
+                            className="w-4 h-4"
+                          />
+                          {item.score.toFixed(1)}
+                        </span>
 
-                      {renderChange(item.change)}
+                        {renderChange(item.change)}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center text-gray-400 py-30">
-              랭킹 데이터가 없습니다.
-            </div>
-          )}
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-gray-400 py-30">
+                랭킹 데이터가 없습니다.
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+      {isNoContentModalOpen && (
+        <Modal
+          title={
+            <>
+              이 작품의 상세 정보가 아직
+              <br />
+              준비되지 않았습니다.
+            </>
+          }
+          buttons={[
+            {
+              text: "확인",
+              variant: "purple",
+              onClick: () => setIsNoContentModalOpen(false),
+            },
+          ]}
+        />
+      )}
+    </>
   );
 }
