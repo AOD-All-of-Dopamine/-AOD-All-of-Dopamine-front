@@ -155,7 +155,7 @@ export default function HomePage() {
   });
 
   const handleSearch = (query: string) => {
-    navigate(`/explore?keyword=${encodeURIComponent(query)}`);
+    navigate(`/search?keyword=${encodeURIComponent(query)}`);
   };
 
   const handleRankingClick = () => {
