@@ -236,12 +236,12 @@ export default function WorkDetailPage() {
         {/* 2. 메인 컨텐츠 영역: max-w-2xl로 제한 */}
         <div className="w-full max-w-2xl mx-auto relative -mt-81 z-10">
           {/* 헤더 */}
-          <header className="h-[60px] flex items-center justify-between px-4 mb-4">
+          <header className="h-[50px] flex items-center justify-between px-5 mb-4 mt-0.5">
             <button onClick={() => navigate(-1)} className="w-5 h-5">
               <img src={Back} alt="뒤로가기" className="w-5 h-5" />
             </button>
-            <button className="w-5 h-5">
-              <img src={SearchIcon} className="w-5 h-5" />
+            <button className="w-5 h-5" onClick={() => navigate("/search")}>
+              <img src={SearchIcon} className="w-6 h-6" />
             </button>
           </header>
 

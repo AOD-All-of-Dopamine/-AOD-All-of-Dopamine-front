@@ -4,10 +4,17 @@ import SearchIcon from "../assets/search-gray.svg";
 interface SearchBarProps {
   onSearch?: (query: string) => void;
   offsetTop?: number;
+  fixed?: boolean;
+  defaultValue?: string;
 }
 
-function SearchBar({ onSearch, offsetTop = 0 }: SearchBarProps) {
-  const [query, setQuery] = useState("");
+function SearchBar({
+  onSearch,
+  offsetTop = 0,
+  fixed = true,
+  defaultValue = "",
+}: SearchBarProps) {
+  const [query, setQuery] = useState(defaultValue);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,9 +25,15 @@ function SearchBar({ onSearch, offsetTop = 0 }: SearchBarProps) {
 
   return (
     <div
-      className="fixed
-    left-1/2 -translate-x-1/2 max-w-2xl mx-auto top-0 w-full z-50 bg-[#242424] items-center justify-between px-4 py-4"
-      style={{ top: offsetTop }}
+      className={`
+    ${fixed ? "fixed" : "relative"}
+    left-1/2 -translate-x-1/2
+    max-w-2xl mx-auto
+    w-full z-50
+    bg-[#242424]
+    px-4 py-4
+  `}
+      style={fixed ? { top: offsetTop } : undefined}
     >
       <form onSubmit={handleSubmit}>
         <img

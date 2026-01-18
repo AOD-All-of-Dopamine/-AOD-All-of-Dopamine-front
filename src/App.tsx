@@ -20,6 +20,7 @@ import MyLikesPage from "./pages/my-likes-page";
 import InternalRankingPage from "./pages/internal-ranking-page";
 import OnboardingPage from "./pages/onboarding-page";
 import ReviewPage from "./pages/review-page";
+import SearchPage from "./pages/search-page";
 
 const publicRoutes: RouteObject[] = [
   {
@@ -35,13 +36,13 @@ const publicRoutes: RouteObject[] = [
       { path: "internal/ranking", element: <InternalRankingPage /> },
       { path: "new", element: <NewReleasesPage /> },
       { path: "profile", element: <ProfilePage /> },
-      { path: "profile", element: <ProfilePage /> },
       { path: "profile/reviews", element: <MyReviewsPage /> },
       { path: "profile/bookmarks", element: <MyBookmarksPage /> },
       { path: "profile/likes", element: <MyLikesPage /> },
       { path: "work/:id", element: <WorkDetailPage /> },
       { path: "onboarding", element: <OnboardingPage /> },
       { path: "review/:id", element: <ReviewPage /> },
+      { path: "search", element: <SearchPage /> },
     ],
   },
 ];
