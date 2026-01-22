@@ -152,16 +152,50 @@ export default function RankingPage() {
           platform: item.platform,
         }));
 
-        // OTT 필터링 (TMDB만 해당) - 다중 선택 지원
+        // 필터링 로직 - 카테고리별로 다르게 적용
         const selectedPlatformArray = selectedPlatforms.has("ALL")
           ? undefined
           : Array.from(selectedPlatforms);
 
         if (selectedPlatformArray && selectedPlatformArray.length > 0) {
-          mappedData = mappedData.filter(
-            (item) =>
-              item.platform && selectedPlatformArray.includes(item.platform)
-          );
+          // 영화/시리즈: OTT 필터링 (watchProviders) + 플랫폼 필터링 (platform)
+          if (selectedCategory === "movie" || selectedCategory === "tv") {
+            // OTT 이름 목록 (watchProviders에서 사용) - platforms.ts와 동일하게
+            const ottNames = ["Netflix", "Watcha", "Disney Plus", "wavve", "TVING"];
+            const selectedOtts = selectedPlatformArray.filter(p => ottNames.includes(p));
+            const selectedPlatformTypes = selectedPlatformArray.filter(p => !ottNames.includes(p));
+
+            mappedData = mappedData.filter((item) => {
+              let matchOtt = true;
+              let matchPlatform = true;
+
+              // OTT 필터 적용 (선택된 경우)
+              if (selectedOtts.length > 0) {
+                if (!item.watchProviders || item.watchProviders.length === 0) {
+                  matchOtt = false;
+                } else {
+                  // 선택된 모든 OTT가 포함되어야 표시 (AND 조건)
+                  matchOtt = selectedOtts.every((selected) =>
+                    item.watchProviders!.includes(selected)
+                  );
+                }
+              }
+
+              // 플랫폼 타입 필터 적용 (선택된 경우)
+              if (selectedPlatformTypes.length > 0) {
+                matchPlatform = item.platform ? selectedPlatformTypes.includes(item.platform) : false;
+              }
+
+              return matchOtt && matchPlatform;
+            });
+          } 
+          // 게임/웹툰/웹소설: 플랫폼 필터링 (platform 사용)
+          else {
+            mappedData = mappedData.filter(
+              (item) =>
+                item.platform && selectedPlatformArray.includes(item.platform)
+            );
+          }
         }
 
         setRankings(mappedData);
