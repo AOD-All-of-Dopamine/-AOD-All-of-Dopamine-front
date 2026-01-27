@@ -346,7 +346,7 @@ export default function RankingPage() {
                       {item.rank}
                     </div>
                     <div
-                      className={`relative h-22 flex-shrink-0 rounded-md bg-[#2a2a2a] overflow-hidden
+                      className={`relative w-22 flex-shrink-0 rounded-md bg-[#2a2a2a] overflow-hidden
     ${imageAspectMap[selectedCategory]}`}
                     >
                       {item.thumbnail ? (
@@ -368,7 +368,7 @@ export default function RankingPage() {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="font-[PretendardVariable] font-medium text-white text-sm mb-2 truncate">
+                      <div className="font-[PretendardVariable] font-medium text-white text-sm mb-1 truncate">
                         {item.title}
                       </div>
                       <div className="flex items-center gap-3 font-[PretendardVariable] text-xs text-gray-400">
