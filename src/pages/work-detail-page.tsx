@@ -31,6 +31,12 @@ import whiteCat from "../assets/white-cat.png";
 import { PLATFORM_META } from "../constants/platforms";
 import { DOMAIN_LABEL_MAP } from "../constants/domain";
 import Modal from "../components/common/Modal";
+import {
+  type Category,
+  imageAspectMap,
+  thumbnailFallbackMap,
+  thumbnailIconSizeMap,
+} from "../constants/thumbnail";
 
 type TabType = "info" | "reviews";
 
@@ -125,7 +131,7 @@ export default function WorkDetailPage() {
 
   const handleRatingAction = (
     type: "like" | "dislike",
-    e: React.MouseEvent<HTMLButtonElement>
+    e: React.MouseEvent<HTMLButtonElement>,
   ) => {
     if (!isAuthenticated) {
       setIsLoginModalOpen(true);
@@ -186,6 +192,7 @@ export default function WorkDetailPage() {
   const reviewCount = reviewsData?.totalElements || 0;
   const averageRating = work.score || 0;
   const myReview = reviewsData?.content.find((review) => review.isMyReview);
+  const category = work.domain?.toLowerCase() as Category;
 
   const platformItems = Object.entries(work.platformInfo ?? {})
     .flatMap(([platformKey, info]) => {
@@ -248,12 +255,30 @@ export default function WorkDetailPage() {
 
           {/* 포스터 */}
           <div className="relative z-10 mx-4 mt-10">
-            <div className="w-[120px] h-[168px] bg-[var(--greygrey-900background-secondary)] rounded overflow-hidden">
-              <img
-                src={work.thumbnail || "https://via.placeholder.com/120x168"}
-                alt={work.title}
-                className="w-full h-full object-cover"
-              />
+            <div
+              className={`
+    ${category === "game" ? "w-60" : "w-32"}
+    rounded-lg
+    overflow-hidden
+    bg-[#2a2a2a]
+    ${imageAspectMap[category]}
+    mb-2
+    flex items-center justify-center
+  `}
+            >
+              {work.thumbnail ? (
+                <img
+                  src={work.thumbnail}
+                  alt={work.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <img
+                  src={thumbnailFallbackMap[category]}
+                  alt="fallback"
+                  className={`${thumbnailIconSizeMap[category]} opacity-70`}
+                />
+              )}
             </div>
           </div>
 
@@ -602,7 +627,7 @@ export default function WorkDetailPage() {
 
                                 const formattedValue = formatFieldValue(
                                   key,
-                                  value
+                                  value,
                                 );
                                 const isMultiline =
                                   formattedValue.includes("\n") ||
@@ -622,7 +647,7 @@ export default function WorkDetailPage() {
                                           className="prose prose-invert prose-sm max-w-none"
                                           dangerouslySetInnerHTML={{
                                             __html: DOMPurify.sanitize(
-                                              value as string
+                                              value as string,
                                             ),
                                           }}
                                         />
@@ -649,7 +674,7 @@ export default function WorkDetailPage() {
                               })}
                             </div>
                           </div>
-                        )
+                        ),
                       )}
                     </div>
                   )}
@@ -674,7 +699,7 @@ export default function WorkDetailPage() {
                             </span>
                             <span className="text-[12px] text-[var(--greygrey-200text-primary)]">
                               {new Date(myReview.createdAt).toLocaleDateString(
-                                "ko-KR"
+                                "ko-KR",
                               )}
                             </span>
                           </div>
@@ -801,7 +826,7 @@ export default function WorkDetailPage() {
                                     year: "numeric",
                                     month: "long",
                                     day: "numeric",
-                                  }
+                                  },
                                 )}
                               </span>
                             </div>

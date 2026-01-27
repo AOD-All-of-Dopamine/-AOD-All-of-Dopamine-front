@@ -23,9 +23,9 @@ const mapToWorkItem = (item: any) => ({
 
 export default function ProfilePage() {
   const navigate = useNavigate();
-  // const { isAuthenticated, user, logout } = useAuth();
-  const isAuthenticated = useAuth();
-  const { user, logout } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
+  // const isAuthenticated = useAuth();
+  // const { user, logout } = useAuth();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   const { data: reviewsData } = useMyReviews(0, 1);
