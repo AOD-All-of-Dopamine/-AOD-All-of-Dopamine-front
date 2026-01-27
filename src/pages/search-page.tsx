@@ -98,7 +98,7 @@ export default function SearchPage() {
           <div className="text-center text-gray-500 py-20">로딩 중...</div>
         ) : data && data.content.length > 0 ? (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-5">
+            <div className="grid grid-cols-3 gap-5">
               {data.content.map((work) => (
                 <div
                   key={work.id}

@@ -11,7 +11,7 @@ export default function MyLikesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const { data, isLoading } = useMyLikes(page, 1000);
   const filteredWorks = data?.content.filter((work: any) =>
-    work.title.toLowerCase().includes(searchQuery.toLowerCase())
+    work.title.toLowerCase().includes(searchQuery.toLowerCase()),
   );
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -36,7 +36,7 @@ export default function MyLikesPage() {
       <div className="w-full max-w-2xl mx-auto px-5 mt-32 mb-8">
         {data && data.content.length > 0 ? (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-5">
+            <div className="grid grid-cols-3 gap-5">
               {filteredWorks.map((work: any) => (
                 <div
                   key={work.id}
