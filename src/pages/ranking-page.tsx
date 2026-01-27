@@ -346,7 +346,7 @@ export default function RankingPage() {
                       {item.rank}
                     </div>
                     <div
-                      className={`relative w-22 flex-shrink-0 rounded-md bg-[#2a2a2a] overflow-hidden
+                      className={`relative ${selectedCategory === "game" ? "w-30" : "w-18"} flex-shrink-0 rounded-md bg-[#2a2a2a] overflow-hidden
     ${imageAspectMap[selectedCategory]}`}
                     >
                       {item.thumbnail ? (
