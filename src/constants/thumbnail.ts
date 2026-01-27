@@ -7,9 +7,9 @@ import WebnovelIcon from "../assets/thumbnail-icon/null_webnovel.svg";
 export type Category = "movie" | "tv" | "game" | "webtoon" | "webnovel";
 
 export const imageAspectMap: Record<Category, string> = {
-  movie: "aspect-[2/3]",
+  movie: "aspect-[20/30]",
   tv: "aspect-[2/3]",
-  game: "aspect-[16/9]",
+  game: "aspect-[21.5/10]",
   webtoon: "aspect-[19/25]",
   webnovel: "aspect-[17/25]",
 };
