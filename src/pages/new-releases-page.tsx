@@ -4,8 +4,12 @@ import { useRecentReleases, useUpcomingReleases } from "../hooks/useWorks";
 import Header from "../components/common/Header";
 import { DOMAIN_LABEL_MAP } from "../constants/domain";
 import { DOMAIN_PLATFORMS, PLATFORM_META } from "../constants/platforms";
+import {
+  Category,
+  imageAspectMap,
+  thumbnailFallbackMap,
+} from "../constants/thumbnail";
 
-type Category = "movie" | "tv" | "game" | "webtoon" | "webnovel";
 type ReleaseType = "released" | "upcoming";
 
 const categories: { id: Category; label: string }[] = [
@@ -29,7 +33,7 @@ export default function NewReleasesPage() {
     () => {
       const platforms = searchParams.get("platforms");
       return platforms ? new Set(platforms.split(",")) : new Set(["all"]);
-    }
+    },
   );
 
   const [releaseType, setReleaseType] = useState<ReleaseType>(() => {
@@ -95,7 +99,7 @@ export default function NewReleasesPage() {
       page,
       size: 20,
     },
-    { enabled: releaseType === "released" }
+    { enabled: releaseType === "released" },
   );
 
   const {
@@ -109,7 +113,7 @@ export default function NewReleasesPage() {
       page,
       size: 20,
     },
-    { enabled: releaseType === "upcoming" }
+    { enabled: releaseType === "upcoming" },
   );
 
   // API 데이터 사용
@@ -285,21 +289,33 @@ export default function NewReleasesPage() {
                   </div>
 
                   {/* 카드 그리드 */}
-                  <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-5">
+                  <div className="grid grid-cols-3 gap-5">
                     {groupedWorks[date].map((work) => (
                       <div
                         key={work.id}
                         onClick={() => navigate(`/work/${work.id}`)}
                         className="cursor-pointer transition-transform hover:-translate-y-1"
                       >
-                        <img
-                          src={
-                            work.thumbnail ||
-                            "https://via.placeholder.com/160x220"
-                          }
-                          alt={work.title}
-                          className="w-full h-[220px] rounded-lg object-cover mb-2 bg-gray-700"
-                        />
+                        <div
+                          className={`relative w-full ${imageAspectMap[selectedCategory]} rounded-lg mb-2 bg-[#302F31] overflow-hidden`}
+                        >
+                          {work.thumbnail ? (
+                            <img
+                              src={work.thumbnail}
+                              alt={work.title}
+                              className="w-full h-full object-cover rounded-lg"
+                            />
+                          ) : (
+                            <img
+                              src={thumbnailFallbackMap[selectedCategory]}
+                              alt="기본 썸네일"
+                              className="absolute inset-0 m-auto object-contain
+        w-[clamp(32px,30%,64px)]
+        h-[clamp(32px,30%,64px)]
+        opacity-80"
+                            />
+                          )}
+                        </div>
 
                         <div className="text-white text-sm font-[PretendardVariable] font-semibold truncate">
                           {work.title}
