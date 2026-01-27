@@ -6,7 +6,11 @@ import { DOMAIN_PLATFORMS, PLATFORM_META } from "../constants/platforms";
 import PurpleStar from "../assets/purple-star.svg";
 import FilterIcon from "../assets/filter-icon.svg";
 
-type Category = "movie" | "tv" | "game" | "webtoon" | "webnovel";
+import {
+  type Category,
+  imageAspectMap,
+  thumbnailFallbackMap,
+} from "../constants/thumbnail";
 
 const categories: { id: Category; label: string }[] = [
   { id: "movie", label: "영화" },
@@ -37,7 +41,7 @@ export default function ExplorePage() {
     () => {
       const platforms = searchParams.get("platforms");
       return platforms ? new Set(platforms.split(",")) : new Set(["ALL"]);
-    }
+    },
   );
 
   const [selectedGenres, setSelectedGenres] = useState<Set<string>>(() => {
@@ -70,13 +74,13 @@ export default function ExplorePage() {
   }, [selectedCategory, selectedPlatforms, selectedGenres, page]);
 
   const { data: genresWithCountData } = useGenresWithCount(
-    selectedCategory.toUpperCase()
+    selectedCategory.toUpperCase(),
   );
 
   // 장르를 작품 수 기준 내림차순으로 정렬
   const sortedGenres = genresWithCountData
     ? Object.entries(genresWithCountData).sort(
-        ([, countA], [, countB]) => countB - countA
+        ([, countA], [, countB]) => countB - countA,
       )
     : [];
 
@@ -289,20 +293,34 @@ export default function ExplorePage() {
             <div className="text-center text-gray-500 py-20">로딩 중...</div>
           ) : data && data.content.length > 0 ? (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-5">
+              <div className="grid grid-cols-3 gap-5">
                 {data.content.map((work) => (
                   <div
                     key={work.id}
                     onClick={() => handleCardClick(String(work.id))}
                     className="cursor-pointer transition-transform hover:-translate-y-1"
                   >
-                    <img
-                      src={
-                        work.thumbnail || "https://via.placeholder.com/160x220"
-                      }
-                      alt={work.title}
-                      className="w-full h-[220px] rounded-lg object-cover mb-2 bg-gray-700"
-                    />
+                    <div
+                      className={`relative w-full ${imageAspectMap[selectedCategory]} rounded-lg mb-2 bg-[#302F31] overflow-hidden`}
+                    >
+                      {work.thumbnail ? (
+                        <img
+                          src={work.thumbnail}
+                          alt={work.title}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      ) : (
+                        <img
+                          src={thumbnailFallbackMap[selectedCategory]}
+                          alt="기본 썸네일"
+                          className="absolute inset-0 m-auto object-contain
+        w-[clamp(32px,30%,64px)]
+        h-[clamp(32px,30%,64px)]
+        opacity-80"
+                        />
+                      )}
+                    </div>
+
                     <div className="font-[PretendardVariable] text-white text-sm font-semibold truncate">
                       {work.title}
                     </div>
