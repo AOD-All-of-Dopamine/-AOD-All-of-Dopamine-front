@@ -6,14 +6,17 @@ import PurpleStar from "../assets/purple-star.svg";
 import InfoIcon from "../assets/info-icon.svg";
 import { DOMAIN_PLATFORMS, PLATFORM_META } from "../constants/platforms";
 import Modal from "../components/common/Modal";
-
-type Category = "movie" | "tv" | "game" | "webtoon" | "webnovel";
+import {
+  Category,
+  imageAspectMap,
+  thumbnailFallbackMap,
+} from "../constants/thumbnail";
 
 interface RankingItem {
   id: string;
   rank: number;
   title: string;
-  thumbnail: string;
+  thumbnail: string | null;
   score: number;
   change?: "up" | "down" | "new" | number;
   watchProviders?: string[];
@@ -57,7 +60,7 @@ export default function RankingPage() {
     () => {
       const platforms = searchParams.get("platforms");
       return platforms ? new Set(platforms.split(",")) : new Set(["ALL"]);
-    }
+    },
   );
 
   const todayLabel = (() => {
@@ -161,9 +164,19 @@ export default function RankingPage() {
           // 영화/시리즈: OTT 필터링 (watchProviders) + 플랫폼 필터링 (platform)
           if (selectedCategory === "movie" || selectedCategory === "tv") {
             // OTT 이름 목록 (watchProviders에서 사용) - platforms.ts와 동일하게
-            const ottNames = ["Netflix", "Watcha", "Disney Plus", "wavve", "TVING"];
-            const selectedOtts = selectedPlatformArray.filter(p => ottNames.includes(p));
-            const selectedPlatformTypes = selectedPlatformArray.filter(p => !ottNames.includes(p));
+            const ottNames = [
+              "Netflix",
+              "Watcha",
+              "Disney Plus",
+              "wavve",
+              "TVING",
+            ];
+            const selectedOtts = selectedPlatformArray.filter((p) =>
+              ottNames.includes(p),
+            );
+            const selectedPlatformTypes = selectedPlatformArray.filter(
+              (p) => !ottNames.includes(p),
+            );
 
             mappedData = mappedData.filter((item) => {
               let matchOtt = true;
@@ -176,24 +189,26 @@ export default function RankingPage() {
                 } else {
                   // 선택된 모든 OTT가 포함되어야 표시 (AND 조건)
                   matchOtt = selectedOtts.every((selected) =>
-                    item.watchProviders!.includes(selected)
+                    item.watchProviders!.includes(selected),
                   );
                 }
               }
 
               // 플랫폼 타입 필터 적용 (선택된 경우)
               if (selectedPlatformTypes.length > 0) {
-                matchPlatform = item.platform ? selectedPlatformTypes.includes(item.platform) : false;
+                matchPlatform = item.platform
+                  ? selectedPlatformTypes.includes(item.platform)
+                  : false;
               }
 
               return matchOtt && matchPlatform;
             });
-          } 
+          }
           // 게임/웹툰/웹소설: 플랫폼 필터링 (platform 사용)
           else {
             mappedData = mappedData.filter(
               (item) =>
-                item.platform && selectedPlatformArray.includes(item.platform)
+                item.platform && selectedPlatformArray.includes(item.platform),
             );
           }
         }
@@ -330,11 +345,28 @@ export default function RankingPage() {
                     >
                       {item.rank}
                     </div>
-                    <img
-                      src={item.thumbnail}
-                      alt={item.title}
-                      className="w-15 h-20 rounded-md object-cover bg-[#444] flex-shrink-0"
-                    />
+                    <div
+                      className={`relative h-22 flex-shrink-0 rounded-md bg-[#2a2a2a] overflow-hidden
+    ${imageAspectMap[selectedCategory]}`}
+                    >
+                      {item.thumbnail ? (
+                        <img
+                          src={item.thumbnail}
+                          alt={item.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <img
+                          src={thumbnailFallbackMap[selectedCategory]}
+                          alt="기본 썸네일"
+                          className="absolute inset-0 m-auto object-contain
+        w-[clamp(20px,50%,36px)]
+        h-[clamp(20px,50%,36px)]
+        opacity-80"
+                        />
+                      )}
+                    </div>
+
                     <div className="flex-1 min-w-0">
                       <div className="font-[PretendardVariable] font-medium text-white text-sm mb-2 truncate">
                         {item.title}
