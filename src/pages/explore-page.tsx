@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useGenresWithCount, useInfiniteWorks } from "../hooks/useWorks";
 import Header from "../components/common/Header";
@@ -11,6 +11,8 @@ import {
   imageAspectMap,
   thumbnailFallbackMap,
 } from "../constants/thumbnail";
+
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 const categories: { id: Category; label: string }[] = [
   { id: "movie", label: "영화" },
@@ -93,15 +95,27 @@ export default function ExplorePage() {
     selectedGenres.size > 0 ? Array.from(selectedGenres) : undefined;
 
   // 정렬 옵션 - 최신순만 지원
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useInfiniteWorks({
-      domain: selectedCategory.toUpperCase(),
-      platforms: selectedPlatformsArray,
-      genres: selectedGenresArray,
-      size: 60,
-      sortBy: "releaseDate",
-      sortDirection: "desc",
-    });
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isError,
+  } = useInfiniteWorks({
+    domain: selectedCategory.toUpperCase(),
+    platforms: selectedPlatformsArray,
+    genres: selectedGenresArray,
+    size: 60,
+    sortBy: "releaseDate",
+    sortDirection: "desc",
+  });
+
+  const items = useMemo(
+    () => data?.pages.flatMap((p) => p.content) ?? [],
+    [data],
+  );
+  const totalElements = data?.pages?.[0]?.totalElements ?? 0;
 
   const handleCategoryChange = (category: Category) => {
     setSelectedCategory(category);
@@ -142,26 +156,33 @@ export default function ExplorePage() {
     navigate(`/work/${id}`);
   };
 
-  const items = data?.pages.flatMap((p) => p.content) ?? [];
-  const totalElements = data?.pages?.[0]?.totalElements ?? 0;
+  const parentRef = useRef<HTMLDivElement>(null);
+  const COLS = 3;
+  const rowCount = Math.ceil(items.length / COLS);
 
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: rowCount,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 340,
+    overscan: 6,
+  });
 
   useEffect(() => {
     if (!hasNextPage || isFetchingNextPage) return;
-    const el = loadMoreRef.current;
-    if (!el) return;
+    const virtualRows = rowVirtualizer.getVirtualItems();
+    const lastRow = virtualRows[virtualRows.length - 1];
+    if (!lastRow) return;
 
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) fetchNextPage();
-      },
-      { root: null, rootMargin: "600px" }, // 미리 당겨서 로드
-    );
-
-    io.observe(el);
-    return () => io.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+    if (lastRow.index >= rowCount - 3) {
+      fetchNextPage();
+    }
+  }, [
+    rowVirtualizer.getVirtualItems(),
+    rowCount,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  ]);
 
   return (
     <div className="flex flex-col h-screen">
@@ -300,58 +321,97 @@ export default function ExplorePage() {
             </div>
           )}
 
+          {isError && (
+            <div className="text-center text-gray-500 py-20">
+              불러오기에 실패했습니다.
+            </div>
+          )}
+
           {/* 작품 목록 */}
           {isLoading ? (
             <div className="text-center text-gray-500 py-20">로딩 중...</div>
           ) : items.length > 0 ? (
-            <>
-              <div className="grid grid-cols-3 gap-5">
-                {items.map((work) => (
-                  <div
-                    key={work.id}
-                    onClick={() => handleCardClick(String(work.id))}
-                    className="cursor-pointer transition-transform hover:-translate-y-1"
-                  >
+            <div
+              ref={parentRef}
+              className="overflow-auto"
+              style={{ height: "calc(100vh - 260px)" }}
+            >
+              <div
+                style={{
+                  height: rowVirtualizer.getTotalSize(),
+                  position: "relative",
+                }}
+              >
+                {rowVirtualizer.getVirtualItems().map((vRow) => {
+                  const startIndex = vRow.index * COLS;
+                  const rowItems = items.slice(startIndex, startIndex + COLS);
+
+                  return (
                     <div
-                      className={`relative w-full ${imageAspectMap[selectedCategory]} rounded-lg mb-2 bg-[#302F31] overflow-hidden`}
+                      key={vRow.key}
+                      ref={rowVirtualizer.measureElement}
+                      data-index={vRow.index}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        transform: `translateY(${vRow.start}px)`,
+                      }}
                     >
-                      {work.thumbnail ? (
-                        <img
-                          src={work.thumbnail}
-                          alt={work.title}
-                          className="w-full h-full object-cover rounded-lg"
-                        />
-                      ) : (
-                        <img
-                          src={thumbnailFallbackMap[selectedCategory]}
-                          alt="기본 썸네일"
-                          className="absolute inset-0 m-auto object-contain
+                      <div className="grid grid-cols-3 gap-5">
+                        {rowItems.map((work) => (
+                          <div
+                            key={work.id}
+                            onClick={() => handleCardClick(String(work.id))}
+                            className="cursor-pointer transition-transform hover:-translate-y-1"
+                          >
+                            <div
+                              className={`relative w-full ${imageAspectMap[selectedCategory]} rounded-lg mb-2 bg-[#302F31] overflow-hidden`}
+                            >
+                              {work.thumbnail ? (
+                                <img
+                                  src={work.thumbnail}
+                                  alt={work.title}
+                                  className="w-full h-full object-cover rounded-lg"
+                                />
+                              ) : (
+                                <img
+                                  src={thumbnailFallbackMap[selectedCategory]}
+                                  alt="기본 썸네일"
+                                  className="absolute inset-0 m-auto object-contain
         w-[clamp(32px,30%,64px)]
         h-[clamp(32px,30%,64px)]
         opacity-80"
-                        />
-                      )}
-                    </div>
+                                />
+                              )}
+                            </div>
 
-                    <div className="font-[PretendardVariable] text-white text-sm font-semibold truncate">
-                      {work.title}
-                    </div>
+                            <div className="font-[PretendardVariable] text-white text-sm font-semibold truncate">
+                              {work.title}
+                            </div>
 
-                    <div className="font-[PretendardVariable] text-gray-400 text-xs mt-0.5">
-                      {domainLabelMap[work.domain] || work.domain}
-                      {work.releaseDate &&
-                        ` • ${new Date(work.releaseDate).getFullYear()}`}
-                    </div>
+                            <div className="font-[PretendardVariable] text-gray-400 text-xs mt-0.5">
+                              {domainLabelMap[work.domain] || work.domain}
+                              {work.releaseDate &&
+                                ` • ${new Date(work.releaseDate).getFullYear()}`}
+                            </div>
 
-                    <div className="flex items-center text-[#855BFF] text-sm font-medium mt-1 gap-1">
-                      <img src={PurpleStar} alt="평점" className="w-4 h-4" />{" "}
-                      {(work.score || 0).toFixed(1)}
+                            <div className="flex items-center text-[#855BFF] text-sm font-medium mt-1 gap-1 mb-3">
+                              <img
+                                src={PurpleStar}
+                                alt="평점"
+                                className="w-4 h-4"
+                              />{" "}
+                              {(work.score || 0).toFixed(1)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
-
-              <div ref={loadMoreRef} className="h-10" />
 
               {isFetchingNextPage && (
                 <div className="text-center text-grey-500 py-10">
@@ -363,7 +423,7 @@ export default function ExplorePage() {
                   더 불러올 작품이 없습니다.
                 </div>
               )}
-            </>
+            </div>
           ) : (
             <div className="text-center text-gray-500 py-20">
               선택한 필터에 맞는 작품이 없습니다.
