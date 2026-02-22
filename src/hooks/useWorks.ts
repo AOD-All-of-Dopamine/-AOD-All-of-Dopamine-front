@@ -2,6 +2,7 @@ import {
   useQuery,
   UseQueryOptions,
   keepPreviousData,
+  useInfiniteQuery,
 } from "@tanstack/react-query";
 import { workApi, WorksQueryParams, ReleasesQueryParams } from "../api/workApi";
 import { PageResponse, WorkSummary, WorkDetail } from "../types/api";
@@ -14,7 +15,7 @@ export const useWorks = (
   options?: Omit<
     UseQueryOptions<PageResponse<WorkSummary>>,
     "queryKey" | "queryFn"
-  >
+  >,
 ) => {
   return useQuery<PageResponse<WorkSummary>>({
     queryKey: ["works", params],
@@ -28,7 +29,7 @@ export const useWorks = (
  */
 export const useWorkDetail = (
   id: number | undefined,
-  options?: Omit<UseQueryOptions<WorkDetail>, "queryKey" | "queryFn">
+  options?: Omit<UseQueryOptions<WorkDetail>, "queryKey" | "queryFn">,
 ) => {
   return useQuery<WorkDetail>({
     queryKey: ["work", id],
@@ -46,7 +47,7 @@ export const useRecentReleases = (
   options?: Omit<
     UseQueryOptions<PageResponse<WorkSummary>>,
     "queryKey" | "queryFn"
-  >
+  >,
 ) => {
   return useQuery<PageResponse<WorkSummary>>({
     queryKey: ["releases", "recent", params],
@@ -63,7 +64,7 @@ export const useUpcomingReleases = (
   options?: Omit<
     UseQueryOptions<PageResponse<WorkSummary>>,
     "queryKey" | "queryFn"
-  >
+  >,
 ) => {
   return useQuery<PageResponse<WorkSummary>>({
     queryKey: ["releases", "upcoming", params],
@@ -77,7 +78,7 @@ export const useUpcomingReleases = (
  */
 export const useGenres = (
   domain?: string,
-  options?: Omit<UseQueryOptions<string[]>, "queryKey" | "queryFn">
+  options?: Omit<UseQueryOptions<string[]>, "queryKey" | "queryFn">,
 ) => {
   return useQuery<string[]>({
     queryKey: ["genres", domain],
@@ -94,7 +95,7 @@ export const useGenresWithCount = (
   options?: Omit<
     UseQueryOptions<Record<string, number>>,
     "queryKey" | "queryFn"
-  >
+  >,
 ) => {
   return useQuery<Record<string, number>>({
     queryKey: ["genres-with-count", domain],
@@ -108,7 +109,7 @@ export const useGenresWithCount = (
  */
 export const usePlatforms = (
   domain?: string,
-  options?: Omit<UseQueryOptions<string[]>, "queryKey" | "queryFn">
+  options?: Omit<UseQueryOptions<string[]>, "queryKey" | "queryFn">,
 ) => {
   return useQuery<string[]>({
     queryKey: ["platforms", domain],
@@ -126,7 +127,7 @@ export const useSearchWorks = (
   options?: Omit<
     UseQueryOptions<PageResponse<WorkSummary>>,
     "queryKey" | "queryFn"
-  >
+  >,
 ) => {
   return useQuery<PageResponse<WorkSummary>>({
     queryKey: ["works", "search", keyword, params],
@@ -140,3 +141,20 @@ export const useSearchWorks = (
     ...options,
   });
 };
+
+export function useInfiniteWorks(params: WorksQueryParams) {
+  return useInfiniteQuery<PageResponse<WorkSummary>>({
+    queryKey: ["works-infinite", params],
+    queryFn: ({ pageParam = 0 }) =>
+      workApi.getWorks({
+        ...params,
+        page: pageParam as number,
+        size: params.size ?? 20,
+      }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => {
+      if (lastPage.last) return undefined;
+      return lastPage.page + 1;
+    },
+  });
+}

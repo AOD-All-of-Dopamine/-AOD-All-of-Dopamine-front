@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { useWorks, useGenresWithCount } from "../hooks/useWorks";
+import { useGenresWithCount, useInfiniteWorks } from "../hooks/useWorks";
 import Header from "../components/common/Header";
 import { DOMAIN_PLATFORMS, PLATFORM_META } from "../constants/platforms";
 import PurpleStar from "../assets/purple-star.svg";
@@ -11,6 +11,8 @@ import {
   imageAspectMap,
   thumbnailFallbackMap,
 } from "../constants/thumbnail";
+
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 const categories: { id: Category; label: string }[] = [
   { id: "movie", label: "영화" },
@@ -49,18 +51,12 @@ export default function ExplorePage() {
     return genres ? new Set(genres.split(",")) : new Set();
   });
 
-  const [page, setPage] = useState(() => {
-    const p = searchParams.get("page");
-    return p ? parseInt(p, 10) : 0;
-  });
-
   const [showGenreFilter, setShowGenreFilter] = useState(false);
 
   // URL 동기화
   useEffect(() => {
     const params = new URLSearchParams();
     params.set("category", selectedCategory);
-    params.set("page", page.toString());
 
     if (!selectedPlatforms.has("ALL") && selectedPlatforms.size > 0) {
       params.set("platforms", Array.from(selectedPlatforms).join(","));
@@ -71,7 +67,7 @@ export default function ExplorePage() {
     }
 
     setSearchParams(params, { replace: true });
-  }, [selectedCategory, selectedPlatforms, selectedGenres, page]);
+  }, [selectedCategory, selectedPlatforms, selectedGenres]);
 
   const { data: genresWithCountData } = useGenresWithCount(
     selectedCategory.toUpperCase(),
@@ -99,21 +95,32 @@ export default function ExplorePage() {
     selectedGenres.size > 0 ? Array.from(selectedGenres) : undefined;
 
   // 정렬 옵션 - 최신순만 지원
-  const { data, isLoading } = useWorks({
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isError,
+  } = useInfiniteWorks({
     domain: selectedCategory.toUpperCase(),
     platforms: selectedPlatformsArray,
     genres: selectedGenresArray,
-    page,
-    size: 20,
+    size: 60,
     sortBy: "releaseDate",
     sortDirection: "desc",
   });
+
+  const items = useMemo(
+    () => data?.pages.flatMap((p) => p.content) ?? [],
+    [data],
+  );
+  const totalElements = data?.pages?.[0]?.totalElements ?? 0;
 
   const handleCategoryChange = (category: Category) => {
     setSelectedCategory(category);
     setSelectedPlatforms(new Set(["ALL"]));
     setSelectedGenres(new Set());
-    setPage(0);
   };
 
   const togglePlatform = (platformId: string) => {
@@ -136,7 +143,6 @@ export default function ExplorePage() {
     }
 
     setSelectedPlatforms(newSelection);
-    setPage(0);
   };
 
   const toggleGenre = (genre: string) => {
@@ -144,12 +150,39 @@ export default function ExplorePage() {
     if (newSelection.has(genre)) newSelection.delete(genre);
     else newSelection.add(genre);
     setSelectedGenres(newSelection);
-    setPage(0);
   };
 
   const handleCardClick = (id: string) => {
     navigate(`/work/${id}`);
   };
+
+  const parentRef = useRef<HTMLDivElement>(null);
+  const COLS = 3;
+  const rowCount = Math.ceil(items.length / COLS);
+
+  const rowVirtualizer = useVirtualizer({
+    count: rowCount,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 340,
+    overscan: 6,
+  });
+
+  useEffect(() => {
+    if (!hasNextPage || isFetchingNextPage) return;
+    const virtualRows = rowVirtualizer.getVirtualItems();
+    const lastRow = virtualRows[virtualRows.length - 1];
+    if (!lastRow) return;
+
+    if (lastRow.index >= rowCount - 3) {
+      fetchNextPage();
+    }
+  }, [
+    rowVirtualizer.getVirtualItems(),
+    rowCount,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  ]);
 
   return (
     <div className="flex flex-col h-screen">
@@ -275,12 +308,12 @@ export default function ExplorePage() {
           </div>
 
           {/* 총 개수 및 정렬 */}
-          {data && data.content.length > 0 && (
+          {items.length > 0 && (
             <div className="flex items-center justify-between mb-4">
               <span className="text-gray-400 text-sm">
                 총{" "}
                 <span className="text-white font-semibold">
-                  {data.totalElements?.toLocaleString() || 0}
+                  {totalElements?.toLocaleString() || 0}
                 </span>
                 개
               </span>
@@ -288,120 +321,109 @@ export default function ExplorePage() {
             </div>
           )}
 
+          {isError && (
+            <div className="text-center text-gray-500 py-20">
+              불러오기에 실패했습니다.
+            </div>
+          )}
+
           {/* 작품 목록 */}
           {isLoading ? (
             <div className="text-center text-gray-500 py-20">로딩 중...</div>
-          ) : data && data.content.length > 0 ? (
-            <>
-              <div className="grid grid-cols-3 gap-5">
-                {data.content.map((work) => (
-                  <div
-                    key={work.id}
-                    onClick={() => handleCardClick(String(work.id))}
-                    className="cursor-pointer transition-transform hover:-translate-y-1"
-                  >
+          ) : items.length > 0 ? (
+            <div
+              ref={parentRef}
+              className="overflow-auto"
+              style={{ height: "calc(100vh - 260px)" }}
+            >
+              <div
+                style={{
+                  height: rowVirtualizer.getTotalSize(),
+                  position: "relative",
+                }}
+              >
+                {rowVirtualizer.getVirtualItems().map((vRow) => {
+                  const startIndex = vRow.index * COLS;
+                  const rowItems = items.slice(startIndex, startIndex + COLS);
+
+                  return (
                     <div
-                      className={`relative w-full ${imageAspectMap[selectedCategory]} rounded-lg mb-2 bg-[#302F31] overflow-hidden`}
+                      key={vRow.key}
+                      ref={rowVirtualizer.measureElement}
+                      data-index={vRow.index}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        transform: `translateY(${vRow.start}px)`,
+                      }}
                     >
-                      {work.thumbnail ? (
-                        <img
-                          src={work.thumbnail}
-                          alt={work.title}
-                          className="w-full h-full object-cover rounded-lg"
-                        />
-                      ) : (
-                        <img
-                          src={thumbnailFallbackMap[selectedCategory]}
-                          alt="기본 썸네일"
-                          className="absolute inset-0 m-auto object-contain
+                      <div className="grid grid-cols-3 gap-5">
+                        {rowItems.map((work) => (
+                          <div
+                            key={work.id}
+                            onClick={() => handleCardClick(String(work.id))}
+                            className="cursor-pointer transition-transform hover:-translate-y-1"
+                          >
+                            <div
+                              className={`relative w-full ${imageAspectMap[selectedCategory]} rounded-lg mb-2 bg-[#302F31] overflow-hidden`}
+                            >
+                              {work.thumbnail ? (
+                                <img
+                                  src={work.thumbnail}
+                                  alt={work.title}
+                                  className="w-full h-full object-cover rounded-lg"
+                                />
+                              ) : (
+                                <img
+                                  src={thumbnailFallbackMap[selectedCategory]}
+                                  alt="기본 썸네일"
+                                  className="absolute inset-0 m-auto object-contain
         w-[clamp(32px,30%,64px)]
         h-[clamp(32px,30%,64px)]
         opacity-80"
-                        />
-                      )}
-                    </div>
+                                />
+                              )}
+                            </div>
 
-                    <div className="font-[PretendardVariable] text-white text-sm font-semibold truncate">
-                      {work.title}
-                    </div>
+                            <div className="font-[PretendardVariable] text-white text-sm font-semibold truncate">
+                              {work.title}
+                            </div>
 
-                    <div className="font-[PretendardVariable] text-gray-400 text-xs mt-0.5">
-                      {domainLabelMap[work.domain] || work.domain}
-                      {work.releaseDate &&
-                        ` • ${new Date(work.releaseDate).getFullYear()}`}
-                    </div>
+                            <div className="font-[PretendardVariable] text-gray-400 text-xs mt-0.5">
+                              {domainLabelMap[work.domain] || work.domain}
+                              {work.releaseDate &&
+                                ` • ${new Date(work.releaseDate).getFullYear()}`}
+                            </div>
 
-                    <div className="flex items-center text-[#855BFF] text-sm font-medium mt-1 gap-1">
-                      <img src={PurpleStar} alt="평점" className="w-4 h-4" />{" "}
-                      {(work.score || 0).toFixed(1)}
+                            <div className="flex items-center text-[#855BFF] text-sm font-medium mt-1 gap-1 mb-3">
+                              <img
+                                src={PurpleStar}
+                                alt="평점"
+                                className="w-4 h-4"
+                              />{" "}
+                              {(work.score || 0).toFixed(1)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
-              {/* 페이지네이션 */}
-              {data && data.totalPages > 1 && (
-                <div className="flex flex-col items-center gap-3 mt-8">
-                  {/* 페이지 번호 버튼들 */}
-                  <div className="flex items-center gap-1 flex-wrap justify-center">
-                    {(() => {
-                      const totalPages = data.totalPages;
-                      const currentPage = page;
-                      const pageNumbers = [];
-
-                      // 항상 첫 페이지
-                      pageNumbers.push(0);
-
-                      // 현재 페이지 주변 (앞뒤 2개씩)
-                      const start = Math.max(1, currentPage - 2);
-                      const end = Math.min(totalPages - 2, currentPage + 2);
-
-                      // ... 표시 여부
-                      if (start > 1) pageNumbers.push(-1); // -1은 ... 표시용
-
-                      for (let i = start; i <= end; i++) {
-                        if (i > 0 && i < totalPages - 1) {
-                          pageNumbers.push(i);
-                        }
-                      }
-
-                      // ... 표시 여부
-                      if (end < totalPages - 2) pageNumbers.push(-2); // -2도 ... 표시용
-
-                      // 항상 마지막 페이지
-                      if (totalPages > 1) pageNumbers.push(totalPages - 1);
-
-                      return pageNumbers.map((pageNum, idx) => {
-                        if (pageNum < 0) {
-                          return (
-                            <span
-                              key={`ellipsis-${idx}`}
-                              className="text-gray-500 px-2"
-                            >
-                              ...
-                            </span>
-                          );
-                        }
-
-                        return (
-                          <button
-                            key={pageNum}
-                            onClick={() => setPage(pageNum)}
-                            className={`min-w-[36px] h-9 px-2 rounded-lg font-medium transition ${
-                              pageNum === currentPage
-                                ? "bg-[#855BFF] text-white"
-                                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-                            }`}
-                          >
-                            {pageNum + 1}
-                          </button>
-                        );
-                      });
-                    })()}
-                  </div>
+              {isFetchingNextPage && (
+                <div className="text-center text-grey-500 py-10">
+                  불러오는 중...
                 </div>
               )}
-            </>
+              {!hasNextPage && items.length > 0 && (
+                <div className="text-center text-grey-600 py-10">
+                  더 불러올 작품이 없습니다.
+                </div>
+              )}
+            </div>
           ) : (
             <div className="text-center text-gray-500 py-20">
               선택한 필터에 맞는 작품이 없습니다.
