@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { useWorks, useGenresWithCount } from "../hooks/useWorks";
+import { useGenresWithCount, useInfiniteWorks } from "../hooks/useWorks";
 import Header from "../components/common/Header";
 import { DOMAIN_PLATFORMS, PLATFORM_META } from "../constants/platforms";
 import PurpleStar from "../assets/purple-star.svg";
@@ -49,18 +49,12 @@ export default function ExplorePage() {
     return genres ? new Set(genres.split(",")) : new Set();
   });
 
-  const [page, setPage] = useState(() => {
-    const p = searchParams.get("page");
-    return p ? parseInt(p, 10) : 0;
-  });
-
   const [showGenreFilter, setShowGenreFilter] = useState(false);
 
   // URL 동기화
   useEffect(() => {
     const params = new URLSearchParams();
     params.set("category", selectedCategory);
-    params.set("page", page.toString());
 
     if (!selectedPlatforms.has("ALL") && selectedPlatforms.size > 0) {
       params.set("platforms", Array.from(selectedPlatforms).join(","));
@@ -71,7 +65,7 @@ export default function ExplorePage() {
     }
 
     setSearchParams(params, { replace: true });
-  }, [selectedCategory, selectedPlatforms, selectedGenres, page]);
+  }, [selectedCategory, selectedPlatforms, selectedGenres]);
 
   const { data: genresWithCountData } = useGenresWithCount(
     selectedCategory.toUpperCase(),
@@ -99,21 +93,20 @@ export default function ExplorePage() {
     selectedGenres.size > 0 ? Array.from(selectedGenres) : undefined;
 
   // 정렬 옵션 - 최신순만 지원
-  const { data, isLoading } = useWorks({
-    domain: selectedCategory.toUpperCase(),
-    platforms: selectedPlatformsArray,
-    genres: selectedGenresArray,
-    page,
-    size: 20,
-    sortBy: "releaseDate",
-    sortDirection: "desc",
-  });
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useInfiniteWorks({
+      domain: selectedCategory.toUpperCase(),
+      platforms: selectedPlatformsArray,
+      genres: selectedGenresArray,
+      size: 60,
+      sortBy: "releaseDate",
+      sortDirection: "desc",
+    });
 
   const handleCategoryChange = (category: Category) => {
     setSelectedCategory(category);
     setSelectedPlatforms(new Set(["ALL"]));
     setSelectedGenres(new Set());
-    setPage(0);
   };
 
   const togglePlatform = (platformId: string) => {
@@ -136,7 +129,6 @@ export default function ExplorePage() {
     }
 
     setSelectedPlatforms(newSelection);
-    setPage(0);
   };
 
   const toggleGenre = (genre: string) => {
@@ -144,12 +136,32 @@ export default function ExplorePage() {
     if (newSelection.has(genre)) newSelection.delete(genre);
     else newSelection.add(genre);
     setSelectedGenres(newSelection);
-    setPage(0);
   };
 
   const handleCardClick = (id: string) => {
     navigate(`/work/${id}`);
   };
+
+  const items = data?.pages.flatMap((p) => p.content) ?? [];
+  const totalElements = data?.pages?.[0]?.totalElements ?? 0;
+
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!hasNextPage || isFetchingNextPage) return;
+    const el = loadMoreRef.current;
+    if (!el) return;
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) fetchNextPage();
+      },
+      { root: null, rootMargin: "600px" }, // 미리 당겨서 로드
+    );
+
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   return (
     <div className="flex flex-col h-screen">
@@ -275,12 +287,12 @@ export default function ExplorePage() {
           </div>
 
           {/* 총 개수 및 정렬 */}
-          {data && data.content.length > 0 && (
+          {items.length > 0 && (
             <div className="flex items-center justify-between mb-4">
               <span className="text-gray-400 text-sm">
                 총{" "}
                 <span className="text-white font-semibold">
-                  {data.totalElements?.toLocaleString() || 0}
+                  {totalElements?.toLocaleString() || 0}
                 </span>
                 개
               </span>
@@ -291,10 +303,10 @@ export default function ExplorePage() {
           {/* 작품 목록 */}
           {isLoading ? (
             <div className="text-center text-gray-500 py-20">로딩 중...</div>
-          ) : data && data.content.length > 0 ? (
+          ) : items.length > 0 ? (
             <>
               <div className="grid grid-cols-3 gap-5">
-                {data.content.map((work) => (
+                {items.map((work) => (
                   <div
                     key={work.id}
                     onClick={() => handleCardClick(String(work.id))}
@@ -339,66 +351,16 @@ export default function ExplorePage() {
                 ))}
               </div>
 
-              {/* 페이지네이션 */}
-              {data && data.totalPages > 1 && (
-                <div className="flex flex-col items-center gap-3 mt-8">
-                  {/* 페이지 번호 버튼들 */}
-                  <div className="flex items-center gap-1 flex-wrap justify-center">
-                    {(() => {
-                      const totalPages = data.totalPages;
-                      const currentPage = page;
-                      const pageNumbers = [];
+              <div ref={loadMoreRef} className="h-10" />
 
-                      // 항상 첫 페이지
-                      pageNumbers.push(0);
-
-                      // 현재 페이지 주변 (앞뒤 2개씩)
-                      const start = Math.max(1, currentPage - 2);
-                      const end = Math.min(totalPages - 2, currentPage + 2);
-
-                      // ... 표시 여부
-                      if (start > 1) pageNumbers.push(-1); // -1은 ... 표시용
-
-                      for (let i = start; i <= end; i++) {
-                        if (i > 0 && i < totalPages - 1) {
-                          pageNumbers.push(i);
-                        }
-                      }
-
-                      // ... 표시 여부
-                      if (end < totalPages - 2) pageNumbers.push(-2); // -2도 ... 표시용
-
-                      // 항상 마지막 페이지
-                      if (totalPages > 1) pageNumbers.push(totalPages - 1);
-
-                      return pageNumbers.map((pageNum, idx) => {
-                        if (pageNum < 0) {
-                          return (
-                            <span
-                              key={`ellipsis-${idx}`}
-                              className="text-gray-500 px-2"
-                            >
-                              ...
-                            </span>
-                          );
-                        }
-
-                        return (
-                          <button
-                            key={pageNum}
-                            onClick={() => setPage(pageNum)}
-                            className={`min-w-[36px] h-9 px-2 rounded-lg font-medium transition ${
-                              pageNum === currentPage
-                                ? "bg-[#855BFF] text-white"
-                                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-                            }`}
-                          >
-                            {pageNum + 1}
-                          </button>
-                        );
-                      });
-                    })()}
-                  </div>
+              {isFetchingNextPage && (
+                <div className="text-center text-grey-500 py-10">
+                  불러오는 중...
+                </div>
+              )}
+              {!hasNextPage && items.length > 0 && (
+                <div className="text-center text-grey-600 py-10">
+                  더 불러올 작품이 없습니다.
                 </div>
               )}
             </>
