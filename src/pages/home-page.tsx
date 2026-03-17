@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import SearchBar from "../components/SearchBar";
 import HorizontalScroller from "../components/HorizontalScroller";
-import { useWorks, useRecentReviewedWorks } from "../hooks/useWorks";
+import { useRecentReviewedWorks } from "../hooks/useWorks";
 import { useQuery } from "@tanstack/react-query";
 import { rankingApi } from "../api/rankingApi";
 import NewIcon from "../assets/home/new-icon.png";
@@ -175,12 +175,7 @@ export default function HomePage() {
     navigate(path);
   };
 
-  // AI 맞춤 추천 - 임시로 GAME 도메인 데이터 사용
-  const { data: recommendations, isLoading: isLoadingRecommendations } =
-    useWorks({
-      domain: "GAME",
-      size: 10,
-    });
+  // [✨ 기능 개편] AI 추천 연동 준비중 안내로 대체 (기존 GAME 더미 데이터 호출 삭제)
 
   // [✨ API 개편] 랭킹 전체 데이터 1회 호출
   // 매번 5초마다 도메인별 API를 부르면 깜빡임 현상이 있으므로, 최초에 전체 플랫폼의 랭킹을 한 번에 가져옴
@@ -306,14 +301,16 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* AI 맞춤 추천 */}
-          {!isLoadingRecommendations && recommendations?.content && (
-            <HorizontalScroller
-              title="모두의도파민님만을 위한 추천"
-              items={recommendations.content.map(mapToWorkItem)}
-              showViewAll
-            />
-          )}
+          {/* AI 맞춤 추천 (준비중) */}
+          <section className="mb-10 w-full flex-shrink-0 snap-center">
+            <header className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-semibold text-white">모두의도파민님만을 위한 추천 <span className="text-xs text-[#855BFF] ml-1">AI</span></h2>
+            </header>
+            <div className="w-full h-36 rounded-xl bg-[#2A292D] flex flex-col items-center justify-center border border-[#3A393D] border-dashed gap-2">
+              <span className="text-2xl opacity-70">🤖</span>
+              <span className="text-sm text-gray-400 font-[PretendardVariable]">AI 맞춤 추천 엔진 연동 준비중입니다</span>
+            </div>
+          </section>
 
           {/* 최신 리뷰 작품 */}
           {!isLoadingRecentReviews && recentReviews?.content && (
