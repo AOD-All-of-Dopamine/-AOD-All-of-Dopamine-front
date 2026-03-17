@@ -40,11 +40,11 @@ export default function SearchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#242424]">
+    <div className="h-screen overflow-y-auto scrollbar-hide bg-[#242424] relative">
       {/* 🔒 상단 고정 영역 */}
       <div
         className="
-    fixed top-0 left-1/2 -translate-x-1/2
+    sticky top-0 left-1/2 -translate-x-1/2
     w-full max-w-2xl
     bg-[#242424]
     z-50
@@ -77,11 +77,10 @@ export default function SearchPage() {
                     key={filter.id}
                     onClick={() => handleDomainClick(filter.id)}
                     className={`flex-1 py-3 text-sm transition-all
-                ${
-                  isActive
-                    ? "border-b-2 border-white text-white font-semibold"
-                    : "text-gray-400 hover:text-gray-300"
-                }
+                ${isActive
+                        ? "border-b-2 border-white text-white font-semibold"
+                        : "text-gray-400 hover:text-gray-300"
+                      }
               `}
                   >
                     {filter.label}
@@ -168,11 +167,10 @@ export default function SearchPage() {
                         <button
                           key={pageNum}
                           onClick={() => setPage(pageNum)}
-                          className={`min-w-[36px] h-9 px-2 rounded-lg font-medium transition ${
-                            pageNum === currentPage
+                          className={`min-w-[36px] h-9 px-2 rounded-lg font-medium transition ${pageNum === currentPage
                               ? "bg-[#855BFF] text-white"
                               : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-                          }`}
+                            }`}
                         >
                           {pageNum + 1}
                         </button>
