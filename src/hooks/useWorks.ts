@@ -57,6 +57,24 @@ export const useRecentReleases = (
 };
 
 /**
+ * [✨ 신규 기능] 최근 리뷰가 남은 작품 조회 hook 연동
+ * 기존에 getWorks를 사용하던 "최신 리뷰 작품" 섹션을 이 커스텀 훅으로 교체함.
+ */
+export const useRecentReviewedWorks = (
+  params: ReleasesQueryParams = {},
+  options?: Omit<
+    UseQueryOptions<PageResponse<WorkSummary>>,
+    "queryKey" | "queryFn"
+  >,
+) => {
+  return useQuery<PageResponse<WorkSummary>>({
+    queryKey: ["works", "recent-reviews", params],
+    queryFn: () => workApi.getRecentReviewedWorks(params),
+    ...options,
+  });
+};
+
+/**
  * 출시 예정작 조회 hook
  */
 export const useUpcomingReleases = (

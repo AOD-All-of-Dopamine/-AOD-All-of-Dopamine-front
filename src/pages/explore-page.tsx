@@ -76,8 +76,8 @@ export default function ExplorePage() {
   // 장르를 작품 수 기준 내림차순으로 정렬
   const sortedGenres = genresWithCountData
     ? Object.entries(genresWithCountData).sort(
-        ([, countA], [, countB]) => countB - countA,
-      )
+      ([, countA], [, countB]) => countB - countA,
+    )
     : [];
 
   const domainKey = selectedCategory.toUpperCase();
@@ -201,11 +201,10 @@ export default function ExplorePage() {
               <button
                 key={cat.id}
                 onClick={() => handleCategoryChange(cat.id)}
-                className={`flex-1 text-center py-3 transition-all select-none ${
-                  selectedCategory === cat.id
+                className={`flex-1 text-center py-3 transition-all select-none ${selectedCategory === cat.id
                     ? "border-b-2 border-white text-white font-semibold"
                     : "text-gray-400"
-                }`}
+                  }`}
               >
                 {cat.label}
               </button>
@@ -227,11 +226,10 @@ export default function ExplorePage() {
                     onClick={() => togglePlatform(platform.key)}
                     className={`flex items-center gap-2 py-1.5 rounded-full border text-sm font-medium transition-all flex-shrink-0
     ${platform.key === "ALL" ? "px-4" : "px-2"}
-    ${
-      isSelected
-        ? "border-transparent text-white bg-gradient-to-r from-[#855BFF] to-[#445FD1]"
-        : "border-[#403F43] bg-[#2a2a2a] text-[#D3D3D3] hover:border-[#855BFF]"
-    }`}
+    ${isSelected
+                        ? "border-transparent text-white bg-gradient-to-r from-[#855BFF] to-[#445FD1]"
+                        : "border-[#403F43] bg-[#2a2a2a] text-[#D3D3D3] hover:border-[#855BFF]"
+                      }`}
                   >
                     {platform.logo && (
                       <img
@@ -290,11 +288,10 @@ export default function ExplorePage() {
                     <button
                       key={genre}
                       onClick={() => toggleGenre(genre)}
-                      className={`px-3 py-1 rounded-full text-xs border transition-all ${
-                        isSelected
+                      className={`px-3 py-1 rounded-full text-xs border transition-all ${isSelected
                           ? "border-[#646cff] bg-[#646cff22] text-white"
                           : "border-gray-700 text-gray-400 hover:border-gray-500"
-                      }`}
+                        }`}
                     >
                       {genre}{" "}
                       <span className="font-[PretendardVariable] text-[10px] opacity-60">
@@ -333,7 +330,7 @@ export default function ExplorePage() {
           ) : items.length > 0 ? (
             <div
               ref={parentRef}
-              className="overflow-auto"
+              className="overflow-y-auto scrollbar-hide"
               style={{ height: "calc(100vh - 260px)" }}
             >
               <div
