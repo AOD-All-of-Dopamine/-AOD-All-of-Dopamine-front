@@ -9,7 +9,7 @@ import LikeIcon from "../assets/home/likes-icon.svg";
 import BookmarkIcon from "../assets/home/bookmarks-icon.svg";
 import { useAuth } from "../contexts/AuthContext";
 import Modal from "../components/common/Modal";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Category } from "../constants/thumbnail";
 
 // 랭킹 아이템 타입
@@ -141,6 +141,29 @@ export default function HomePage() {
     webnovel: "NaverSeries",
   };
 
+  // [✨ 기능 개편] 5초마다 자동으로 가로 스크롤 넘기기
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % domains.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [domains.length]);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      const container = scrollRef.current;
+      // 전체 스크롤 너비를 아이템 갯수로 나누어 1칸의 너비를 계산
+      const itemWidth = container.scrollWidth / domains.length;
+      container.scrollTo({
+        left: itemWidth * activeIndex,
+        behavior: "smooth"
+      });
+    }
+  }, [activeIndex, domains.length]);
+
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isNoContentModalOpen, setIsNoContentModalOpen] = useState(false);
 
@@ -257,7 +280,10 @@ export default function HomePage() {
 
           {/* 랭킹 (가로 슬라이드 컨테이너) */}
           {!isLoadingRankings && allRankings && (
-            <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide w-full gap-5">
+            <div
+              ref={scrollRef}
+              className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide w-full gap-5"
+            >
               {domains.map((domain) => {
                 const platform = BACKEND_PLATFORM_MAPPING[domain];
                 const domainItems = allRankings
