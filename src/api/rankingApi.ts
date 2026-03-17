@@ -28,4 +28,12 @@ export const rankingApi = {
     const response = await client.get<ExternalRanking[]>(`/api/rankings/${platform}`)
     return response.data
   },
+
+  /**
+   * [✨ 신규/수정 기능] 특정 도메인(GAME 등) 문자열을 기준으로 랭킹 조회
+   */
+  getRankingsByDomain: async (domain: string) => {
+    const response = await client.get<ExternalRanking[]>(`/api/rankings/domain/${domain}`)
+    return response.data
+  },
 }

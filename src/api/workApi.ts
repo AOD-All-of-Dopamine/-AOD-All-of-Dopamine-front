@@ -73,6 +73,27 @@ export const workApi = {
   },
 
   /**
+   * [✨ 신규 기능] 최근 리뷰가 달린 작품 조회
+   * (기존에는 신작 조회 API를 잘못 쓰고 있었음 -> 신규 API 연동)
+   */
+  getRecentReviewedWorks: async (
+    params: ReleasesQueryParams = {}
+  ): Promise<PageResponse<WorkSummary>> => {
+    const { data } = await apiClient.get<PageResponse<WorkSummary>>(
+      "/api/works/recent-reviews",
+      {
+        params: {
+          domain: params.domain,
+          platforms: params.platforms,
+          page: params.page ?? 0,
+          size: params.size ?? 20,
+        },
+      }
+    );
+    return data;
+  },
+
+  /**
    * 출시 예정작 조회
    */
   getUpcomingReleases: async (

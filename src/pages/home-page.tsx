@@ -1,14 +1,16 @@
 import { useNavigate } from "react-router-dom";
 import SearchBar from "../components/SearchBar";
 import HorizontalScroller from "../components/HorizontalScroller";
-import { useWorks } from "../hooks/useWorks";
+import { useWorks, useRecentReviewedWorks } from "../hooks/useWorks";
+import { useQuery } from "@tanstack/react-query";
+import { rankingApi } from "../api/rankingApi";
 import NewIcon from "../assets/home/new-icon.png";
 import LikeIcon from "../assets/home/likes-icon.svg";
 import BookmarkIcon from "../assets/home/bookmarks-icon.svg";
-import ViewIcon from "../assets/view-all-icon.svg";
 import { useAuth } from "../contexts/AuthContext";
 import Modal from "../components/common/Modal";
 import { useState } from "react";
+import { Category } from "../constants/thumbnail";
 
 // 랭킹 아이템 타입
 interface RankingItemProps {
@@ -82,25 +84,27 @@ interface RankingSectionProps {
     title: string;
     thumbnail: string;
   }>;
+  domainLabel: string;
   onViewAll: () => void;
+  onItemClick: (id: string) => void;
 }
 
-function RankingSection({ items, onViewAll }: RankingSectionProps) {
-  const navigate = useNavigate();
-
+function RankingSection({ items, domainLabel, onViewAll, onItemClick }: RankingSectionProps) {
   // 상위 3개만 표시
   const topItems = items.slice(0, 3);
 
   return (
-    <article className="mb-6">
+    <article className="mb-6 w-full flex-shrink-0 snap-center">
       <header className="flex items-center justify-between mb-1.5">
-        <h2 className="text-base font-semibold text-white">랭킹</h2>
+        <h2 className="text-base font-semibold text-white">랭킹 <span className="text-xs text-[#855BFF] ml-1">{domainLabel}</span></h2>
         <button
           className="flex items-center gap-1 font-[PretendardVariable] text-[14px] text-[#B2B1B3]"
           onClick={onViewAll}
         >
           전체보기
-          <img src={ViewIcon} alt="전체보기" className="w-3 h-3" />
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="w-3 h-3 text-[#B2B1B3]">
+            <path d="M4.5 9L7.5 6L4.5 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </button>
       </header>
       <ul>
@@ -112,7 +116,7 @@ function RankingSection({ items, onViewAll }: RankingSectionProps) {
             thumbnail={item.thumbnail}
             change={1}
             changeType={index % 2 === 0 ? "up" : "down"}
-            onClick={() => navigate(`/work/${item.id}`)}
+            onClick={() => onItemClick(item.id)}
           />
         ))}
       </ul>
@@ -124,7 +128,20 @@ export default function HomePage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
 
+  const domains: Category[] = ["movie", "tv", "game", "webtoon", "webnovel"];
+  const domainLabels: Record<Category, string> = {
+    movie: "영화", tv: "시리즈", game: "게임", webtoon: "웹툰", webnovel: "웹소설"
+  };
+  const BACKEND_PLATFORM_MAPPING: Record<Category, string> = {
+    movie: "TMDB_MOVIE",
+    tv: "TMDB_TV",
+    game: "Steam",
+    webtoon: "NaverWebtoon",
+    webnovel: "NaverSeries",
+  };
+
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isNoContentModalOpen, setIsNoContentModalOpen] = useState(false);
 
   const handleProtectedNavigation = (path: string) => {
     if (!isAuthenticated) {
@@ -141,16 +158,16 @@ export default function HomePage() {
       size: 10,
     });
 
-  // 랭킹 - 평점 높은 순
-  const { data: rankings, isLoading: isLoadingRankings } = useWorks({
-    domain: "GAME",
-    size: 10,
-    sortBy: "masterTitle",
-    sortDirection: "asc",
+  // [✨ API 개편] 랭킹 전체 데이터 1회 호출
+  // 매번 5초마다 도메인별 API를 부르면 깜빡임 현상이 있으므로, 최초에 전체 플랫폼의 랭킹을 한 번에 가져옴
+  const { data: allRankings, isLoading: isLoadingRankings } = useQuery({
+    queryKey: ["home-all-rankings"],
+    queryFn: () => rankingApi.getAllRankings(),
   });
 
-  // 최신 리뷰 작품 - 임시로 최근 작품 사용
-  const { data: recentReviews, isLoading: isLoadingRecentReviews } = useWorks({
+  // [✨ API 개편] 최신 리뷰 작품 연동
+  // 이전에는 useWorks(단순 전체조회)를 사용 중이었으나, 새로 생긴 getRecentReviewedWorks 전용 훅으로 교체
+  const { data: recentReviews, isLoading: isLoadingRecentReviews } = useRecentReviewedWorks({
     size: 10,
   });
 
@@ -158,8 +175,16 @@ export default function HomePage() {
     navigate(`/search?keyword=${encodeURIComponent(query)}`);
   };
 
-  const handleRankingClick = () => {
-    navigate("/ranking");
+  const handleRankingClick = (category: Category) => {
+    navigate(`/ranking?category=${category}`);
+  };
+
+  const handleRankingItemClick = (id: string) => {
+    if (id.startsWith("no-content-")) {
+      setIsNoContentModalOpen(true);
+    } else {
+      navigate(`/work/${id}`);
+    }
   };
 
   const mapToWorkItem = (item: any) => ({
@@ -171,10 +196,13 @@ export default function HomePage() {
     year: item.releaseDate,
   });
 
+  // [✨ 기능 개편] 랭킹 클릭 처리 및 예외 핸들링
+  // ranking.id(외부랭킹 PK) 대신 ranking.contentId(우리 DB의 Content PK)로 연결되도록 수정함
   const mapToRankingItem = (item: any) => ({
-    id: String(item.id),
+    id: item.contentId ? String(item.contentId) : `no-content-${item.id}`,
     title: item.title,
-    thumbnail: item.thumbnail || "https://via.placeholder.com/40x54",
+    thumbnail: item.thumbnailUrl || item.thumbnail || "https://via.placeholder.com/160x220",
+    rank: item.ranking,
   });
 
   return (
@@ -226,15 +254,30 @@ export default function HomePage() {
             ))}
           </div>
 
-          {/* 랭킹 */}
-          {!isLoadingRankings &&
-            rankings?.content &&
-            rankings.content.length > 0 && (
-              <RankingSection
-                items={rankings.content.map(mapToRankingItem)}
-                onViewAll={handleRankingClick}
-              />
-            )}
+          {/* 랭킹 (가로 슬라이드 컨테이너) */}
+          {!isLoadingRankings && allRankings && (
+            <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide w-full gap-5">
+              {domains.map((domain) => {
+                const platform = BACKEND_PLATFORM_MAPPING[domain];
+                const domainItems = allRankings
+                  .filter((item) => item.platform === platform)
+                  .sort((a, b) => a.ranking - b.ranking)
+                  .slice(0, 3); // 상위 3개 표시
+
+                if (domainItems.length === 0) return null;
+
+                return (
+                  <RankingSection
+                    key={domain}
+                    items={domainItems.map(mapToRankingItem)}
+                    domainLabel={domainLabels[domain]}
+                    onViewAll={() => handleRankingClick(domain)}
+                    onItemClick={handleRankingItemClick}
+                  />
+                );
+              })}
+            </div>
+          )}
 
           {/* AI 맞춤 추천 */}
           {!isLoadingRecommendations && recommendations?.content && (
@@ -273,6 +316,25 @@ export default function HomePage() {
               text: "로그인",
               variant: "purple",
               onClick: () => navigate("/login"),
+            },
+          ]}
+        />
+      )}
+
+      {isNoContentModalOpen && (
+        <Modal
+          title={
+            <>
+              이 작품의 상세 정보가 아직
+              <br />
+              준비되지 않았습니다.
+            </>
+          }
+          buttons={[
+            {
+              text: "확인",
+              variant: "purple",
+              onClick: () => setIsNoContentModalOpen(false),
             },
           ]}
         />
