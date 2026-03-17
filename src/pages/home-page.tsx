@@ -304,11 +304,10 @@ export default function HomePage() {
           {/* AI 맞춤 추천 (준비중) */}
           <section className="mb-10 w-full flex-shrink-0 snap-center">
             <header className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-semibold text-white">모두의도파민님만을 위한 추천 <span className="text-xs text-[#855BFF] ml-1">AI</span></h2>
+              <h2 className="text-base font-semibold text-white">개인 추천 <span className="text-xs text-[#855BFF] ml-1">AI</span></h2>
             </header>
             <div className="w-full h-36 rounded-xl bg-[#2A292D] flex flex-col items-center justify-center border border-[#3A393D] border-dashed gap-2">
-              <span className="text-2xl opacity-70">🤖</span>
-              <span className="text-sm text-gray-400 font-[PretendardVariable]">AI 맞춤 추천 엔진 연동 준비중입니다</span>
+              <span className="text-sm text-gray-400 font-[PretendardVariable]">AI 맞춤 추천 엔진 연동 준비 중입니다.</span>
             </div>
           </section>
 
