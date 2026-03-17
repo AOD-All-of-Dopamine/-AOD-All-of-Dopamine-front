@@ -83,6 +83,7 @@ interface RankingSectionProps {
     id: string;
     title: string;
     thumbnail: string;
+    rank: number;
   }>;
   domainLabel: string;
   onViewAll: () => void;
