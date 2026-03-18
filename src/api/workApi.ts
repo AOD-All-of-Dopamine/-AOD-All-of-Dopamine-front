@@ -1,4 +1,4 @@
-import apiClient from "./client";
+import { publicApi } from "./client";
 import { PageResponse, WorkSummary, WorkDetail } from "../types/api";
 
 export interface WorksQueryParams {
@@ -24,9 +24,9 @@ export const workApi = {
    * 작품 목록 조회
    */
   getWorks: async (
-    params: WorksQueryParams = {}
+    params: WorksQueryParams = {},
   ): Promise<PageResponse<WorkSummary>> => {
-    const { data } = await apiClient.get<PageResponse<WorkSummary>>(
+    const { data } = await publicApi.get<PageResponse<WorkSummary>>(
       "/api/works",
       {
         params: {
@@ -39,7 +39,7 @@ export const workApi = {
           sortBy: params.sortBy ?? "masterTitle",
           sortDirection: params.sortDirection ?? "asc",
         },
-      }
+      },
     );
     return data;
   },
@@ -48,7 +48,7 @@ export const workApi = {
    * 작품 상세 조회
    */
   getWorkDetail: async (id: number): Promise<WorkDetail> => {
-    const { data } = await apiClient.get<WorkDetail>(`/api/works/${id}`);
+    const { data } = await publicApi.get<WorkDetail>(`/api/works/${id}`);
     return data;
   },
 
@@ -56,9 +56,9 @@ export const workApi = {
    * 최근 출시작 조회 (신작)
    */
   getRecentReleases: async (
-    params: ReleasesQueryParams = {}
+    params: ReleasesQueryParams = {},
   ): Promise<PageResponse<WorkSummary>> => {
-    const { data } = await apiClient.get<PageResponse<WorkSummary>>(
+    const { data } = await publicApi.get<PageResponse<WorkSummary>>(
       "/api/works/releases/recent",
       {
         params: {
@@ -67,7 +67,7 @@ export const workApi = {
           page: params.page ?? 0,
           size: params.size ?? 20,
         },
-      }
+      },
     );
     return data;
   },
@@ -77,9 +77,9 @@ export const workApi = {
    * (기존에는 신작 조회 API를 잘못 쓰고 있었음 -> 신규 API 연동)
    */
   getRecentReviewedWorks: async (
-    params: ReleasesQueryParams = {}
+    params: ReleasesQueryParams = {},
   ): Promise<PageResponse<WorkSummary>> => {
-    const { data } = await apiClient.get<PageResponse<WorkSummary>>(
+    const { data } = await publicApi.get<PageResponse<WorkSummary>>(
       "/api/works/recent-reviews",
       {
         params: {
@@ -88,7 +88,7 @@ export const workApi = {
           page: params.page ?? 0,
           size: params.size ?? 20,
         },
-      }
+      },
     );
     return data;
   },
@@ -97,9 +97,9 @@ export const workApi = {
    * 출시 예정작 조회
    */
   getUpcomingReleases: async (
-    params: ReleasesQueryParams = {}
+    params: ReleasesQueryParams = {},
   ): Promise<PageResponse<WorkSummary>> => {
-    const { data } = await apiClient.get<PageResponse<WorkSummary>>(
+    const { data } = await publicApi.get<PageResponse<WorkSummary>>(
       "/api/works/releases/upcoming",
       {
         params: {
@@ -108,7 +108,7 @@ export const workApi = {
           page: params.page ?? 0,
           size: params.size ?? 20,
         },
-      }
+      },
     );
     return data;
   },
@@ -117,7 +117,7 @@ export const workApi = {
    * 도메인별 사용 가능한 장르 목록 조회
    */
   getGenres: async (domain?: string): Promise<string[]> => {
-    const { data } = await apiClient.get<string[]>("/api/works/genres", {
+    const { data } = await publicApi.get<string[]>("/api/works/genres", {
       params: domain ? { domain } : {},
     });
     return data;
@@ -127,13 +127,13 @@ export const workApi = {
    * 도메인별 장르별 작품 수 조회 (작품 수 내림차순)
    */
   getGenresWithCount: async (
-    domain?: string
+    domain?: string,
   ): Promise<Record<string, number>> => {
-    const { data } = await apiClient.get<Record<string, number>>(
+    const { data } = await publicApi.get<Record<string, number>>(
       "/api/works/genres-with-count",
       {
         params: domain ? { domain } : {},
-      }
+      },
     );
     return data;
   },
@@ -142,7 +142,7 @@ export const workApi = {
    * 도메인별 사용 가능한 플랫폼 목록 조회
    */
   getPlatforms: async (domain?: string): Promise<string[]> => {
-    const { data } = await apiClient.get<string[]>("/api/works/platforms", {
+    const { data } = await publicApi.get<string[]>("/api/works/platforms", {
       params: domain ? { domain } : {},
     });
     return data;

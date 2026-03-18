@@ -1,65 +1,95 @@
-import axios from "axios";
+import axios, {
+  AxiosError,
+  AxiosResponse,
+  InternalAxiosRequestConfig,
+} from "axios";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-  timeout: 10000,
-});
+const isDev = import.meta.env.DEV;
 
-// 요청 인터셉터
-apiClient.interceptors.request.use(
-  (config) => {
-    // 인증 토큰이 있으면 추가
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+const logRequest = (config: InternalAxiosRequestConfig) => {
+  if (isDev) {
     console.log("API Request:", config.method?.toUpperCase(), config.url, {
       params: config.params,
       data: config.data,
     });
-
-    return config;
-  },
-  (error) => {
-    console.error("API Request Error:", error);
-    return Promise.reject(error);
   }
-);
+  return config;
+};
 
-// 응답 인터셉터
-apiClient.interceptors.response.use(
-  (response) => {
+const logRequestError = (error: AxiosError) => {
+  if (isDev) {
+    console.error("API Request Error:", error);
+  }
+  return Promise.reject(error);
+};
+
+const logResponse = (response: AxiosResponse) => {
+  if (isDev) {
     console.log(
       "API Response:",
       response.config.method?.toUpperCase(),
       response.config.url,
-      response.data
+      response.data,
     );
-    return response;
-  },
-  (error) => {
+  }
+  return response;
+};
+
+const logResponseError = (error: AxiosError) => {
+  if (isDev) {
     if (error.response) {
-      // 서버 응답이 있는 경우
       console.error(
         "API Response Error:",
+        error.config?.method?.toUpperCase(),
+        error.config?.url,
         error.response.status,
-        error.response.data
+        error.response.data,
       );
     } else if (error.request) {
-      // 요청은 보냈지만 응답이 없는 경우
-      console.error("No response from server");
+      console.error(
+        "No response from server:",
+        error.config?.method?.toUpperCase(),
+        error.config?.url,
+      );
     } else {
-      // 요청 설정 중 에러
       console.error("Error setting up request:", error.message);
     }
-    return Promise.reject(error);
   }
-);
 
-export default apiClient;
+  // 필요하면 401 공통 처리 추가 가능
+  // if (error.response?.status === 401) {
+  //   localStorage.removeItem("token");
+  //   window.location.href = "/login";
+  // }
+
+  return Promise.reject(error);
+};
+
+export const publicApi = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 10000,
+});
+
+export const privateApi = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 10000,
+});
+
+publicApi.interceptors.request.use(logRequest, logRequestError);
+publicApi.interceptors.response.use(logResponse, logResponseError);
+
+privateApi.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+
+  if (token) {
+    config.headers = config.headers ?? {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return logRequest(config);
+}, logRequestError);
+
+privateApi.interceptors.response.use(logResponse, logResponseError);

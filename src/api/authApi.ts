@@ -1,59 +1,83 @@
-import apiClient from './client'
+import { publicApi, privateApi } from "./client";
 
 export interface SignupRequest {
-  username: string
-  email: string
-  password: string
+  username: string;
+  email: string;
+  password: string;
 }
 
 export interface LoginRequest {
-  username: string
-  password: string
+  username: string;
+  password: string;
 }
 
 export interface AuthResponse {
-  token: string
-  username: string
-  userId: number
-  message: string
+  token: string;
+  username: string;
+  userId: number;
+  message: string;
 }
 
 export interface UserInfo {
-  userId: number
-  username: string
-  email: string
+  userId: number;
+  username: string;
+  email: string;
+}
+
+export interface DuplicateCheckRequest {
+  username?: string;
+  email?: string;
+}
+
+export interface DuplicateCheckResponse {
+  usernameDuplicate?: boolean;
+  emailDuplicate?: boolean;
+  message?: string;
 }
 
 export const authApi = {
   /**
    * 회원가입
    */
-  signup: async (data: SignupRequest): Promise<{ message: string; username: string }> => {
-    const response = await apiClient.post('/api/auth/signup', data)
-    return response.data
+  signup: async (
+    payload: SignupRequest,
+  ): Promise<{ message: string; username: string }> => {
+    const { data } = await publicApi.post<{
+      message: string;
+      username: string;
+    }>("/api/auth/signup", payload);
+    return data;
   },
 
   /**
    * 로그인
    */
-  login: async (data: LoginRequest): Promise<AuthResponse> => {
-    const response = await apiClient.post('/api/auth/login', data)
-    return response.data
+  login: async (payload: LoginRequest): Promise<AuthResponse> => {
+    const { data } = await publicApi.post<AuthResponse>(
+      "/api/auth/login",
+      payload,
+    );
+    return data;
   },
 
   /**
    * 중복 확인
    */
-  checkDuplicate: async (data: { username?: string; email?: string }): Promise<any> => {
-    const response = await apiClient.post('/api/auth/check-duplicate', data)
-    return response.data
+  checkDuplicate: async (
+    payload: DuplicateCheckRequest,
+  ): Promise<DuplicateCheckResponse> => {
+    const { data } = await publicApi.post<DuplicateCheckResponse>(
+      "/api/auth/check-duplicate",
+      payload,
+    );
+    return data;
   },
 
   /**
    * 현재 사용자 정보 조회
    */
   getCurrentUser: async (): Promise<UserInfo> => {
-    const response = await apiClient.get('/api/auth/me')
-    return response.data
+    const { data } = await privateApi.get<UserInfo>("/api/auth/me");
+    return data;
   },
-}
+};
