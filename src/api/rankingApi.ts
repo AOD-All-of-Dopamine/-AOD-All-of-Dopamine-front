@@ -1,39 +1,44 @@
-import client from './client'
+import { publicApi } from "./client";
 
 export interface ContentInfo {
-  contentId: number
-  domain: string
-  masterTitle: string
-  posterImageUrl: string
+  contentId: number;
+  domain: string;
+  masterTitle: string;
+  posterImageUrl: string;
 }
 
 export interface ExternalRanking {
-  id: number
-  contentId?: number              // 매핑된 Content ID (있는 경우만)
-  title: string
-  ranking: number
-  platform: string
-  thumbnailUrl: string
-  content?: ContentInfo           // 상세 정보 (선택적)
-  watchProviders?: string[]       // OTT 플랫폼 정보 (TMDB만 해당)
+  id: number;
+  contentId?: number; // 매핑된 Content ID (있는 경우만)
+  title: string;
+  ranking: number;
+  platform: string;
+  thumbnailUrl: string;
+  content?: ContentInfo; // 상세 정보 (선택적)
+  watchProviders?: string[]; // OTT 플랫폼 정보 (TMDB만 해당)
 }
 
 export const rankingApi = {
   getAllRankings: async () => {
-    const response = await client.get<ExternalRanking[]>('/api/rankings/all')
-    return response.data
+    const response =
+      await publicApi.get<ExternalRanking[]>("/api/rankings/all");
+    return response.data;
   },
 
   getRankingsByPlatform: async (platform: string) => {
-    const response = await client.get<ExternalRanking[]>(`/api/rankings/${platform}`)
-    return response.data
+    const response = await publicApi.get<ExternalRanking[]>(
+      `/api/rankings/${platform}`,
+    );
+    return response.data;
   },
 
   /**
    * [✨ 신규/수정 기능] 특정 도메인(GAME 등) 문자열을 기준으로 랭킹 조회
    */
   getRankingsByDomain: async (domain: string) => {
-    const response = await client.get<ExternalRanking[]>(`/api/rankings/domain/${domain}`)
-    return response.data
+    const response = await publicApi.get<ExternalRanking[]>(
+      `/api/rankings/domain/${domain}`,
+    );
+    return response.data;
   },
-}
+};
