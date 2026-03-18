@@ -6,7 +6,6 @@ import React, {
   useCallback,
 } from "react";
 import { authApi, AuthResponse, UserInfo } from "../api/authApi";
-import axios from "axios";
 
 interface AuthContextType {
   isAuthenticated: boolean;
