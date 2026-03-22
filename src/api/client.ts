@@ -4,8 +4,14 @@ import axios, {
   InternalAxiosRequestConfig,
 } from "axios";
 
+// In development, prefer explicit env var or localhost. In production, if no
+// VITE_API_BASE_URL is provided, use a same-origin `/api` path so the app can
+// call a frontend-hosted proxy (Vercel function, CDN edge function, etc.)
+// This enables a frontend-only workaround when you can't change the backend
+// CORS settings.
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.PROD ? "/api" : "http://localhost:8080");
 
 const isDev = import.meta.env.DEV;
 
@@ -77,6 +83,8 @@ export const privateApi = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
 });
+
+console.log("API_BASE_URL =", API_BASE_URL);
 
 publicApi.interceptors.request.use(logRequest, logRequestError);
 publicApi.interceptors.response.use(logResponse, logResponseError);
