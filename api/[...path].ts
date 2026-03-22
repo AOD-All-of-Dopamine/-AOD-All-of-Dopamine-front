@@ -1,15 +1,13 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-// Proxy that forwards requests to the real API origin and returns the response
-// with CORS headers so browser clients on the same origin can consume it.
-// Configure the target via the API_ORIGIN environment variable (e.g.
-// https://api.allofdophamin.com). If not provided, defaults to
-// https://api.allofdophamin.com
+// Vercel serverless proxy (catch-all at /api/*) - TypeScript
+// For local dev use `vercel dev` or deploy to Vercel. Ensure devDependencies
+// include @vercel/node and @types/node (installed previously).
 
 const API_ORIGIN = process.env.API_ORIGIN || "https://api.allofdophamin.com";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Preflight handling: respond locally to OPTIONS so the backend is not hit
+  // Handle preflight locally
   if (req.method === "OPTIONS") {
     res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
     res.setHeader(
@@ -25,38 +23,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  // Build target URL
-  const pathParts = (req.query.path || []) as string[];
+  const rawPath = req.query.path;
+  const pathParts: string[] = Array.isArray(rawPath)
+    ? rawPath
+    : rawPath
+      ? [String(rawPath)]
+      : [];
   const path = pathParts.join("/");
-  const query = req.url?.split("?")[1] || "";
+  const query = req.url && req.url.includes("?") ? req.url.split("?")[1] : "";
   const targetUrl = `${API_ORIGIN}/${path}${query ? `?${query}` : ""}`;
 
   try {
-    // Forward headers (preserve Authorization if present). Remove host to avoid conflicts.
+    // Forward headers (preserve Authorization, Cookie, etc.)
     const forwardedHeaders: Record<string, string> = {};
-    Object.entries(req.headers).forEach(([k, v]) => {
+    Object.keys(req.headers).forEach((k) => {
+      const v = req.headers[k as keyof typeof req.headers];
       if (!v) return;
       const key = k.toLowerCase();
       if (key === "host") return;
-      // Vercel gives header values as string | string[]
-      forwardedHeaders[key] = Array.isArray(v) ? v.join(",") : v;
+      forwardedHeaders[key] = Array.isArray(v) ? v.join(",") : String(v);
     });
 
-    const fetchOptions: RequestInit = {
+    const body =
+      req.body && Object.keys(req.body).length
+        ? JSON.stringify(req.body)
+        : undefined;
+
+    const upstreamRes = await fetch(targetUrl, {
       method: req.method,
-      headers: forwardedHeaders,
-      // forward body when present
-      body:
-        req.body && Object.keys(req.body).length
-          ? JSON.stringify(req.body)
-          : undefined,
-      // credentials: 'include' is not relevant here; we're server-side
-    };
+      headers: forwardedHeaders as HeadersInit,
+      body,
+    });
 
-    const upstreamRes = await fetch(targetUrl, fetchOptions);
-
-    // Copy status, headers, and body
-    const body = await upstreamRes.arrayBuffer();
+    const arrayBuffer = await upstreamRes.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
     // Copy upstream headers except hop-by-hop ones
     upstreamRes.headers.forEach((value, name) => {
@@ -71,25 +71,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         "upgrade",
       ];
       if (hopByHop.includes(name.toLowerCase())) return;
+      // Some header names may be set multiple times; use setHeader to overwrite
       res.setHeader(name, value);
     });
 
-    // Ensure CORS headers for same-origin frontend
+    // Ensure CORS headers so browser receives the response
     res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
     res.setHeader("Access-Control-Allow-Credentials", "true");
 
-    res.status(upstreamRes.status).send(Buffer.from(body));
-  } catch (err: any) {
-    // If upstream fails, return a clear error but include CORS headers so browser
-    // will receive the error body instead of only a CORS rejection message.
+    res.status(upstreamRes.status).send(buffer);
+  } catch (err: unknown) {
     res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
     res.setHeader("Access-Control-Allow-Credentials", "true");
     console.error("Proxy error:", err);
-    res
-      .status(502)
-      .json({
-        message: "Bad Gateway (proxy error)",
-        detail: err?.message ?? String(err),
-      });
+    const detail =
+      err && typeof err === "object" && "message" in err
+        ? (err as any).message
+        : String(err);
+    res.status(502).json({ message: "Bad Gateway (proxy error)", detail });
   }
 }

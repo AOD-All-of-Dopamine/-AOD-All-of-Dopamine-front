@@ -2,6 +2,7 @@ import axios, {
   AxiosError,
   AxiosResponse,
   InternalAxiosRequestConfig,
+  AxiosInstance,
 } from "axios";
 
 // In development, prefer explicit env var or localhost. In production, if no
@@ -76,17 +77,66 @@ const logResponseError = (error: AxiosError) => {
 
 export const publicApi = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  // increase timeout to handle slow upstreams (was 10s)
+  timeout: 30000,
 });
 
 export const privateApi = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 30000,
 });
+
+// Retry interceptor for transient failures (network errors, timeouts, 5xx, 429)
+const addRetryInterceptor = (
+  instance: AxiosInstance,
+  { retries = 2, retryDelay = 500 } = {} as {
+    retries?: number;
+    retryDelay?: number;
+  },
+) => {
+  instance.interceptors.response.use(undefined, async (error: AxiosError) => {
+    const config = error.config as any;
+    if (!config) return Promise.reject(error);
+
+    config.__retryCount = config.__retryCount || 0;
+
+    const shouldRetry = (() => {
+      // Network or timeout
+      if (!error.response) return true;
+      const status = error.response.status;
+      // Retry on server errors and too many requests
+      if (status >= 500 && status < 600) return true;
+      if (status === 429) return true;
+      return false;
+    })();
+
+    if (!shouldRetry) return Promise.reject(error);
+
+    if (config.__retryCount >= retries) return Promise.reject(error);
+
+    config.__retryCount += 1;
+    const delay = Math.round(
+      retryDelay *
+        Math.pow(2, config.__retryCount - 1) *
+        (0.8 + Math.random() * 0.4),
+    );
+
+    if (import.meta.env.DEV) {
+      console.warn(
+        `Request retry #${config.__retryCount} for ${config.url} after ${delay}ms`,
+      );
+    }
+
+    await new Promise((r) => setTimeout(r, delay));
+    return instance.request(config);
+  });
+};
 
 console.log("API_BASE_URL =", API_BASE_URL);
 
 publicApi.interceptors.request.use(logRequest, logRequestError);
+// add retry logic for transient failures before the response error handler
+addRetryInterceptor(publicApi, { retries: 2, retryDelay: 500 });
 publicApi.interceptors.response.use(logResponse, logResponseError);
 
 privateApi.interceptors.request.use((config) => {
@@ -100,4 +150,6 @@ privateApi.interceptors.request.use((config) => {
   return logRequest(config);
 }, logRequestError);
 
+// add retry logic for transient failures before the response error handler
+addRetryInterceptor(privateApi, { retries: 2, retryDelay: 500 });
 privateApi.interceptors.response.use(logResponse, logResponseError);
