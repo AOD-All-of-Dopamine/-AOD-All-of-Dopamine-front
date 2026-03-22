@@ -42,57 +42,53 @@ export default function SearchPage() {
   return (
     <div className="h-screen overflow-y-auto scrollbar-hide bg-[#242424] relative">
       {/* 🔒 상단 고정 영역 */}
-      <div
-        className="
-    sticky top-0 left-1/2 -translate-x-1/2
-    w-full max-w-2xl
-    bg-[#242424]
-    z-50
-  "
-      >
-        {/* 뒤로가기 + 검색바 */}
-        <div className="flex items-center px-3 h-[56px]">
-          <button onClick={() => navigate(-1)} className="p-2 shrink-0">
-            <img src={BackIcon} alt="뒤로가기" className="w-5 h-5" />
-          </button>
+      <div className="sticky top-0 bg-[#242424] z-50">
+        <div className="w-full max-w-2xl mx-auto">
+          {/* 뒤로가기 + 검색바 */}
+          <div className="flex items-center px-3 h-[56px]">
+            <button onClick={() => navigate(-1)} className="p-2 shrink-0">
+              <img src={BackIcon} alt="뒤로가기" className="w-5 h-5" />
+            </button>
 
-          <div className="flex-1">
-            <SearchBar
-              fixed={false}
-              onSearch={handleSearch}
-              defaultValue={initialKeyword}
-            />
+            <div className="flex-1">
+              <SearchBar
+                fixed={false}
+                onSearch={handleSearch}
+                defaultValue={initialKeyword}
+              />
+            </div>
           </div>
-        </div>
 
-        {/* 도메인 필터 */}
-        <div className="border-b border-white/10">
-          <div className="px-4">
-            <div className="flex gap-1">
-              {DOMAIN_FILTERS.map((filter) => {
-                const isActive = selectedDomain === filter.id;
+          {/* 도메인 필터 */}
+          <div className="border-b border-white/10">
+            <div className="px-4">
+              <div className="flex gap-1">
+                {DOMAIN_FILTERS.map((filter) => {
+                  const isActive = selectedDomain === filter.id;
 
-                return (
-                  <button
-                    key={filter.id}
-                    onClick={() => handleDomainClick(filter.id)}
-                    className={`flex-1 py-3 text-sm transition-all
-                ${isActive
-                        ? "border-b-2 border-white text-white font-semibold"
-                        : "text-gray-400 hover:text-gray-300"
-                      }
+                  return (
+                    <button
+                      key={filter.id}
+                      onClick={() => handleDomainClick(filter.id)}
+                      className={`flex-1 py-3 text-sm transition-all
+                ${
+                  isActive
+                    ? "border-b-2 border-white text-white font-semibold"
+                    : "text-gray-400 hover:text-gray-300"
+                }
               `}
-                  >
-                    {filter.label}
-                  </button>
-                );
-              })}
+                    >
+                      {filter.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="pt-30 px-5 max-w-2xl mx-auto">
+      <div className="pt-28 px-5 max-w-2xl mx-auto">
         {isLoading ? (
           <div className="text-center text-gray-500 py-20">로딩 중...</div>
         ) : data && data.content.length > 0 ? (
@@ -167,10 +163,11 @@ export default function SearchPage() {
                         <button
                           key={pageNum}
                           onClick={() => setPage(pageNum)}
-                          className={`min-w-[36px] h-9 px-2 rounded-lg font-medium transition ${pageNum === currentPage
+                          className={`min-w-[36px] h-9 px-2 rounded-lg font-medium transition ${
+                            pageNum === currentPage
                               ? "bg-[#855BFF] text-white"
                               : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-                            }`}
+                          }`}
                         >
                           {pageNum + 1}
                         </button>
