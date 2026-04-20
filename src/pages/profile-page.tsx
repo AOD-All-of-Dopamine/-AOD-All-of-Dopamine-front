@@ -28,9 +28,9 @@ export default function ProfilePage() {
   // const { user, logout } = useAuth();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
-  const { data: reviewsData } = useMyReviews(0, 1);
-  const { data: bookmarksData } = useMyBookmarks(0, 10);
-  const { data: likesData } = useMyLikes(0, 10);
+  const { data: reviewsData } = useMyReviews(0, 1, isAuthenticated);
+  const { data: bookmarksData } = useMyBookmarks(0, 10, isAuthenticated);
+  const { data: likesData } = useMyLikes(0, 10, isAuthenticated);
 
   const reviewCount = reviewsData?.totalElements || 0;
   const likeCount = likesData?.totalElements || 0;

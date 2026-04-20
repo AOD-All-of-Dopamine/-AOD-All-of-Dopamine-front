@@ -216,29 +216,32 @@ export const useToggleBookmark = (contentId: number) => {
 /**
  * 내 리뷰 목록
  */
-export const useMyReviews = (page = 0, size = 20) => {
+export const useMyReviews = (page = 0, size = 20, enabled = true) => {
   return useQuery({
     queryKey: ["myReviews", page, size],
     queryFn: () => reviewApi.getMyReviews(page, size),
+    enabled,
   });
 };
 
 /**
  * 내 북마크 목록
  */
-export const useMyBookmarks = (page = 0, size = 20) => {
+export const useMyBookmarks = (page = 0, size = 20, enabled = true) => {
   return useQuery({
     queryKey: ["myBookmarks", page, size],
     queryFn: () => interactionApi.getMyBookmarks(page, size),
+    enabled,
   });
 };
 
 /**
  * 내가 좋아요한 작품 목록
  */
-export const useMyLikes = (page = 0, size = 20) => {
+export const useMyLikes = (page = 0, size = 20, enabled = true) => {
   return useQuery({
     queryKey: ["myLikes", page, size],
     queryFn: () => interactionApi.getMyLikes(page, size),
+    enabled,
   });
 };
