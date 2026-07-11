@@ -5,7 +5,7 @@ import {
   useInfiniteQuery,
 } from "@tanstack/react-query";
 import { workApi, WorksQueryParams, ReleasesQueryParams } from "../api/workApi";
-import { PageResponse, WorkSummary, WorkDetail } from "../types/api";
+import { PageResponse, WorkSummary, WorkDetail } from "@aod/shared/types";
 
 /**
  * 작품 목록 조회 hook

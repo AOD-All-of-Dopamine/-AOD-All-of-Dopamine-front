@@ -4,7 +4,7 @@ import BackIcon from "../assets/left-arrow.svg";
 import { useState } from "react";
 import { useSearchWorks } from "../hooks/useWorks";
 import PurpleStar from "../assets/purple-star.svg";
-import { DOMAIN_LABEL_MAP, DOMAIN_FILTERS } from "../constants/domain";
+import { DOMAIN_LABEL_MAP, DOMAIN_FILTERS } from "@aod/shared/constants";
 
 type Domain = keyof typeof DOMAIN_LABEL_MAP;
 

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useRecentReleases, useUpcomingReleases } from "../hooks/useWorks";
 import Header from "../components/common/Header";
-import { DOMAIN_LABEL_MAP } from "../constants/domain";
+import { DOMAIN_LABEL_MAP } from "@aod/shared/constants";
 import { DOMAIN_PLATFORMS, PLATFORM_META } from "../constants/platforms";
 import {
   Category,

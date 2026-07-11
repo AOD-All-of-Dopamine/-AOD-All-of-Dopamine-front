@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { DOMAIN_LABEL_MAP } from "../constants/domain";
+import { DOMAIN_LABEL_MAP } from "@aod/shared/constants";
 import PurpleStar from "../assets/purple-star.svg";
 import ViewIcon from "../assets/view-all-icon.svg";
 

@@ -1,5 +1,5 @@
 import { publicApi } from "./client";
-import { PageResponse, WorkSummary, WorkDetail } from "../types/api";
+import { PageResponse, WorkSummary, WorkDetail } from "@aod/shared/types";
 
 export interface WorksQueryParams {
   domain?: string;

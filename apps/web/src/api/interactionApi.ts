@@ -1,5 +1,5 @@
 import { publicApi, privateApi } from "./client";
-import { PageResponse } from "../types/api";
+import { PageResponse } from "@aod/shared/types";
 
 export interface ReviewRequest {
   rating: number;

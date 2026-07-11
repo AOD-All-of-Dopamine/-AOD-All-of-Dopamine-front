@@ -350,6 +350,8 @@ git add -A
 git commit -m "refactor: @aod/shared 신설 — types·constants 이동"
 ```
 
+> **실행 중 발견·조정 (2026-07-12):** `platforms.ts`가 PNG 로고 12개를 import하고 있어(플랫폼 의존) 통째 이동 불가 → 분리: shared는 `DOMAIN_PLATFORMS`+`PLATFORM_LABELS`(라벨만), 웹은 `apps/web/src/constants/platforms.ts`에서 라벨+로컬 로고를 합성해 `PLATFORM_META` 제공(기존 import 경로·모양 무수정). `PLATFORM_META`를 쓰는 4개 페이지의 import는 웹 로컬로 유지. 참고: `api/user.ts`·`api/index.ts`·`hooks/useUser.ts`는 빈 스텁(참조 0)으로 확인 — 무시.
+
 ---
 
 ### Task 4: createApiClients 팩토리 (TDD)

@@ -29,7 +29,7 @@ import SaveIcon from "../assets/work-detail-icon/save-icon.svg";
 import BookmarkIcon from "../assets/work-detail-icon/bookmark-icon.svg";
 import whiteCat from "../assets/white-cat.png";
 import { PLATFORM_META } from "../constants/platforms";
-import { DOMAIN_LABEL_MAP } from "../constants/domain";
+import { DOMAIN_LABEL_MAP } from "@aod/shared/constants";
 import Modal from "../components/common/Modal";
 import {
   type Category,
