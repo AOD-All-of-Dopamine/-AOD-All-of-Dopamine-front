@@ -2,8 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 > (이 프로젝트 사용자 선호: 서브에이전트 없이 메인 모델이 직접 TDD → executing-plans 인라인 실행)
+> 개정: v2 (2차 리뷰 반영 — createApis 배치 수정, Task 5/6 순서 교체, 재시도 멱등 게이트, 401 single-flight, ESLint 강화, Vercel 체크 보강)
 
-**Goal:** 기존 웹 레포를 pnpm 모노레포로 전환하고, 플랫폼 무관 로직(api·hooks·types·constants)을 `@aod/shared`로 추출해 웹이 이를 소비하게 한다. 웹의 UI·동작은 변하지 않는다.
+**Goal:** 기존 웹 레포를 pnpm 모노레포로 전환하고, 플랫폼 무관 로직(api·hooks·types·constants)을 `@aod/shared`로 추출해 웹이 이를 소비하게 한다. 웹의 UI·동작은 변하지 않는다(명시된 예외 1건 제외).
 
 **Architecture:** `apps/web`(기존 코드 이동) + `packages/shared`(3층: api 팩토리 → query key 팩토리 → ApiProvider 주입 훅). 플랫폼 의존(localStorage, import.meta.env)은 전부 앱 진입점에서 주입. 스펙: `docs/superpowers/specs/2026-07-11-mobile-app-monorepo-design.md`
 
@@ -12,8 +13,10 @@
 ## Global Constraints
 
 - 웹 페이지·컴포넌트의 **훅 호출부 시그니처는 무수정** (`useWorks(params)` 그대로). 바뀌는 건 import 경로와 진입점 배선뿐.
-- query key의 **바이트 단위 모양 보존** (아래 Task 5 매핑표) — 캐시 동작 변화 금지.
-- shared 안에서 `window`/`document`/`localStorage`/`import.meta.env`/`process.env` 직접 참조 금지 — 전부 옵션 주입.
+- 기존 훅의 **파라미터·반환 타입 정의는 한 글자도 바꾸지 않고 이동**한다. 바꾸는 것은 API 접근(useApis)과 queryKey(팩토리 호출) 두 가지뿐.
+- **query key 배열의 요소·순서·타입·중첩 구조 보존** (React Query는 구조적 해시) — 아래 Task 6 매핑표. **key 팩토리는 파라미터를 정규화하지 않는다** (기본값 적용은 API 함수 내부에서만).
+- **의도된 동작 변경은 딱 1건:** 비멱등 메서드(POST 등)의 자동 재시도 제거 (Task 4) — 응답 유실 시 중복 리뷰 생성·토글 역전을 일으키는 기존 잠재 버그의 수정. 그 외 전부 무변경.
+- shared 안에서 `window`/`document`/`localStorage`/`process.env`/`import.meta.env` 직접 참조 금지 — 전부 옵션 주입 (ESLint로 강제, Task 3).
 - shared의 `react`·`@tanstack/react-query`는 peerDependencies, `axios`는 dependencies.
 - 커밋은 태스크당 1개 이상, **패키지 매니저 전환·디렉터리 이동·로직 추출을 한 커밋에 섞지 않는다**.
 - 각 태스크 종료 시 게이트: `pnpm --filter @aod/web build` 그린 (Task 3부터는 `pnpm --filter @aod/shared test`도).
@@ -215,6 +218,7 @@ git commit -m "chore: pnpm 워크스페이스 전환 — 웹을 apps/web으로 �
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "typescript": "^5.5.3",
+    "typescript-eslint": "^8.7.0",
     "vitest": "^2.1.8"
   }
 }
@@ -239,7 +243,7 @@ git commit -m "chore: pnpm 워크스페이스 전환 — 웹을 apps/web으로 �
 }
 ```
 
-(`lib`에 DOM이 있어도 됨 — 타입 체크용일 뿐. **런타임 전역 참조 금지는 ESLint로 강제**, 아래 Step 2)
+(`lib`에 DOM이 있어도 됨 — 타입 체크용일 뿐. **런타임 전역·환경변수·네이티브 참조 금지는 ESLint로 강제**, 아래)
 
 `packages/shared/vitest.config.ts`:
 
@@ -254,7 +258,7 @@ export default defineConfig({
 });
 ```
 
-`packages/shared/eslint.config.js` (플랫폼 전역 금지 규칙):
+`packages/shared/eslint.config.js` — 플랫폼 의존 3종 세트 차단 (전역, 환경변수 구문, 네이티브 import):
 
 ```js
 import tseslint from "typescript-eslint";
@@ -268,12 +272,30 @@ export default tseslint.config({
       { name: "window", message: "플랫폼 의존 금지 — 앱에서 주입하세요." },
       { name: "document", message: "플랫폼 의존 금지 — 앱에서 주입하세요." },
       { name: "localStorage", message: "플랫폼 의존 금지 — getToken으로 주입하세요." },
+      { name: "process", message: "환경값은 앱에서 읽어 주입하세요." },
+    ],
+    "no-restricted-syntax": [
+      "error",
+      {
+        selector:
+          "MemberExpression[property.name='env'] > MetaProperty[meta.name='import'][property.name='meta']",
+        message: "import.meta.env는 앱에서 읽고 shared에 주입하세요.",
+      },
+    ],
+    "no-restricted-imports": [
+      "error",
+      {
+        patterns: [
+          {
+            group: ["react-native", "react-native/*", "expo-*", "@react-native-*"],
+            message: "shared는 네이티브 플랫폼에 의존할 수 없습니다.",
+          },
+        ],
+      },
     ],
   },
 });
 ```
-
-(devDependencies에 `typescript-eslint` 추가 필요: `pnpm --filter @aod/shared add -D typescript-eslint`)
 
 - [ ] **Step 2: types·constants 이동**
 
@@ -343,13 +365,16 @@ git commit -m "refactor: @aod/shared 신설 — types·constants 이동"
 export interface ApiClientOptions {
   baseURL: string;
   getToken: () => string | null | Promise<string | null>;
-  onSessionExpired?: () => void | Promise<void>;
-  isDev?: boolean;                                   // 콘솔 로깅 게이트 (기본 false)
-  retry?: { retries?: number; retryDelay?: number }; // 기본 { retries: 2, retryDelay: 500 }
+  onSessionExpired?: () => void | Promise<void>;  // 동시 401에서도 1회만 실행 (single-flight)
+  isDev?: boolean;                                 // 콘솔 로깅 게이트 (기본 false)
+  retry?: { retries?: number; retryDelay?: number }; // 기본 { retries: 2, retryDelay: 500 } — GET/HEAD/OPTIONS만
+  sleep?: (ms: number) => Promise<void>;           // 테스트 주입용 (기본: 실제 setTimeout 대기)
 }
 export interface ApiClients { publicApi: AxiosInstance; privateApi: AxiosInstance; }
 export function createApiClients(options: ApiClientOptions): ApiClients;
 ```
+
+**기존 웹 대비 의도된 변경 (Global Constraints의 예외 1건):** 재시도를 멱등 메서드(GET/HEAD/OPTIONS)로 한정한다. 기존 코드는 POST도 5xx/타임아웃 시 재시도해 응답 유실 시 중복 리뷰·토글 역전 위험이 있었다.
 
 - [ ] **Step 1: 실패하는 테스트 작성**
 
@@ -362,6 +387,7 @@ import { setupServer } from "msw/node";
 import { createApiClients } from "../src/api/client";
 
 const BASE = "http://test.local";
+const noSleep = async () => {};
 let lastAuthHeader: string | null = null;
 let hitCount = 0;
 
@@ -374,6 +400,10 @@ const server = setupServer(
     hitCount += 1;
     if (hitCount < 3) return new HttpResponse(null, { status: 500 });
     return HttpResponse.json({ ok: true });
+  }),
+  http.post(`${BASE}/api/flaky-post`, () => {
+    hitCount += 1;
+    return new HttpResponse(null, { status: 500 });
   }),
   http.get(`${BASE}/api/secret`, () => new HttpResponse(null, { status: 401 })),
 );
@@ -417,11 +447,12 @@ describe("createApiClients", () => {
     expect(lastAuthHeader).toBe("Bearer tok-async");
   });
 
-  it("5xx는 retries 상한까지 재시도 후 성공한다 (2회 실패 → 3회째 성공)", async () => {
+  it("GET 5xx는 retries 상한까지 재시도 후 성공한다 (2회 실패 → 3회째 성공)", async () => {
     const { publicApi } = createApiClients({
       baseURL: BASE,
       getToken: () => null,
-      retry: { retries: 2, retryDelay: 1 },
+      retry: { retries: 2 },
+      sleep: noSleep,
     });
     const res = await publicApi.get("/api/flaky");
     expect(res.data.ok).toBe(true);
@@ -432,10 +463,22 @@ describe("createApiClients", () => {
     const { publicApi } = createApiClients({
       baseURL: BASE,
       getToken: () => null,
-      retry: { retries: 1, retryDelay: 1 },
+      retry: { retries: 1 },
+      sleep: noSleep,
     });
     await expect(publicApi.get("/api/flaky")).rejects.toThrow();
     expect(hitCount).toBe(2);
+  });
+
+  it("POST는 5xx여도 재시도하지 않는다 (비멱등 보호)", async () => {
+    const { publicApi } = createApiClients({
+      baseURL: BASE,
+      getToken: () => null,
+      retry: { retries: 2 },
+      sleep: noSleep,
+    });
+    await expect(publicApi.post("/api/flaky-post")).rejects.toThrow();
+    expect(hitCount).toBe(1);
   });
 
   it("privateApi가 401을 받으면 onSessionExpired를 호출한다", async () => {
@@ -446,6 +489,23 @@ describe("createApiClients", () => {
       onSessionExpired,
     });
     await expect(privateApi.get("/api/secret")).rejects.toThrow();
+    expect(onSessionExpired).toHaveBeenCalledTimes(1);
+  });
+
+  it("동시 다발 401에서도 onSessionExpired는 1회만 실행된다 (single-flight)", async () => {
+    const onSessionExpired = vi.fn(
+      () => new Promise<void>((resolve) => setTimeout(resolve, 20)),
+    );
+    const { privateApi } = createApiClients({
+      baseURL: BASE,
+      getToken: () => "expired",
+      onSessionExpired,
+    });
+    await Promise.allSettled([
+      privateApi.get("/api/secret"),
+      privateApi.get("/api/secret"),
+      privateApi.get("/api/secret"),
+    ]);
     expect(onSessionExpired).toHaveBeenCalledTimes(1);
   });
 
@@ -466,7 +526,7 @@ Expected: FAIL — `../src/api/client` 모듈 없음.
 
 - [ ] **Step 3: 구현**
 
-`packages/shared/src/api/client.ts` — 기존 `apps/web/src/api/client.ts`의 로깅·재시도 인터셉터 로직을 팩토리 내부로 이동:
+`packages/shared/src/api/client.ts` — 기존 `apps/web/src/api/client.ts`의 로깅·재시도 인터셉터 로직을 팩토리 내부로 이동 (재시도에 멱등 게이트 추가, 401 콜백 single-flight):
 
 ```ts
 import axios, {
@@ -482,6 +542,7 @@ export interface ApiClientOptions {
   onSessionExpired?: () => void | Promise<void>;
   isDev?: boolean;
   retry?: { retries?: number; retryDelay?: number };
+  sleep?: (ms: number) => Promise<void>;
 }
 
 export interface ApiClients {
@@ -489,8 +550,16 @@ export interface ApiClients {
   privateApi: AxiosInstance;
 }
 
+const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
 export function createApiClients(options: ApiClientOptions): ApiClients {
-  const { baseURL, getToken, onSessionExpired, isDev = false } = options;
+  const {
+    baseURL,
+    getToken,
+    onSessionExpired,
+    isDev = false,
+    sleep = defaultSleep,
+  } = options;
   const { retries = 2, retryDelay = 500 } = options.retry ?? {};
 
   const logRequest = (config: InternalAxiosRequestConfig) => {
@@ -543,6 +612,18 @@ export function createApiClients(options: ApiClientOptions): ApiClients {
     return Promise.reject(error);
   };
 
+  // 동시 401에서 콜백을 1회로 합치는 single-flight
+  let sessionExpirationPromise: Promise<void> | null = null;
+  const handleSessionExpired = async () => {
+    if (!onSessionExpired) return;
+    if (!sessionExpirationPromise) {
+      sessionExpirationPromise = Promise.resolve(onSessionExpired()).finally(() => {
+        sessionExpirationPromise = null;
+      });
+    }
+    await sessionExpirationPromise;
+  };
+
   const addRetryInterceptor = (instance: AxiosInstance) => {
     instance.interceptors.response.use(undefined, async (error: AxiosError) => {
       const config = error.config as InternalAxiosRequestConfig & {
@@ -552,9 +633,17 @@ export function createApiClients(options: ApiClientOptions): ApiClients {
 
       config.__retryCount = config.__retryCount || 0;
 
+      // 비멱등 메서드는 재시도하지 않는다 — 응답 유실 시 중복 쓰기 방지
+      const method = (config.method ?? "get").toLowerCase();
+      const isRetryableMethod =
+        method === "get" || method === "head" || method === "options";
+
       const status = error.response?.status;
       const shouldRetry =
-        !error.response || (status !== undefined && ((status >= 500 && status < 600) || status === 429));
+        isRetryableMethod &&
+        (!error.response ||
+          status === 429 ||
+          (status !== undefined && status >= 500 && status < 600));
 
       if (!shouldRetry) return Promise.reject(error);
       if (config.__retryCount >= retries) return Promise.reject(error);
@@ -568,7 +657,7 @@ export function createApiClients(options: ApiClientOptions): ApiClients {
         console.warn(`Request retry #${config.__retryCount} for ${config.url} after ${delay}ms`);
       }
 
-      await new Promise((r) => setTimeout(r, delay));
+      await sleep(delay);
       return instance.request(config);
     });
   };
@@ -590,8 +679,8 @@ export function createApiClients(options: ApiClientOptions): ApiClients {
   }, logRequestError);
   addRetryInterceptor(privateApi);
   privateApi.interceptors.response.use(logResponse, async (error: AxiosError) => {
-    if (error.response?.status === 401 && onSessionExpired) {
-      await onSessionExpired();
+    if (error.response?.status === 401) {
+      await handleSessionExpired();
     }
     return logResponseError(error);
   });
@@ -606,172 +695,24 @@ export function createApiClients(options: ApiClientOptions): ApiClients {
 pnpm --filter @aod/shared test
 ```
 
-Expected: 8 tests PASS.
+Expected: 10 tests PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add packages/shared
-git commit -m "feat(shared): createApiClients 팩토리 — 토큰 저장소 주입"
+git commit -m "feat(shared): createApiClients 팩토리 — 토큰 주입·멱등 재시도·401 single-flight"
 ```
 
 ---
 
-### Task 5: query key 팩토리 (TDD)
-
-**Files:**
-- Create: `packages/shared/src/queries/keys.ts`, `packages/shared/src/queries/index.ts`
-- Test: `packages/shared/tests/keys.test.ts`
-
-**Interfaces:**
-- Produces: `workKeys`, `releaseKeys`, `metaKeys`, `reviewKeys`, `interactionKeys`, `myKeys` — **기존 인라인 키와 바이트 단위 동일** 모양.
-
-기존 키 → 팩토리 매핑표 (전수):
-
-| 기존 인라인 키 | 팩토리 |
-|---|---|
-| `["works", params]` | `workKeys.list(params)` |
-| `["work", id]` | `workKeys.detail(id)` |
-| `["works", "search", keyword, params]` | `workKeys.search(keyword, params)` |
-| `["works-infinite", params]` | `workKeys.infinite(params)` |
-| `["works", "recent-reviews", params]` | `workKeys.recentReviewed(params)` |
-| `["releases", "recent", params]` | `releaseKeys.recent(params)` |
-| `["releases", "upcoming", params]` | `releaseKeys.upcoming(params)` |
-| `["genres", domain]` | `metaKeys.genres(domain)` |
-| `["genres-with-count", domain]` | `metaKeys.genresWithCount(domain)` |
-| `["platforms", domain]` | `metaKeys.platforms(domain)` |
-| `["reviews", contentId, page, size]` | `reviewKeys.list(contentId, page, size)` |
-| `["reviews", contentId]` (invalidate 접두) | `reviewKeys.byContent(contentId)` |
-| `["likeStats", contentId]` | `interactionKeys.likeStats(contentId)` |
-| `["bookmarkStatus", contentId]` | `interactionKeys.bookmarkStatus(contentId)` |
-| `["myReviews", page, size]` | `myKeys.reviews(page, size)` |
-| `["myBookmarks", page, size]` | `myKeys.bookmarks(page, size)` |
-| `["myBookmarks"]` (invalidate 접두) | `myKeys.bookmarksRoot()` |
-| `["myLikes", page, size]` | `myKeys.likes(page, size)` |
-
-- [ ] **Step 1: 실패하는 테스트 작성**
-
-`packages/shared/tests/keys.test.ts`:
-
-```ts
-import { describe, it, expect } from "vitest";
-import {
-  workKeys, releaseKeys, metaKeys, reviewKeys, interactionKeys, myKeys,
-} from "../src/queries/keys";
-
-describe("query key 팩토리 — 기존 인라인 키와 동일 모양", () => {
-  const params = { domain: "GAME", page: 1 };
-
-  it("work 계열", () => {
-    expect(workKeys.list(params)).toEqual(["works", params]);
-    expect(workKeys.detail(7)).toEqual(["work", 7]);
-    expect(workKeys.search("q", params)).toEqual(["works", "search", "q", params]);
-    expect(workKeys.infinite(params)).toEqual(["works-infinite", params]);
-    expect(workKeys.recentReviewed(params)).toEqual(["works", "recent-reviews", params]);
-  });
-
-  it("release·meta 계열", () => {
-    expect(releaseKeys.recent(params)).toEqual(["releases", "recent", params]);
-    expect(releaseKeys.upcoming(params)).toEqual(["releases", "upcoming", params]);
-    expect(metaKeys.genres("GAME")).toEqual(["genres", "GAME"]);
-    expect(metaKeys.genresWithCount("GAME")).toEqual(["genres-with-count", "GAME"]);
-    expect(metaKeys.platforms(undefined)).toEqual(["platforms", undefined]);
-  });
-
-  it("review·interaction·my 계열", () => {
-    expect(reviewKeys.list(3, 0, 20)).toEqual(["reviews", 3, 0, 20]);
-    expect(reviewKeys.byContent(3)).toEqual(["reviews", 3]);
-    expect(interactionKeys.likeStats(3)).toEqual(["likeStats", 3]);
-    expect(interactionKeys.bookmarkStatus(3)).toEqual(["bookmarkStatus", 3]);
-    expect(myKeys.reviews(0, 20)).toEqual(["myReviews", 0, 20]);
-    expect(myKeys.bookmarks(0, 20)).toEqual(["myBookmarks", 0, 20]);
-    expect(myKeys.bookmarksRoot()).toEqual(["myBookmarks"]);
-    expect(myKeys.likes(0, 20)).toEqual(["myLikes", 0, 20]);
-  });
-
-  it("byContent는 list의 접두사다 (invalidation 전제)", () => {
-    const prefix = reviewKeys.byContent(3);
-    const full = reviewKeys.list(3, 0, 20);
-    expect(full.slice(0, prefix.length)).toEqual(prefix);
-  });
-});
-```
-
-- [ ] **Step 2: 실패 확인** — `pnpm --filter @aod/shared test` → FAIL (모듈 없음)
-
-- [ ] **Step 3: 구현**
-
-`packages/shared/src/queries/keys.ts`:
-
-```ts
-import type { WorksQueryParams, ReleasesQueryParams } from "../api/workApi";
-
-export const workKeys = {
-  list: (params: WorksQueryParams) => ["works", params] as const,
-  detail: (id: number | undefined) => ["work", id] as const,
-  search: (keyword: string, params: Omit<WorksQueryParams, "keyword">) =>
-    ["works", "search", keyword, params] as const,
-  infinite: (params: WorksQueryParams) => ["works-infinite", params] as const,
-  recentReviewed: (params: ReleasesQueryParams) =>
-    ["works", "recent-reviews", params] as const,
-};
-
-export const releaseKeys = {
-  recent: (params: ReleasesQueryParams) => ["releases", "recent", params] as const,
-  upcoming: (params: ReleasesQueryParams) => ["releases", "upcoming", params] as const,
-};
-
-export const metaKeys = {
-  genres: (domain?: string) => ["genres", domain] as const,
-  genresWithCount: (domain?: string) => ["genres-with-count", domain] as const,
-  platforms: (domain?: string) => ["platforms", domain] as const,
-};
-
-export const reviewKeys = {
-  byContent: (contentId: number) => ["reviews", contentId] as const,
-  list: (contentId: number, page: number, size: number) =>
-    ["reviews", contentId, page, size] as const,
-};
-
-export const interactionKeys = {
-  likeStats: (contentId: number) => ["likeStats", contentId] as const,
-  bookmarkStatus: (contentId: number) => ["bookmarkStatus", contentId] as const,
-};
-
-export const myKeys = {
-  reviews: (page: number, size: number) => ["myReviews", page, size] as const,
-  bookmarksRoot: () => ["myBookmarks"] as const,
-  bookmarks: (page: number, size: number) => ["myBookmarks", page, size] as const,
-  likes: (page: number, size: number) => ["myLikes", page, size] as const,
-};
-```
-
-`packages/shared/src/queries/index.ts`:
-
-```ts
-export * from "./keys";
-```
-
-(주의: `../api/workApi`는 Task 6에서 생성 — Task 5·6은 같은 브랜치에서 연달아 진행하므로, Task 5 시점에는 타입 import 없이 `Record<string, unknown>`으로 두고 Task 6에서 정식 타입으로 교체해도 된다. 순서를 바꿔 Task 6 → Task 5로 진행해도 무방.)
-
-- [ ] **Step 4: 통과 확인** — `pnpm --filter @aod/shared test` → PASS
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add packages/shared
-git commit -m "feat(shared): query key 팩토리 — 기존 키 모양 보존"
-```
-
----
-
-### Task 6: API 모듈 팩토리 전환
+### Task 5: API 모듈 팩토리 전환
 
 **Files:**
 - Move+수정: `apps/web/src/api/{authApi,workApi,interactionApi,rankingApi}.ts` → `packages/shared/src/api/`
 - Create: `packages/shared/src/api/index.ts`
-- Delete: `apps/web/src/api/client.ts` (Task 4에서 대체됨 — 웹이 아직 참조 중이므로 **이동은 Task 8에서**, 이 태스크는 shared 쪽 생성만)
 - Test: `packages/shared/tests/workApi.test.ts`
+- 참고: `apps/web/src/api/client.ts` 삭제는 웹이 아직 참조 중이므로 **Task 8에서** 수행. 이 태스크는 shared 쪽 생성만.
 
 **Interfaces:**
 - Consumes: `ApiClients` (Task 4)
@@ -884,7 +825,7 @@ export type RankingApi = ReturnType<typeof createRankingApi>;
 - `workApi.ts`: 8개 함수 전부 publicApi → `createWorkApi(publicApi)`. `WorksQueryParams`·`ReleasesQueryParams` export 유지.
 - `interactionApi.ts`: 한 파일에 두 팩토리 — `createReviewApi(publicApi, privateApi)` (getReviews=public, 나머지 4개=private), `createInteractionApi(publicApi, privateApi)` (getLikeStats=public, 나머지 6개=private).
 
-`packages/shared/src/api/index.ts`:
+`packages/shared/src/api/index.ts` (createApis는 Task 7에서 추가):
 
 ```ts
 export * from "./client";
@@ -905,23 +846,180 @@ git commit -m "refactor(shared): API 모듈 팩토리 전환 — 엔드포인트
 
 ---
 
-### Task 7: ApiProvider + 데이터 훅 이동 (TDD)
+### Task 6: query key 팩토리 (TDD)
 
 **Files:**
-- Create: `packages/shared/src/hooks/ApiProvider.tsx`, `packages/shared/src/hooks/index.ts`
+- Create: `packages/shared/src/queries/keys.ts`, `packages/shared/src/queries/index.ts`
+- Test: `packages/shared/tests/keys.test.ts`
+
+**Interfaces:**
+- Consumes: Task 5의 `WorksQueryParams`, `ReleasesQueryParams` 타입 (이제 존재함 — 순서 의존성 해소됨)
+- Produces: `workKeys`, `releaseKeys`, `metaKeys`, `reviewKeys`, `interactionKeys`, `myKeys` — **기존 인라인 키의 요소·순서·타입·중첩 구조 보존**. **팩토리는 파라미터를 정규화하지 않는다** — 기본값 적용은 API 함수 내부에서만 (`useWorks()` → `["works", {}]`가 유지되어야 함).
+
+기존 키 → 팩토리 매핑표 (전수):
+
+| 기존 인라인 키 | 팩토리 |
+|---|---|
+| `["works", params]` | `workKeys.list(params)` |
+| `["work", id]` | `workKeys.detail(id)` |
+| `["works", "search", keyword, params]` | `workKeys.search(keyword, params)` |
+| `["works-infinite", params]` | `workKeys.infinite(params)` |
+| `["works", "recent-reviews", params]` | `workKeys.recentReviewed(params)` |
+| `["releases", "recent", params]` | `releaseKeys.recent(params)` |
+| `["releases", "upcoming", params]` | `releaseKeys.upcoming(params)` |
+| `["genres", domain]` | `metaKeys.genres(domain)` |
+| `["genres-with-count", domain]` | `metaKeys.genresWithCount(domain)` |
+| `["platforms", domain]` | `metaKeys.platforms(domain)` |
+| `["reviews", contentId, page, size]` | `reviewKeys.list(contentId, page, size)` |
+| `["reviews", contentId]` (invalidate 접두) | `reviewKeys.byContent(contentId)` |
+| `["likeStats", contentId]` | `interactionKeys.likeStats(contentId)` |
+| `["bookmarkStatus", contentId]` | `interactionKeys.bookmarkStatus(contentId)` |
+| `["myReviews", page, size]` | `myKeys.reviews(page, size)` |
+| `["myBookmarks", page, size]` | `myKeys.bookmarks(page, size)` |
+| `["myBookmarks"]` (invalidate 접두) | `myKeys.bookmarksRoot()` |
+| `["myLikes", page, size]` | `myKeys.likes(page, size)` |
+
+- [ ] **Step 1: 실패하는 테스트 작성**
+
+`packages/shared/tests/keys.test.ts`:
+
+```ts
+import { describe, it, expect } from "vitest";
+import {
+  workKeys, releaseKeys, metaKeys, reviewKeys, interactionKeys, myKeys,
+} from "../src/queries/keys";
+
+describe("query key 팩토리 — 기존 인라인 키와 동일 구조", () => {
+  const params = { domain: "GAME", page: 1 };
+
+  it("work 계열", () => {
+    expect(workKeys.list(params)).toEqual(["works", params]);
+    expect(workKeys.detail(7)).toEqual(["work", 7]);
+    expect(workKeys.search("q", params)).toEqual(["works", "search", "q", params]);
+    expect(workKeys.infinite(params)).toEqual(["works-infinite", params]);
+    expect(workKeys.recentReviewed(params)).toEqual(["works", "recent-reviews", params]);
+  });
+
+  it("파라미터를 정규화하지 않는다 — 빈 객체는 빈 객체 그대로", () => {
+    expect(workKeys.list({})).toEqual(["works", {}]);
+    expect(releaseKeys.recent({})).toEqual(["releases", "recent", {}]);
+  });
+
+  it("release·meta 계열", () => {
+    expect(releaseKeys.recent(params)).toEqual(["releases", "recent", params]);
+    expect(releaseKeys.upcoming(params)).toEqual(["releases", "upcoming", params]);
+    expect(metaKeys.genres("GAME")).toEqual(["genres", "GAME"]);
+    expect(metaKeys.genresWithCount("GAME")).toEqual(["genres-with-count", "GAME"]);
+    expect(metaKeys.platforms(undefined)).toEqual(["platforms", undefined]);
+  });
+
+  it("review·interaction·my 계열", () => {
+    expect(reviewKeys.list(3, 0, 20)).toEqual(["reviews", 3, 0, 20]);
+    expect(reviewKeys.byContent(3)).toEqual(["reviews", 3]);
+    expect(interactionKeys.likeStats(3)).toEqual(["likeStats", 3]);
+    expect(interactionKeys.bookmarkStatus(3)).toEqual(["bookmarkStatus", 3]);
+    expect(myKeys.reviews(0, 20)).toEqual(["myReviews", 0, 20]);
+    expect(myKeys.bookmarks(0, 20)).toEqual(["myBookmarks", 0, 20]);
+    expect(myKeys.bookmarksRoot()).toEqual(["myBookmarks"]);
+    expect(myKeys.likes(0, 20)).toEqual(["myLikes", 0, 20]);
+  });
+
+  it("byContent는 list의 접두사다 (invalidation 전제)", () => {
+    const prefix = reviewKeys.byContent(3);
+    const full = reviewKeys.list(3, 0, 20);
+    expect(full.slice(0, prefix.length)).toEqual(prefix);
+  });
+});
+```
+
+- [ ] **Step 2: 실패 확인** — `pnpm --filter @aod/shared test` → FAIL (모듈 없음)
+
+- [ ] **Step 3: 구현**
+
+`packages/shared/src/queries/keys.ts`:
+
+```ts
+import type { WorksQueryParams, ReleasesQueryParams } from "../api/workApi";
+
+export const workKeys = {
+  list: (params: WorksQueryParams) => ["works", params] as const,
+  detail: (id: number | undefined) => ["work", id] as const,
+  search: (keyword: string, params: Omit<WorksQueryParams, "keyword">) =>
+    ["works", "search", keyword, params] as const,
+  infinite: (params: WorksQueryParams) => ["works-infinite", params] as const,
+  recentReviewed: (params: ReleasesQueryParams) =>
+    ["works", "recent-reviews", params] as const,
+};
+
+export const releaseKeys = {
+  recent: (params: ReleasesQueryParams) => ["releases", "recent", params] as const,
+  upcoming: (params: ReleasesQueryParams) => ["releases", "upcoming", params] as const,
+};
+
+export const metaKeys = {
+  genres: (domain?: string) => ["genres", domain] as const,
+  genresWithCount: (domain?: string) => ["genres-with-count", domain] as const,
+  platforms: (domain?: string) => ["platforms", domain] as const,
+};
+
+export const reviewKeys = {
+  byContent: (contentId: number) => ["reviews", contentId] as const,
+  list: (contentId: number, page: number, size: number) =>
+    ["reviews", contentId, page, size] as const,
+};
+
+export const interactionKeys = {
+  likeStats: (contentId: number) => ["likeStats", contentId] as const,
+  bookmarkStatus: (contentId: number) => ["bookmarkStatus", contentId] as const,
+};
+
+export const myKeys = {
+  reviews: (page: number, size: number) => ["myReviews", page, size] as const,
+  bookmarksRoot: () => ["myBookmarks"] as const,
+  bookmarks: (page: number, size: number) => ["myBookmarks", page, size] as const,
+  likes: (page: number, size: number) => ["myLikes", page, size] as const,
+};
+```
+
+`packages/shared/src/queries/index.ts`:
+
+```ts
+export * from "./keys";
+```
+
+- [ ] **Step 4: 통과 확인** — `pnpm --filter @aod/shared test` → PASS
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add packages/shared
+git commit -m "feat(shared): query key 팩토리 — 기존 키 구조 보존, 정규화 금지"
+```
+
+---
+
+### Task 7: createApis + ApiProvider + 데이터 훅 이동 (TDD)
+
+**Files:**
+- Create: `packages/shared/src/api/createApis.ts` (조립 함수 — **api 서브패스에 배치**)
+- Modify: `packages/shared/src/api/index.ts` (createApis export 추가)
+- Create: `packages/shared/src/hooks/ApiProvider.tsx` (Context·Provider·useApis만), `packages/shared/src/hooks/index.ts`
 - Move+수정: `apps/web/src/hooks/useWorks.ts`, `useInteractions.ts` → `packages/shared/src/hooks/`
 - Test: `packages/shared/tests/hooks.test.tsx`
 
 **Interfaces:**
-- Consumes: Task 4 `createApiClients`, Task 5 키 팩토리, Task 6 API 팩토리
+- Consumes: Task 4 `createApiClients`, Task 5 API 팩토리, Task 6 키 팩토리
 - Produces:
 
 ```ts
+// @aod/shared/api 에서:
 export interface Apis {
   authApi: AuthApi; workApi: WorkApi; reviewApi: ReviewApi;
   interactionApi: InteractionApi; rankingApi: RankingApi;
 }
 export function createApis(clients: ApiClients): Apis;
+
+// @aod/shared/hooks 에서:
 export const ApiProvider: React.FC<{ apis: Apis; children: React.ReactNode }>;
 export function useApis(): Apis;
 // + 기존 훅 26개 전부, 시그니처 무변경:
@@ -932,19 +1030,27 @@ export function useApis(): Apis;
 //   useMyReviews, useMyBookmarks, useMyLikes
 ```
 
+- [ ] **Step 0: 웹 호출부 옵션 사용 전수 확인**
+
+```bash
+cd apps/web && grep -rn -E "select:|initialData:" src
+```
+
+Expected: 훅 `options`로 `select`/`initialData`를 넘기는 호출부가 있으면 기록 — 해당 훅의 타입 정의를 반드시 원본 그대로 이동해야 함 (v5 제네릭 추론이 엄격해 임의 재정의 시 깨질 수 있음). 없으면 그대로 진행.
+
 - [ ] **Step 1: 실패하는 테스트 작성**
 
 `packages/shared/tests/hooks.test.tsx`:
 
 ```tsx
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import React from "react";
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { createApiClients, createApis } from "../src/api";
-import { ApiProvider, useWorks } from "../src/hooks";
+import { ApiProvider, useApis, useWorks } from "../src/hooks";
 
 const BASE = "http://test.local";
 const server = setupServer(
@@ -956,18 +1062,26 @@ const server = setupServer(
   ),
 );
 
-beforeAll(() => server.listen());
-afterAll(() => server.close());
+// wrapper 바깥에서 1회 생성 — 리렌더마다 새 인스턴스가 생기지 않도록
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
+const apis = createApis(createApiClients({ baseURL: BASE, getToken: () => null }));
 
 function wrapper({ children }: { children: React.ReactNode }) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const apis = createApis(createApiClients({ baseURL: BASE, getToken: () => null }));
   return (
     <QueryClientProvider client={queryClient}>
       <ApiProvider apis={apis}>{children}</ApiProvider>
     </QueryClientProvider>
   );
 }
+
+beforeAll(() => server.listen());
+afterEach(() => {
+  queryClient.clear();
+  server.resetHandlers();
+});
+afterAll(() => server.close());
 
 describe("shared hooks", () => {
   it("useWorks가 ApiProvider의 API로 데이터를 가져온다", async () => {
@@ -977,27 +1091,26 @@ describe("shared hooks", () => {
   });
 
   it("ApiProvider 밖에서 useApis를 쓰면 명확한 에러를 던진다", () => {
-    expect(() => renderHook(() => useWorks())).toThrow(/ApiProvider/);
+    expect(() => renderHook(() => useApis())).toThrow(/ApiProvider/);
   });
 });
 ```
 
 - [ ] **Step 2: 실패 확인** — `pnpm --filter @aod/shared test` → FAIL
 
-- [ ] **Step 3: ApiProvider 구현**
+- [ ] **Step 3: createApis + ApiProvider 구현**
 
-`packages/shared/src/hooks/ApiProvider.tsx`:
+`packages/shared/src/api/createApis.ts` (조립은 api 계층 소속 — hooks는 Context만 담당):
 
-```tsx
-import React, { createContext, useContext } from "react";
-import type { ApiClients } from "../api/client";
-import { createAuthApi, type AuthApi } from "../api/authApi";
-import { createWorkApi, type WorkApi } from "../api/workApi";
+```ts
+import type { ApiClients } from "./client";
+import { createAuthApi, type AuthApi } from "./authApi";
+import { createWorkApi, type WorkApi } from "./workApi";
 import {
   createReviewApi, createInteractionApi,
   type ReviewApi, type InteractionApi,
-} from "../api/interactionApi";
-import { createRankingApi, type RankingApi } from "../api/rankingApi";
+} from "./interactionApi";
+import { createRankingApi, type RankingApi } from "./rankingApi";
 
 export interface Apis {
   authApi: AuthApi;
@@ -1017,6 +1130,19 @@ export function createApis(clients: ApiClients): Apis {
     rankingApi: createRankingApi(publicApi),
   };
 }
+```
+
+`packages/shared/src/api/index.ts`에 추가:
+
+```ts
+export * from "./createApis";
+```
+
+`packages/shared/src/hooks/ApiProvider.tsx`:
+
+```tsx
+import React, { createContext, useContext } from "react";
+import type { Apis } from "../api/createApis";
 
 const ApiContext = createContext<Apis | undefined>(undefined);
 
@@ -1041,12 +1167,13 @@ git mv apps/web/src/hooks/useWorks.ts packages/shared/src/hooks/useWorks.ts
 git mv apps/web/src/hooks/useInteractions.ts packages/shared/src/hooks/useInteractions.ts
 ```
 
-**변환 규칙 (양 파일 공통, 기계적):**
+**변환 규칙 (양 파일 공통, 기계적 — 이 4가지 외에는 아무것도 바꾸지 않는다):**
 1. `import { workApi, ... } from "../api/workApi"` → `import type { WorksQueryParams, ReleasesQueryParams } from "../api/workApi"` (타입만) + `import { useApis } from "./ApiProvider"`
 2. 각 훅 함수 첫 줄에 `const { workApi } = useApis();` (해당 API만 구조분해)
-3. 인라인 queryKey → Task 5 팩토리 호출로 교체 (매핑표 그대로)
+3. 인라인 queryKey → Task 6 팩토리 호출로 교체 (매핑표 그대로)
 4. `../types/api` → `../types`
-5. **그 외 로직(enabled, placeholderData, optimistic update, invalidation 대상) 무변경**
+
+**파라미터·반환·options 타입 정의는 원본 그대로 유지** (Omit<UseQueryOptions...> 포함 한 글자도 변경 금지).
 
 변환 예 — `useWorks`와 `useToggleBookmark` (나머지 24개 동일 패턴):
 
@@ -1107,7 +1234,7 @@ export * from "./useInteractions";
 
 ```bash
 git add -A
-git commit -m "feat(shared): ApiProvider + 데이터 훅 26개 이동 — 시그니처·캐시 키 보존"
+git commit -m "feat(shared): createApis·ApiProvider + 데이터 훅 26개 이동 — 시그니처·캐시 키 보존"
 ```
 
 ---
@@ -1119,7 +1246,7 @@ git commit -m "feat(shared): ApiProvider + 데이터 훅 26개 이동 — 시그
 - Delete: `apps/web/src/api/`(4파일 + client.ts), `apps/web/src/hooks/`(빈 디렉터리)
 
 **Interfaces:**
-- Consumes: `@aod/shared/api`, `@aod/shared/hooks` (Task 4~7 전부)
+- Consumes: `@aod/shared/api`의 `createApiClients`·`createApis`, `@aod/shared/hooks`의 `ApiProvider`·`useApis`·데이터 훅 (Task 4~7 전부)
 
 - [ ] **Step 1: main.tsx 배선**
 
@@ -1161,7 +1288,7 @@ createRoot(document.getElementById("root")!).render(
 );
 ```
 
-(기존 client.ts의 `console.log("API_BASE_URL = ...")` 상시 출력은 isDev 게이트로 흡수 — 의도된 미세 개선. `onSessionExpired`는 웹에 전달하지 않음 — 현행 401 동작 보존)
+(기존 client.ts의 `console.log("API_BASE_URL = ...")` 상시 출력은 isDev 게이트로 흡수. `onSessionExpired`는 웹에 전달하지 않음 — 현행 401 동작 보존)
 
 - [ ] **Step 2: AuthContext 전환**
 
@@ -1226,7 +1353,7 @@ pnpm dev:web
 
 ```bash
 git add -A
-git commit -m "refactor(web): @aod/shared 소비로 전환 — UI·동작 무변경"
+git commit -m "refactor(web): @aod/shared 소비로 전환 — UI·동작 무변경(재시도 멱등화 제외)"
 ```
 
 ---
@@ -1249,7 +1376,7 @@ git commit -m "refactor(web): @aod/shared 소비로 전환 — UI·동작 무변
 
 - [ ] **Step 2: CLAUDE.md 경로 갱신**
 
-`CLAUDE.md`의 디렉터리 구조 섹션을 모노레포 구조(apps/web, packages/shared)로 수정. api/·hooks/·types/·constants/가 `packages/shared`로 이동했음을 명기.
+`CLAUDE.md`의 디렉터리 구조 섹션을 모노레포 구조(apps/web, packages/shared)로 수정. api/·hooks/·types/·constants/가 `packages/shared`로 이동했음을 명기. 재시도 정책 변경(멱등 메서드만) 1줄 추가.
 
 - [ ] **Step 3: 검증 + Commit**
 
@@ -1270,13 +1397,22 @@ git push -u origin feature/f0-monorepo-shared
 gh pr create --title "F0: pnpm 모노레포 전환 + @aod/shared 추출" --body "스펙: docs/superpowers/specs/2026-07-11-mobile-app-monorepo-design.md (F0-A/B/C)"
 ```
 
-- [ ] **Step 2: 수동 — Vercel Root Directory 변경**
+- [ ] **Step 2: 수동 — Vercel 모노레포 설정**
 
-Vercel 대시보드 → 프로젝트 Settings → Build & Development → Root Directory = `apps/web` 저장. (Install Command가 기본이면 Vercel이 워크스페이스 루트에서 pnpm install을 수행하고 apps/web을 빌드한다)
+Vercel 대시보드 → 프로젝트 Settings → Build & Development:
+1. Root Directory = `apps/web`
+2. **"Include source files outside of the Root Directory" 활성화 확인** — `packages/shared`가 apps/web 바깥이므로 필수.
 
-- [ ] **Step 3: 프리뷰 배포 스모크**
+- [ ] **Step 3: 프리뷰 배포 검증 (빌드 로그 + 스모크)**
 
-PR의 프리뷰 URL에서: 홈 3섹션, 로그인, `/api/*` 프록시(api/[...path].ts) 동작, 작품 상세 확인.
+빌드 로그에서 확인:
+- 루트 `pnpm-lock.yaml`이 사용되는지 (워크스페이스 인식)
+- `@aod/shared` `workspace:*` 의존성이 정상 해석되는지
+- shared 소스가 빌드 컨텍스트에 포함되는지
+
+프리뷰 URL에서 스모크: 홈 3섹션, 로그인, `/api/*` 프록시(`api/[...path].ts`) 동작, 작품 상세.
+
+**실패 시 대안 (문서화된 폴백):** Root Directory를 레포 루트로 두고 Build Command = `pnpm --filter @aod/web build`, Output Directory = `apps/web/dist`로 명시. (이 경우 서버리스 `api/` 인식 경로를 반드시 재확인)
 
 - [ ] **Step 4: 리뷰 게이트**
 
@@ -1284,8 +1420,9 @@ superpowers:requesting-code-review로 리뷰 → APPROVE 후 main 머지. **머�
 
 ---
 
-## Self-Review 결과
+## Self-Review 결과 (v2)
 
 - 스펙 F0-A/B/C ↔ Task 1/2/(3~9) 커버 확인. F1 이후는 별도 계획(shared 표면 확정 후 작성).
-- 타입 일관성: `ApiClients`(T4) → `createApis`(T7) → `main.tsx`(T8), 키 팩토리 이름(T5 매핑표 = T7 변환 규칙) 일치 확인.
-- 알려진 유의점: ① Task 5의 keys.ts가 Task 6의 타입을 import — 실행 시 Task 6을 먼저 해도 됨(명기). ② happy-dom + MSW node 조합에서 axios가 XHR 어댑터를 잡으면 인터셉트 실패 가능 — 그 경우 vitest environment를 테스트 파일 단위로 `// @vitest-environment node`(client·workApi 테스트) 지정, hooks 테스트만 happy-dom 유지.
+- 타입 일관성: `ApiClients`(T4) → API 팩토리(T5) → 키 팩토리(T6, T5 타입 소비 — 순서 의존성 해소) → `createApis`·`ApiProvider`(T7) → `main.tsx`(T8). `createApis`는 `@aod/shared/api` 소속으로 통일 (T7 정의 = T8 import).
+- 동작 변경은 재시도 멱등 게이트 1건만, Global Constraints·Task 4·Task 8 커밋 메시지·CLAUDE.md에 일관 표기.
+- 알려진 유의점: ① happy-dom + MSW node 조합에서 axios가 XHR 어댑터를 잡으면 인터셉트 실패 가능 — 그 경우 vitest environment를 테스트 파일 단위로 `// @vitest-environment node`(client·workApi 테스트) 지정, hooks 테스트만 happy-dom 유지. ② logger 주입(콘솔 정책 분리)은 F1 확장 포인트 — F0는 isDev로 충분.
