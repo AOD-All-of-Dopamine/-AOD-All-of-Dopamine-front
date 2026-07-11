@@ -846,6 +846,8 @@ git add packages/shared
 git commit -m "refactor(shared): API 모듈 팩토리 전환 — 엔드포인트·기본값 무변경"
 ```
 
+> **실행 노트 (2026-07-12):** "이동"은 복사-후-삭제로 해석 — 웹이 Task 8까지 구 파일을 참조하므로 git mv 시 태스크 게이트(웹 빌드 그린)가 깨진다. shared에 팩토리 버전 생성, 웹 원본은 Task 8 Step 5에서 git rm (계획의 client.ts 각주와 동일 논리).
+
 ---
 
 ### Task 6: query key 팩토리 (TDD)
