@@ -1,53 +1,12 @@
 {
-  "name": "aod-frontend",
+  "name": "aod-front-monorepo",
   "private": true,
   "packageManager": "pnpm@10.34.5",
-  "version": "0.0.0",
-  "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css}\""
-  },
-  "dependencies": {
-    "@tanstack/react-query": "^5.56.2",
-    "@tanstack/react-virtual": "^3.13.18",
-    "axios": "^1.13.2",
-    "dompurify": "^3.3.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.2",
-    "zustand": "^5.0.8"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.17",
-    "@types/dompurify": "^3.0.5",
-    "@types/node": "^25.5.0",
-    "@types/react": "^18.3.9",
-    "@types/react-dom": "^18.3.0",
-    "@types/react-query": "^1.2.9",
-    "@typescript-eslint/eslint-plugin": "^8.7.0",
-    "@typescript-eslint/parser": "^8.7.0",
-    "@vercel/node": "^5.6.18",
-    "@vitejs/plugin-react": "^4.3.2",
-    "autoprefixer": "^10.4.22",
-    "eslint": "^9.11.1",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-prettier": "^5.5.4",
-    "eslint-plugin-react-hooks": "^5.1.0-rc.0",
-    "eslint-plugin-react-refresh": "^0.4.12",
-    "msw": "^2.12.7",
-    "postcss": "^8.5.6",
-    "prettier": "^3.3.3",
-    "tailwindcss": "^4.1.17",
-    "typescript": "^5.5.3",
-    "vite": "^5.4.8"
-  },
-  "msw": {
-    "workerDirectory": [
-      "public"
-    ]
+    "dev:web": "pnpm --filter @aod/web dev",
+    "build": "pnpm -r --if-present build",
+    "lint": "pnpm -r --if-present lint",
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --if-present typecheck"
   }
 }

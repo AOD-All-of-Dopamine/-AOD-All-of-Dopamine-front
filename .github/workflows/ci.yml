@@ -5,6 +5,7 @@ on:
   pull_request:
     branches:
       - develop
+      - main
 
 jobs:
   build-and-test:
@@ -33,8 +34,12 @@ jobs:
 
       # ESLint 검사
       - name: Run ESLint
-        run: pnpm eslint . --ext .ts,.tsx,.js,.jsx
+        run: pnpm lint
+
+      # 테스트
+      - name: Run tests
+        run: pnpm test
 
       # 빌드 테스트
       - name: Build project
-        run: pnpm run build
+        run: pnpm build
