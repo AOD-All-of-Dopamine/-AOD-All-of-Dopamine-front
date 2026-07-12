@@ -4,8 +4,10 @@ import {
   keepPreviousData,
   useInfiniteQuery,
 } from "@tanstack/react-query";
-import { workApi, WorksQueryParams, ReleasesQueryParams } from "../api/workApi";
-import { PageResponse, WorkSummary, WorkDetail } from "@aod/shared/types";
+import type { WorksQueryParams, ReleasesQueryParams } from "../api/workApi";
+import type { PageResponse, WorkSummary, WorkDetail } from "../types";
+import { useApis } from "./ApiProvider";
+import { workKeys, releaseKeys, metaKeys } from "../queries/keys";
 
 /**
  * 작품 목록 조회 hook
@@ -17,8 +19,9 @@ export const useWorks = (
     "queryKey" | "queryFn"
   >,
 ) => {
+  const { workApi } = useApis();
   return useQuery<PageResponse<WorkSummary>>({
-    queryKey: ["works", params],
+    queryKey: workKeys.list(params),
     queryFn: () => workApi.getWorks(params),
     ...options,
   });
@@ -31,8 +34,9 @@ export const useWorkDetail = (
   id: number | undefined,
   options?: Omit<UseQueryOptions<WorkDetail>, "queryKey" | "queryFn">,
 ) => {
+  const { workApi } = useApis();
   return useQuery<WorkDetail>({
-    queryKey: ["work", id],
+    queryKey: workKeys.detail(id),
     queryFn: () => workApi.getWorkDetail(id!),
     enabled: !!id,
     ...options,
@@ -49,16 +53,16 @@ export const useRecentReleases = (
     "queryKey" | "queryFn"
   >,
 ) => {
+  const { workApi } = useApis();
   return useQuery<PageResponse<WorkSummary>>({
-    queryKey: ["releases", "recent", params],
+    queryKey: releaseKeys.recent(params),
     queryFn: () => workApi.getRecentReleases(params),
     ...options,
   });
 };
 
 /**
- * [✨ 신규 기능] 최근 리뷰가 남은 작품 조회 hook 연동
- * 기존에 getWorks를 사용하던 "최신 리뷰 작품" 섹션을 이 커스텀 훅으로 교체함.
+ * 최근 리뷰가 남은 작품 조회 hook
  */
 export const useRecentReviewedWorks = (
   params: ReleasesQueryParams = {},
@@ -67,8 +71,9 @@ export const useRecentReviewedWorks = (
     "queryKey" | "queryFn"
   >,
 ) => {
+  const { workApi } = useApis();
   return useQuery<PageResponse<WorkSummary>>({
-    queryKey: ["works", "recent-reviews", params],
+    queryKey: workKeys.recentReviewed(params),
     queryFn: () => workApi.getRecentReviewedWorks(params),
     ...options,
   });
@@ -84,8 +89,9 @@ export const useUpcomingReleases = (
     "queryKey" | "queryFn"
   >,
 ) => {
+  const { workApi } = useApis();
   return useQuery<PageResponse<WorkSummary>>({
-    queryKey: ["releases", "upcoming", params],
+    queryKey: releaseKeys.upcoming(params),
     queryFn: () => workApi.getUpcomingReleases(params),
     ...options,
   });
@@ -98,8 +104,9 @@ export const useGenres = (
   domain?: string,
   options?: Omit<UseQueryOptions<string[]>, "queryKey" | "queryFn">,
 ) => {
+  const { workApi } = useApis();
   return useQuery<string[]>({
-    queryKey: ["genres", domain],
+    queryKey: metaKeys.genres(domain),
     queryFn: () => workApi.getGenres(domain),
     ...options,
   });
@@ -115,8 +122,9 @@ export const useGenresWithCount = (
     "queryKey" | "queryFn"
   >,
 ) => {
+  const { workApi } = useApis();
   return useQuery<Record<string, number>>({
-    queryKey: ["genres-with-count", domain],
+    queryKey: metaKeys.genresWithCount(domain),
     queryFn: () => workApi.getGenresWithCount(domain),
     ...options,
   });
@@ -129,8 +137,9 @@ export const usePlatforms = (
   domain?: string,
   options?: Omit<UseQueryOptions<string[]>, "queryKey" | "queryFn">,
 ) => {
+  const { workApi } = useApis();
   return useQuery<string[]>({
-    queryKey: ["platforms", domain],
+    queryKey: metaKeys.platforms(domain),
     queryFn: () => workApi.getPlatforms(domain),
     ...options,
   });
@@ -147,8 +156,9 @@ export const useSearchWorks = (
     "queryKey" | "queryFn"
   >,
 ) => {
+  const { workApi } = useApis();
   return useQuery<PageResponse<WorkSummary>>({
-    queryKey: ["works", "search", keyword, params],
+    queryKey: workKeys.search(keyword, params),
     queryFn: () =>
       workApi.getWorks({
         ...params,
@@ -161,8 +171,9 @@ export const useSearchWorks = (
 };
 
 export function useInfiniteWorks(params: WorksQueryParams) {
+  const { workApi } = useApis();
   return useInfiniteQuery<PageResponse<WorkSummary>>({
-    queryKey: ["works-infinite", params],
+    queryKey: workKeys.infinite(params),
     queryFn: ({ pageParam = 0 }) =>
       workApi.getWorks({
         ...params,

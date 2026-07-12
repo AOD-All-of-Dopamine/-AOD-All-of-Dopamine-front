@@ -1,16 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  reviewApi,
-  interactionApi,
-  ReviewRequest,
-} from "../api/interactionApi";
+import type { ReviewRequest } from "../api/interactionApi";
+import { useApis } from "./ApiProvider";
+import { reviewKeys, interactionKeys, myKeys } from "../queries/keys";
 
 /**
  * 리뷰 목록 조회
  */
 export const useReviews = (contentId: number, page = 0, size = 20) => {
+  const { reviewApi } = useApis();
   return useQuery({
-    queryKey: ["reviews", contentId, page, size],
+    queryKey: reviewKeys.list(contentId, page, size),
     queryFn: () => reviewApi.getReviews(contentId, page, size),
     enabled: !!contentId,
   });
@@ -20,6 +19,7 @@ export const useReviews = (contentId: number, page = 0, size = 20) => {
  * 리뷰 작성
  */
 export const useCreateReview = (contentId: number) => {
+  const { reviewApi } = useApis();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -27,7 +27,7 @@ export const useCreateReview = (contentId: number) => {
       reviewApi.createReview(contentId, reviewData),
     onSuccess: () => {
       // 리뷰 목록 다시 불러오기
-      queryClient.invalidateQueries({ queryKey: ["reviews", contentId] });
+      queryClient.invalidateQueries({ queryKey: reviewKeys.byContent(contentId) });
     },
   });
 };
@@ -36,6 +36,7 @@ export const useCreateReview = (contentId: number) => {
  * 리뷰 수정
  */
 export const useUpdateReview = (contentId: number) => {
+  const { reviewApi } = useApis();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -47,7 +48,7 @@ export const useUpdateReview = (contentId: number) => {
       reviewData: ReviewRequest;
     }) => reviewApi.updateReview(reviewId, reviewData),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["reviews", contentId] });
+      queryClient.invalidateQueries({ queryKey: reviewKeys.byContent(contentId) });
     },
   });
 };
@@ -56,12 +57,13 @@ export const useUpdateReview = (contentId: number) => {
  * 리뷰 삭제
  */
 export const useDeleteReview = (contentId: number) => {
+  const { reviewApi } = useApis();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (reviewId: number) => reviewApi.deleteReview(reviewId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["reviews", contentId] });
+      queryClient.invalidateQueries({ queryKey: reviewKeys.byContent(contentId) });
     },
   });
 };
@@ -70,8 +72,9 @@ export const useDeleteReview = (contentId: number) => {
  * 좋아요/싫어요 통계
  */
 export const useLikeStats = (contentId: number) => {
+  const { interactionApi } = useApis();
   return useQuery({
-    queryKey: ["likeStats", contentId],
+    queryKey: interactionKeys.likeStats(contentId),
     queryFn: () => interactionApi.getLikeStats(contentId),
     enabled: !!contentId,
   });
@@ -81,17 +84,18 @@ export const useLikeStats = (contentId: number) => {
  * 좋아요 토글
  */
 export const useToggleLike = (contentId: number) => {
+  const { interactionApi } = useApis();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: () => interactionApi.toggleLike(contentId),
 
     onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ["likeStats", contentId] });
+      await queryClient.cancelQueries({ queryKey: interactionKeys.likeStats(contentId) });
 
-      const previous = queryClient.getQueryData<any>(["likeStats", contentId]);
+      const previous = queryClient.getQueryData<any>(interactionKeys.likeStats(contentId));
 
-      queryClient.setQueryData(["likeStats", contentId], (old: any) => {
+      queryClient.setQueryData(interactionKeys.likeStats(contentId), (old: any) => {
         if (!old) return old;
         return {
           ...old,
@@ -106,11 +110,11 @@ export const useToggleLike = (contentId: number) => {
     },
 
     onError: (_err, _var, context) => {
-      queryClient.setQueryData(["likeStats", contentId], context?.previous);
+      queryClient.setQueryData(interactionKeys.likeStats(contentId), context?.previous);
     },
 
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["likeStats", contentId] });
+      queryClient.invalidateQueries({ queryKey: interactionKeys.likeStats(contentId) });
     },
   });
 };
@@ -119,17 +123,18 @@ export const useToggleLike = (contentId: number) => {
  * 싫어요 토글
  */
 export const useToggleDislike = (contentId: number) => {
+  const { interactionApi } = useApis();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: () => interactionApi.toggleDislike(contentId),
 
     onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ["likeStats", contentId] });
+      await queryClient.cancelQueries({ queryKey: interactionKeys.likeStats(contentId) });
 
-      const previous = queryClient.getQueryData<any>(["likeStats", contentId]);
+      const previous = queryClient.getQueryData<any>(interactionKeys.likeStats(contentId));
 
-      queryClient.setQueryData(["likeStats", contentId], (old: any) => {
+      queryClient.setQueryData(interactionKeys.likeStats(contentId), (old: any) => {
         if (!old) return old;
 
         return {
@@ -147,11 +152,11 @@ export const useToggleDislike = (contentId: number) => {
     },
 
     onError: (_err, _var, context) => {
-      queryClient.setQueryData(["likeStats", contentId], context?.previous);
+      queryClient.setQueryData(interactionKeys.likeStats(contentId), context?.previous);
     },
 
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["likeStats", contentId] });
+      queryClient.invalidateQueries({ queryKey: interactionKeys.likeStats(contentId) });
     },
   });
 };
@@ -160,8 +165,9 @@ export const useToggleDislike = (contentId: number) => {
  * 북마크 상태
  */
 export const useBookmarkStatus = (contentId: number) => {
+  const { interactionApi } = useApis();
   return useQuery({
-    queryKey: ["bookmarkStatus", contentId],
+    queryKey: interactionKeys.bookmarkStatus(contentId),
     queryFn: () => interactionApi.getBookmarkStatus(contentId),
     enabled: !!contentId,
   });
@@ -171,22 +177,22 @@ export const useBookmarkStatus = (contentId: number) => {
  * 북마크 토글
  */
 export const useToggleBookmark = (contentId: number) => {
+  const { interactionApi } = useApis();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: () => interactionApi.toggleBookmark(contentId),
     onMutate: async () => {
       await queryClient.cancelQueries({
-        queryKey: ["bookmarkStatus", contentId],
+        queryKey: interactionKeys.bookmarkStatus(contentId),
       });
 
-      const previous = queryClient.getQueryData<any>([
-        "bookmarkStatus",
-        contentId,
-      ]);
+      const previous = queryClient.getQueryData<any>(
+        interactionKeys.bookmarkStatus(contentId),
+      );
 
       queryClient.setQueryData(
-        ["bookmarkStatus", contentId],
+        interactionKeys.bookmarkStatus(contentId),
         (old: any) => {
           if (!old) return { bookmarked: true };
           return {
@@ -200,15 +206,15 @@ export const useToggleBookmark = (contentId: number) => {
     },
     onError: (_err, _var, context) => {
       queryClient.setQueryData(
-        ["bookmarkStatus", contentId],
+        interactionKeys.bookmarkStatus(contentId),
         context?.previous
       );
     },
     onSettled: () => {
       queryClient.invalidateQueries({
-        queryKey: ["bookmarkStatus", contentId],
+        queryKey: interactionKeys.bookmarkStatus(contentId),
       });
-      queryClient.invalidateQueries({ queryKey: ["myBookmarks"] });
+      queryClient.invalidateQueries({ queryKey: myKeys.bookmarksRoot() });
     },
   });
 };
@@ -217,8 +223,9 @@ export const useToggleBookmark = (contentId: number) => {
  * 내 리뷰 목록
  */
 export const useMyReviews = (page = 0, size = 20, enabled = true) => {
+  const { reviewApi } = useApis();
   return useQuery({
-    queryKey: ["myReviews", page, size],
+    queryKey: myKeys.reviews(page, size),
     queryFn: () => reviewApi.getMyReviews(page, size),
     enabled,
   });
@@ -228,8 +235,9 @@ export const useMyReviews = (page = 0, size = 20, enabled = true) => {
  * 내 북마크 목록
  */
 export const useMyBookmarks = (page = 0, size = 20, enabled = true) => {
+  const { interactionApi } = useApis();
   return useQuery({
-    queryKey: ["myBookmarks", page, size],
+    queryKey: myKeys.bookmarks(page, size),
     queryFn: () => interactionApi.getMyBookmarks(page, size),
     enabled,
   });
@@ -239,8 +247,9 @@ export const useMyBookmarks = (page = 0, size = 20, enabled = true) => {
  * 내가 좋아요한 작품 목록
  */
 export const useMyLikes = (page = 0, size = 20, enabled = true) => {
+  const { interactionApi } = useApis();
   return useQuery({
-    queryKey: ["myLikes", page, size],
+    queryKey: myKeys.likes(page, size),
     queryFn: () => interactionApi.getMyLikes(page, size),
     enabled,
   });
