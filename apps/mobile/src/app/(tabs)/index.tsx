@@ -154,8 +154,8 @@ export default function HomeScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView showsVerticalScrollIndicator={false}>
-          {/* 검색 바 (F3에서 검색 화면 연결) */}
-          <Pressable style={styles.searchBar} onPress={notReady}>
+          {/* 검색 바 */}
+          <Pressable style={styles.searchBar} onPress={() => router.push('/search')}>
             <ThemedText type="small" style={styles.searchPlaceholder}>
               작품 검색
             </ThemedText>
