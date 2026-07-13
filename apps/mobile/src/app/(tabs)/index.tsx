@@ -126,7 +126,7 @@ export default function HomeScreen() {
     if (id.startsWith('no-content-')) {
       Alert.alert('안내', '이 작품의 상세 정보가 아직 준비되지 않았습니다.');
     } else {
-      notReady(); // F3: router.push(`/work/${id}`)
+      router.push({ pathname: '/work/[id]', params: { id } });
     }
   };
 
@@ -226,7 +226,9 @@ export default function HomeScreen() {
             title="최신 리뷰 작품"
             items={(recentReviews?.content ?? []).map(mapToWorkItem)}
             loading={isLoadingRecentReviews}
-            onItemPress={notReady}
+            onItemPress={(id) =>
+              router.push({ pathname: '/work/[id]', params: { id } })
+            }
           />
         </ScrollView>
       </SafeAreaView>

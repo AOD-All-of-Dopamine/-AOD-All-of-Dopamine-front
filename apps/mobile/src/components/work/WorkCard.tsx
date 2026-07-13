@@ -19,11 +19,16 @@ export interface WorkCardItem {
 interface WorkCardProps {
   item: WorkCardItem;
   onPress?: (id: string) => void;
+  /** 그리드 배치용 — 미지정 시 캐러셀 기본(160/224) */
+  width?: number | `${number}%`;
+  imageHeight?: number;
 }
 
-export function WorkCard({ item, onPress }: WorkCardProps) {
+export function WorkCard({ item, onPress, width, imageHeight }: WorkCardProps) {
   return (
-    <Pressable style={styles.card} onPress={() => onPress?.(item.id)}>
+    <Pressable
+      style={[styles.card, width != null && { width }]}
+      onPress={() => onPress?.(item.id)}>
       {typeof item.rank === 'number' && (
         <View style={styles.rankBadge}>
           <ThemedText style={styles.rankText}>{item.rank}</ThemedText>
@@ -31,7 +36,7 @@ export function WorkCard({ item, onPress }: WorkCardProps) {
       )}
       <Image
         source={item.thumbnail ? { uri: item.thumbnail } : undefined}
-        style={styles.thumbnail}
+        style={[styles.thumbnail, imageHeight != null && { height: imageHeight }]}
         contentFit="cover"
         transition={150}
       />
