@@ -15,7 +15,7 @@ import { WorkCard } from '@/components/work/WorkCard';
 import { useSearchWorks } from '@aod/shared/hooks';
 import { DOMAIN_FILTERS } from '@aod/shared/constants';
 import type { WorkSummary } from '@aod/shared/types';
-import { colors, spacing, radius } from '@/theme/tokens';
+import { colors, spacing, radius, fonts } from '@/theme/tokens';
 
 export default function SearchScreen() {
   const [input, setInput] = useState('');
@@ -167,6 +167,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     fontSize: 16,
+    fontFamily: fonts.regular,
     color: colors.textPrimary,
   },
   filterRow: {

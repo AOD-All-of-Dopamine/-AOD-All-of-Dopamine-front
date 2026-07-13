@@ -36,3 +36,24 @@ export const radius = {
   lg: 16,
   full: 999,
 } as const;
+
+// 웹과 동일한 Pretendard (static weights — Android는 weight 교차 매칭 불가)
+export const fonts = {
+  regular: 'Pretendard-Regular',
+  medium: 'Pretendard-Medium',
+  semiBold: 'Pretendard-SemiBold',
+  bold: 'Pretendard-Bold',
+} as const;
+
+export function fontFamilyForWeight(weight?: string | number): string {
+  const w =
+    typeof weight === 'string'
+      ? weight === 'bold'
+        ? 700
+        : Number(weight) || 400
+      : (weight ?? 400);
+  if (w >= 700) return fonts.bold;
+  if (w >= 600) return fonts.semiBold;
+  if (w >= 500) return fonts.medium;
+  return fonts.regular;
+}

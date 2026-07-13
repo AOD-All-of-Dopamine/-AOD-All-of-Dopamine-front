@@ -12,6 +12,7 @@ import { Link, Stack, router } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
+import { fonts } from '@/theme/tokens';
 import { useAuth } from '@/auth/AuthContext';
 
 export default function LoginScreen() {
@@ -99,6 +100,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.three,
     fontSize: 16,
+    fontFamily: fonts.regular,
     color: '#FFFFFF',
   },
   error: {
