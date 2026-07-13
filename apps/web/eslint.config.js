@@ -23,6 +23,17 @@ export default tseslint.config([
       // 레거시 웹 코드 기준선 — 신규 코드 품질 게이트는 packages/shared의 strict 설정이 담당.
       // 웹 리디자인 시 재활성화 검토.
       '@typescript-eslint/no-explicit-any': 'off',
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@aod/shared/src/*'],
+              message: '서브패스 export(@aod/shared/api 등)만 사용하세요.',
+            },
+          ],
+        },
+      ],
     },
   },
   {
