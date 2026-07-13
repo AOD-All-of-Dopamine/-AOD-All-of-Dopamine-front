@@ -24,7 +24,12 @@ import {
   useBookmarkStatus,
   useToggleBookmark,
 } from '@aod/shared/hooks';
-import { DOMAIN_LABEL_MAP, PLATFORM_LABELS } from '@aod/shared/constants';
+import {
+  DOMAIN_LABEL_MAP,
+  PLATFORM_LABELS,
+  getFieldLabel,
+  formatFieldValue,
+} from '@aod/shared/constants';
 import { colors, spacing, radius } from '@/theme/tokens';
 
 type TabType = 'info' | 'reviews';
@@ -232,9 +237,29 @@ export default function WorkDetailScreen() {
               </>
             )}
 
+            {/* 상세 정보 표 (웹 domainInfo 필드표 미러) */}
+            {work.domainInfo && Object.keys(work.domainInfo).length > 0 && (
+              <>
+                <View style={styles.divider} />
+                <View style={styles.fieldTable}>
+                  {Object.entries(work.domainInfo).map(([key, value]) => (
+                    <View key={key} style={styles.fieldRow}>
+                      <ThemedText type="small" style={styles.fieldLabel}>
+                        {getFieldLabel(key, 'domain')}
+                      </ThemedText>
+                      <ThemedText type="small" style={styles.fieldValue}>
+                        {formatFieldValue(key, value)}
+                      </ThemedText>
+                    </View>
+                  ))}
+                </View>
+              </>
+            )}
+
             {/* 플랫폼 */}
             {platformKeys.length > 0 && (
               <>
+                <View style={styles.divider} />
                 <ThemedText style={styles.sectionTitle}>볼 수 있는 곳</ThemedText>
                 <View style={styles.chipRow}>
                   {platformKeys.map((key) => (
@@ -247,9 +272,6 @@ export default function WorkDetailScreen() {
                 </View>
               </>
             )}
-            <ThemedText type="small" style={styles.todo}>
-              상세 정보 표는 F4에서 확장 예정
-            </ThemedText>
           </View>
         ) : (
           <View style={styles.section}>
@@ -448,6 +470,27 @@ const styles = StyleSheet.create({
   todo: {
     color: colors.textFaint,
     marginTop: spacing.md,
+  },
+  divider: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    marginVertical: spacing.sm,
+  },
+  fieldTable: {
+    gap: spacing.sm,
+  },
+  fieldRow: {
+    flexDirection: 'row',
+    padding: spacing.xs,
+    borderRadius: radius.sm,
+  },
+  fieldLabel: {
+    color: colors.textMuted,
+    minWidth: 80,
+  },
+  fieldValue: {
+    flex: 1,
+    color: colors.textPrimary,
   },
   writeReviewButton: {
     backgroundColor: colors.accent,

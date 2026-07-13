@@ -35,7 +35,11 @@ export default tseslint.config(
   },
   {
     // 웹에서 이관한 레거시 파일 — 실서버 응답 타입 확정 후 any 제거 (후속 과제)
-    files: ["src/hooks/useInteractions.ts", "src/types/index.ts"],
+    files: [
+      "src/hooks/useInteractions.ts",
+      "src/types/index.ts",
+      "src/constants/fieldLabels.ts",
+    ],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
     },
