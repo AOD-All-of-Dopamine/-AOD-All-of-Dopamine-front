@@ -5,7 +5,8 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import { authApi, AuthResponse, UserInfo } from "../api/authApi";
+import { useApis } from "@aod/shared/hooks";
+import type { AuthResponse, UserInfo } from "@aod/shared/api";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -25,6 +26,7 @@ const TOKEN_KEY = "token";
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const { authApi } = useApis();
   const [token, setToken] = useState<string | null>(
     localStorage.getItem(TOKEN_KEY),
   );
@@ -66,7 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setLoading(false);
       setAuthReady(true);
     }
-  }, [clearAuth]);
+  }, [clearAuth, authApi]);
 
   useEffect(() => {
     restoreUser();

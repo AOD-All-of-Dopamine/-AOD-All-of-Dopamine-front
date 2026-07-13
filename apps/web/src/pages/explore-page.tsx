@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { useGenresWithCount, useInfiniteWorks } from "../hooks/useWorks";
+import { useGenresWithCount, useInfiniteWorks } from "@aod/shared/hooks";
 import Header from "../components/common/Header";
 import { DOMAIN_PLATFORMS, PLATFORM_META } from "../constants/platforms";
 import PurpleStar from "../assets/purple-star.svg";

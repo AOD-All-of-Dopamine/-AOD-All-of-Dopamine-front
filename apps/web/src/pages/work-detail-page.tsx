@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
 import { useAuth } from "../contexts/AuthContext";
-import { useWorkDetail } from "../hooks/useWorks";
+import { useWorkDetail } from "@aod/shared/hooks";
 import {
   useReviews,
   useDeleteReview,
@@ -11,7 +11,7 @@ import {
   useToggleDislike,
   useBookmarkStatus,
   useToggleBookmark,
-} from "../hooks/useInteractions";
+} from "@aod/shared/hooks";
 import {
   getFieldLabel,
   getPlatformLabel,

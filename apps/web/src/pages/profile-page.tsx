@@ -4,7 +4,7 @@ import {
   useMyReviews,
   useMyBookmarks,
   useMyLikes,
-} from "../hooks/useInteractions";
+} from "@aod/shared/hooks";
 import Header from "../components/common/Header";
 import whiteCat from "../assets/white-cat.png";
 import { useEffect, useState } from "react";

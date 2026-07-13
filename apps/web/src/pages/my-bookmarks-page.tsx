@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMyBookmarks } from "../hooks/useInteractions";
+import { useMyBookmarks } from "@aod/shared/hooks";
 import { DOMAIN_LABEL_MAP } from "@aod/shared/constants";
 import Header from "../components/common/Header";
 import SearchBar from "../components/SearchBar";

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { rankingApi, ExternalRanking } from "../api/rankingApi";
+import { useApis } from "@aod/shared/hooks";
+import type { ExternalRanking } from "@aod/shared/api";
 import Header from "../components/common/Header";
 import PurpleStar from "../assets/purple-star.svg";
 import InfoIcon from "../assets/info-icon.svg";
@@ -49,6 +50,7 @@ const BACKEND_PLATFORM_MAPPING: Record<string, string> = {
 
 export default function RankingPage() {
   const navigate = useNavigate();
+  const { rankingApi } = useApis();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [selectedCategory, setSelectedCategory] = useState<Category>(() => {
@@ -223,7 +225,7 @@ export default function RankingPage() {
     };
 
     fetchRankings();
-  }, [selectedCategory, selectedPlatforms]);
+  }, [selectedCategory, selectedPlatforms, rankingApi]);
 
   const handleCardClick = (id: string) => {
     if (id.startsWith("no-content-")) {

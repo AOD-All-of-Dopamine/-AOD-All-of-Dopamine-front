@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMyReviews, useDeleteReview } from "../hooks/useInteractions";
+import { useMyReviews, useDeleteReview } from "@aod/shared/hooks";
 import Header from "../components/common/Header";
 import PurpleStar from "../assets/purple-star.svg";
 import GreyStar from "../assets/grey-star.svg";

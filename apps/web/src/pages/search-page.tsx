@@ -2,7 +2,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import SearchBar from "../components/SearchBar";
 import BackIcon from "../assets/left-arrow.svg";
 import { useState } from "react";
-import { useSearchWorks } from "../hooks/useWorks";
+import { useSearchWorks } from "@aod/shared/hooks";
 import PurpleStar from "../assets/purple-star.svg";
 import { DOMAIN_LABEL_MAP, DOMAIN_FILTERS } from "@aod/shared/constants";
 

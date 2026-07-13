@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import PurpleStar from "../assets/purple-star.svg";
 import GreyStar from "../assets/grey-star.svg";
 import BottomButton from "../components/common/BottomButton";
-import { useCreateReview } from "../hooks/useInteractions";
+import { useCreateReview } from "@aod/shared/hooks";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function ReviewPage() {

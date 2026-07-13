@@ -1,9 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import SearchBar from "../components/SearchBar";
 import HorizontalScroller from "../components/HorizontalScroller";
-import { useRecentReviewedWorks } from "../hooks/useWorks";
+import { useRecentReviewedWorks } from "@aod/shared/hooks";
 import { useQuery } from "@tanstack/react-query";
-import { rankingApi } from "../api/rankingApi";
+import { useApis } from "@aod/shared/hooks";
 import NewIcon from "../assets/home/new-icon.png";
 import LikeIcon from "../assets/home/likes-icon.svg";
 import BookmarkIcon from "../assets/home/bookmarks-icon.svg";
@@ -128,6 +128,7 @@ function RankingSection({ items, domainLabel, onViewAll, onItemClick }: RankingS
 export default function HomePage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const { rankingApi } = useApis();
 
   const domains: Category[] = ["movie", "tv", "game", "webtoon", "webnovel"];
   const domainLabels: Record<Category, string> = {
