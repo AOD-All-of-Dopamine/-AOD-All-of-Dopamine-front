@@ -18,6 +18,13 @@ export const colors = {
 
   error: "#FF5455",
   blue: "#445FD1",
+
+  // 랭킹 순위·변동 (웹 ranking-page 실측)
+  rankGold: "#FACC15",
+  rankSilver: "#D1D5DB",
+  rankBronze: "#CD7F32",
+  changeUp: "#FF5455",
+  changeDown: "#6883F5",
 } as const;
 
 // Tailwind 스케일(1 = 4px) 미러
