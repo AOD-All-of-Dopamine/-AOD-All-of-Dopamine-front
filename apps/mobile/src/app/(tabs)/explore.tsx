@@ -1,180 +1,293 @@
-import { Image } from 'expo-image';
-import { SymbolView } from 'expo-symbols';
-import { Platform, Pressable, ScrollView, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 
-import { ExternalLink } from '@/components/external-link';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Collapsible } from '@/components/ui/collapsible';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { WorkCard } from '@/components/work/WorkCard';
+import { useGenresWithCount, useInfiniteWorks } from '@aod/shared/hooks';
+import { DOMAIN_PLATFORMS, PLATFORM_LABELS } from '@aod/shared/constants';
+import { colors, spacing, radius } from '@/theme/tokens';
 
-export default function TabTwoScreen() {
-  const safeAreaInsets = useSafeAreaInsets();
-  const insets = {
-    ...safeAreaInsets,
-    bottom: safeAreaInsets.bottom + BottomTabInset + Spacing.three,
+// 웹 explore-page 미러 (기본 도메인 game 동일)
+type Category = 'movie' | 'tv' | 'game' | 'webtoon' | 'webnovel';
+
+const CATEGORIES: { id: Category; label: string }[] = [
+  { id: 'movie', label: '영화' },
+  { id: 'tv', label: '시리즈' },
+  { id: 'game', label: '게임' },
+  { id: 'webtoon', label: '웹툰' },
+  { id: 'webnovel', label: '웹소설' },
+];
+
+export default function ExploreScreen() {
+  const [category, setCategory] = useState<Category>('game');
+  const [selectedPlatforms, setSelectedPlatforms] = useState<Set<string>>(
+    new Set(['ALL']),
+  );
+  const [selectedGenres, setSelectedGenres] = useState<Set<string>>(new Set());
+
+  const domainKey = category.toUpperCase();
+
+  const { data: genresWithCount } = useGenresWithCount(domainKey);
+  const sortedGenres = genresWithCount
+    ? Object.entries(genresWithCount).sort(([, a], [, b]) => b - a)
+    : [];
+
+  const availablePlatforms = DOMAIN_PLATFORMS[domainKey] ?? [];
+
+  const platformsParam = selectedPlatforms.has('ALL')
+    ? undefined
+    : Array.from(selectedPlatforms);
+  const genresParam =
+    selectedGenres.size > 0 ? Array.from(selectedGenres) : undefined;
+
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useInfiniteWorks({
+      domain: domainKey,
+      platforms: platformsParam,
+      genres: genresParam,
+      size: 60,
+      sortBy: 'releaseDate',
+      sortDirection: 'desc',
+    });
+
+  const works = data?.pages.flatMap((page) => page.content) ?? [];
+
+  const selectCategory = (next: Category) => {
+    setCategory(next);
+    setSelectedPlatforms(new Set(['ALL']));
+    setSelectedGenres(new Set());
   };
-  const theme = useTheme();
 
-  const contentPlatformStyle = Platform.select({
-    android: {
-      paddingTop: insets.top,
-      paddingLeft: insets.left,
-      paddingRight: insets.right,
-      paddingBottom: insets.bottom,
-    },
-    web: {
-      paddingTop: Spacing.six,
-      paddingBottom: Spacing.four,
-    },
-  });
+  const togglePlatform = (key: string) => {
+    setSelectedPlatforms((prev) => {
+      if (key === 'ALL') return new Set(['ALL']);
+      const next = new Set(prev);
+      next.delete('ALL');
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next.size === 0 ? new Set(['ALL']) : next;
+    });
+  };
+
+  const toggleGenre = (genre: string) => {
+    setSelectedGenres((prev) => {
+      const next = new Set(prev);
+      if (next.has(genre)) next.delete(genre);
+      else next.add(genre);
+      return next;
+    });
+  };
 
   return (
-    <ScrollView
-      style={[styles.scrollView, { backgroundColor: theme.background }]}
-      contentInset={insets}
-      contentContainerStyle={[styles.contentContainer, contentPlatformStyle]}>
-      <ThemedView style={styles.container}>
-        <ThemedView style={styles.titleContainer}>
-          <ThemedText type="subtitle">Explore</ThemedText>
-          <ThemedText style={styles.centerText} themeColor="textSecondary">
-            This starter app includes example{'\n'}code to help you get started.
-          </ThemedText>
+    <ThemedView style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        {/* 도메인 탭 */}
+        <View style={styles.categoryRow}>
+          {CATEGORIES.map((cat) => {
+            const active = category === cat.id;
+            return (
+              <Pressable
+                key={cat.id}
+                style={[styles.categoryTab, active && styles.categoryTabActive]}
+                onPress={() => selectCategory(cat.id)}>
+                <ThemedText
+                  type="small"
+                  style={[styles.categoryText, active && styles.categoryTextActive]}>
+                  {cat.label}
+                </ThemedText>
+              </Pressable>
+            );
+          })}
+        </View>
 
-          <ExternalLink href="https://docs.expo.dev" asChild>
-            <Pressable style={({ pressed }) => pressed && styles.pressed}>
-              <ThemedView type="backgroundElement" style={styles.linkButton}>
-                <ThemedText type="link">Expo documentation</ThemedText>
-                <SymbolView
-                  tintColor={theme.text}
-                  name={{ ios: 'arrow.up.right.square', android: 'link', web: 'link' }}
-                  size={12}
+        {/* 플랫폼 칩 (라벨만 — 로고 에셋은 웹 전용) */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.chipScroll}
+          contentContainerStyle={styles.chipRow}>
+          {availablePlatforms.map((key) => {
+            const active = selectedPlatforms.has(key);
+            return (
+              <Pressable
+                key={key}
+                style={[styles.chip, active && styles.chipActive]}
+                onPress={() => togglePlatform(key)}>
+                <ThemedText
+                  type="small"
+                  style={[styles.chipText, active && styles.chipTextActive]}>
+                  {PLATFORM_LABELS[key] ?? key}
+                </ThemedText>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        {/* 장르 칩 (작품 수 내림차순 — 웹 동일) */}
+        {sortedGenres.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.chipScroll}
+            contentContainerStyle={styles.chipRow}>
+            {sortedGenres.map(([genre, count]) => {
+              const active = selectedGenres.has(genre);
+              return (
+                <Pressable
+                  key={genre}
+                  style={[styles.chip, active && styles.chipActive]}
+                  onPress={() => toggleGenre(genre)}>
+                  <ThemedText
+                    type="small"
+                    style={[styles.chipText, active && styles.chipTextActive]}>
+                    {genre} {count}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
+
+        {/* 결과 그리드 + 무한 스크롤 */}
+        {isLoading ? (
+          <View style={styles.center}>
+            <ActivityIndicator color={colors.accent} />
+          </View>
+        ) : (
+          <FlatList
+            data={works}
+            keyExtractor={(item) => String(item.id)}
+            numColumns={3}
+            columnWrapperStyle={styles.gridRow}
+            contentContainerStyle={styles.gridContent}
+            onEndReached={() => {
+              if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+            }}
+            onEndReachedThreshold={0.8}
+            renderItem={({ item }) => (
+              <View style={styles.gridCell}>
+                <WorkCard
+                  item={{
+                    id: String(item.id),
+                    title: item.title,
+                    thumbnail: item.thumbnail ?? '',
+                    score: item.score ?? 0,
+                    domain: item.domain,
+                    year: item.releaseDate,
+                  }}
+                  width={'100%'}
+                  imageHeight={140}
+                  onPress={(id) =>
+                    router.push({ pathname: '/work/[id]', params: { id } })
+                  }
                 />
-              </ThemedView>
-            </Pressable>
-          </ExternalLink>
-        </ThemedView>
-
-        <ThemedView style={styles.sectionsWrapper}>
-          <Collapsible title="File-based routing">
-            <ThemedText type="small">
-              This app has two screens: <ThemedText type="code">src/app/index.tsx</ThemedText> and{' '}
-              <ThemedText type="code">src/app/explore.tsx</ThemedText>
-            </ThemedText>
-            <ThemedText type="small">
-              The layout file in <ThemedText type="code">src/app/_layout.tsx</ThemedText> sets up
-              the tab navigator.
-            </ThemedText>
-            <ExternalLink href="https://docs.expo.dev/router/introduction">
-              <ThemedText type="linkPrimary">Learn more</ThemedText>
-            </ExternalLink>
-          </Collapsible>
-
-          <Collapsible title="Android, iOS, and web support">
-            <ThemedView type="backgroundElement" style={styles.collapsibleContent}>
-              <ThemedText type="small">
-                You can open this project on Android, iOS, and the web. To open the web version,
-                press <ThemedText type="smallBold">w</ThemedText> in the terminal running this
-                project.
-              </ThemedText>
-              <Image
-                source={require('@/assets/images/tutorial-web.png')}
-                style={styles.imageTutorial}
-              />
-            </ThemedView>
-          </Collapsible>
-
-          <Collapsible title="Images">
-            <ThemedText type="small">
-              For static images, you can use the <ThemedText type="code">@2x</ThemedText> and{' '}
-              <ThemedText type="code">@3x</ThemedText> suffixes to provide files for different
-              screen densities.
-            </ThemedText>
-            <Image source={require('@/assets/images/react-logo.png')} style={styles.imageReact} />
-            <ExternalLink href="https://reactnative.dev/docs/images">
-              <ThemedText type="linkPrimary">Learn more</ThemedText>
-            </ExternalLink>
-          </Collapsible>
-
-          <Collapsible title="Light and dark mode components">
-            <ThemedText type="small">
-              This template has light and dark mode support. The{' '}
-              <ThemedText type="code">useColorScheme()</ThemedText> hook lets you inspect what the
-              user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-            </ThemedText>
-            <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-              <ThemedText type="linkPrimary">Learn more</ThemedText>
-            </ExternalLink>
-          </Collapsible>
-
-          <Collapsible title="Animations">
-            <ThemedText type="small">
-              This template includes an example of an animated component. The{' '}
-              <ThemedText type="code">src/components/ui/collapsible.tsx</ThemedText> component uses
-              the powerful <ThemedText type="code">react-native-reanimated</ThemedText> library to
-              animate opening this hint.
-            </ThemedText>
-          </Collapsible>
-        </ThemedView>
-        {Platform.OS === 'web' && <WebBadge />}
-      </ThemedView>
-    </ScrollView>
+              </View>
+            )}
+            ListEmptyComponent={
+              <View style={styles.center}>
+                <ThemedText type="small" style={styles.muted}>
+                  조건에 맞는 작품이 없습니다.
+                </ThemedText>
+              </View>
+            }
+            ListFooterComponent={
+              isFetchingNextPage ? (
+                <ActivityIndicator
+                  color={colors.accent}
+                  style={styles.footerLoading}
+                />
+              ) : null
+            }
+          />
+        )}
+      </SafeAreaView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollView: {
+  container: {
     flex: 1,
   },
-  contentContainer: {
+  safeArea: {
+    flex: 1,
+  },
+  categoryRow: {
     flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  categoryTab: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  categoryTabActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: colors.textPrimary,
+  },
+  categoryText: {
+    color: colors.textMuted,
+  },
+  categoryTextActive: {
+    color: colors.textPrimary,
+    fontWeight: '600',
+  },
+  chipScroll: {
+    flexGrow: 0,
+    marginTop: spacing.md,
+  },
+  chipRow: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+  },
+  chip: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  chipActive: {
+    backgroundColor: colors.accent,
+  },
+  chipText: {
+    color: colors.textBright,
+  },
+  chipTextActive: {
+    color: colors.textPrimary,
+    fontWeight: '600',
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: spacing.xxl,
   },
-  container: {
-    maxWidth: MaxContentWidth,
-    flexGrow: 1,
+  muted: {
+    color: colors.textFaint,
   },
-  titleContainer: {
-    gap: Spacing.three,
-    alignItems: 'center',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.six,
+  gridRow: {
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
-  centerText: {
-    textAlign: 'center',
+  gridContent: {
+    paddingVertical: spacing.lg,
+    gap: spacing.lg,
   },
-  pressed: {
-    opacity: 0.7,
+  gridCell: {
+    flex: 1 / 3,
   },
-  linkButton: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
-    borderRadius: Spacing.five,
-    justifyContent: 'center',
-    gap: Spacing.one,
-    alignItems: 'center',
-  },
-  sectionsWrapper: {
-    gap: Spacing.five,
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.three,
-  },
-  collapsibleContent: {
-    alignItems: 'center',
-  },
-  imageTutorial: {
-    width: '100%',
-    aspectRatio: 296 / 171,
-    borderRadius: Spacing.three,
-    marginTop: Spacing.two,
-  },
-  imageReact: {
-    width: 100,
-    height: 100,
-    alignSelf: 'center',
+  footerLoading: {
+    marginVertical: spacing.lg,
   },
 });
