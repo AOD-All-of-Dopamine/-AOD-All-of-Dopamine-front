@@ -12,7 +12,7 @@ export interface WorkCardItem {
   thumbnail: string;
   score?: number;
   domain?: string;
-  year?: number;
+  year?: string; // releaseDate 문자열 (웹 mapToWorkItem과 동일)
   rank?: number;
 }
 
