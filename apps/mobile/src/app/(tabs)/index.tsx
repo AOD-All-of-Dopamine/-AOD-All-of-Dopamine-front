@@ -14,6 +14,7 @@ import { Image } from 'expo-image';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { LikesIcon, BookmarksIcon } from '@/components/icons';
 import { WorkCarousel } from '@/components/work/WorkCarousel';
 import type { WorkCardItem } from '@/components/work/WorkCard';
 import { useApis, useRecentReviewedWorks } from '@aod/shared/hooks';
@@ -161,11 +162,15 @@ export default function HomeScreen() {
             </ThemedText>
           </Pressable>
 
-          {/* 퀵 내비 (웹 동그라미 내비 미러) */}
+          {/* 퀵 내비 (웹 동그라미 내비 미러 — 아이콘도 웹 에셋) */}
           <View style={styles.quickNav}>
             <Pressable style={styles.quickNavItem} onPress={() => router.push('/new')}>
               <View style={styles.quickNavCircle}>
-                <ThemedText style={styles.quickNavEmoji}>🗓️</ThemedText>
+                <Image
+                  source={require('@/assets/images/quicknav-new.png')}
+                  style={styles.quickNavImage}
+                  contentFit="contain"
+                />
               </View>
               <ThemedText type="small" style={styles.quickNavLabel}>
                 공개예정
@@ -173,7 +178,7 @@ export default function HomeScreen() {
             </Pressable>
             <Pressable style={styles.quickNavItem} onPress={notReady}>
               <View style={styles.quickNavCircle}>
-                <ThemedText style={styles.quickNavEmoji}>❤️</ThemedText>
+                <LikesIcon size={22} />
               </View>
               <ThemedText type="small" style={styles.quickNavLabel}>
                 좋아요
@@ -181,7 +186,7 @@ export default function HomeScreen() {
             </Pressable>
             <Pressable style={styles.quickNavItem} onPress={notReady}>
               <View style={styles.quickNavCircle}>
-                <ThemedText style={styles.quickNavEmoji}>🔖</ThemedText>
+                <BookmarksIcon size={22} />
               </View>
               <ThemedText type="small" style={styles.quickNavLabel}>
                 북마크
@@ -273,9 +278,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  quickNavEmoji: {
-    fontSize: 22,
-    lineHeight: 26,
+  quickNavImage: {
+    width: 24,
+    height: 24,
   },
   quickNavLabel: {
     color: colors.textBright,
