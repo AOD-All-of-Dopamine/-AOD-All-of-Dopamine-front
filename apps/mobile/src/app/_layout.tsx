@@ -6,6 +6,7 @@ import { ApiProvider } from '@aod/shared/hooks';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
+import { AuthProvider } from '@/auth/AuthContext';
 import { apis } from '@/lib/api';
 import { queryClient } from '@/lib/queryClient';
 
@@ -16,10 +17,12 @@ export default function TabLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <ApiProvider apis={apis}>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <AnimatedSplashOverlay />
-          <AppTabs />
-        </ThemeProvider>
+        <AuthProvider>
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <AnimatedSplashOverlay />
+            <AppTabs />
+          </ThemeProvider>
+        </AuthProvider>
       </ApiProvider>
     </QueryClientProvider>
   );
