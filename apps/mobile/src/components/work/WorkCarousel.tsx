@@ -22,16 +22,18 @@ export function WorkCarousel({
 }: WorkCarouselProps) {
   return (
     <View style={styles.section}>
-      <View style={styles.header}>
-        <ThemedText style={styles.title}>{title}</ThemedText>
-        {onViewAll && (
-          <Pressable onPress={onViewAll}>
-            <ThemedText type="small" style={styles.viewAll}>
-              전체보기 ›
-            </ThemedText>
-          </Pressable>
-        )}
-      </View>
+      {(title !== '' || onViewAll) && (
+        <View style={styles.header}>
+          <ThemedText style={styles.title}>{title}</ThemedText>
+          {onViewAll && (
+            <Pressable onPress={onViewAll}>
+              <ThemedText type="small" style={styles.viewAll}>
+                전체보기 ›
+              </ThemedText>
+            </Pressable>
+          )}
+        </View>
+      )}
 
       {loading ? (
         <View style={styles.loading}>

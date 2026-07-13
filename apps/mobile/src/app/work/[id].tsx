@@ -293,9 +293,22 @@ export default function WorkDetailScreen() {
                 </View>
               ))
             )}
-            <ThemedText type="small" style={styles.todo}>
-              리뷰 작성은 F4에서 지원 예정
-            </ThemedText>
+            <Pressable
+              style={styles.writeReviewButton}
+              onPress={() => {
+                if (!isAuthenticated) {
+                  requireLogin();
+                  return;
+                }
+                router.push({
+                  pathname: '/review/[id]',
+                  params: { id: String(contentId) },
+                });
+              }}>
+              <ThemedText style={styles.writeReviewText}>
+                리뷰 작성하기
+              </ThemedText>
+            </Pressable>
           </View>
         )}
       </ScrollView>
@@ -435,5 +448,16 @@ const styles = StyleSheet.create({
   todo: {
     color: colors.textFaint,
     marginTop: spacing.md,
+  },
+  writeReviewButton: {
+    backgroundColor: colors.accent,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    marginTop: spacing.md,
+  },
+  writeReviewText: {
+    color: colors.textPrimary,
+    fontWeight: '600',
   },
 });
