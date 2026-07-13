@@ -61,6 +61,18 @@ describe("AuthContext hydration", () => {
     expect(mockClear).toHaveBeenCalled();
   });
 
+  it("400(서버가 만료 토큰에 400 반환) → 토큰 삭제 + unauthenticated", async () => {
+    mockGet.mockResolvedValue("expired");
+    mockGetCurrentUser.mockRejectedValue({
+      response: { status: 400, data: { error: "인증에 실패했습니다." } },
+    });
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() =>
+      expect(result.current.state.status).toBe("unauthenticated"),
+    );
+    expect(mockClear).toHaveBeenCalled();
+  });
+
   it("일시 오류(5xx) → unauthenticated지만 토큰은 유지", async () => {
     mockGet.mockResolvedValue("tok");
     mockGetCurrentUser.mockRejectedValue({ response: { status: 500 } });

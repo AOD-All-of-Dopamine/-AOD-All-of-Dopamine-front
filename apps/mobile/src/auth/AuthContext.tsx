@@ -40,8 +40,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch (error) {
       const status = (error as { response?: { status?: number } })?.response
         ?.status;
-      if (status === 401 || status === 403) {
-        // 인증 자체가 잘못된 경우만 토큰 폐기 (웹 AuthContext와 동일 정책)
+      // 인증 자체가 잘못된 경우만 토큰 폐기. 백엔드는 만료/무효 토큰에
+      // 400("인증에 실패했습니다")을 반환하므로 400도 포함한다 — 안 하면
+      // 만료 토큰이 영구히 남아 매 부팅마다 실패 요청이 반복된다.
+      // (일시 오류 5xx/네트워크는 토큰 유지 — 웹 AuthContext와 동일)
+      if (status === 400 || status === 401 || status === 403) {
         await tokenStorage.clear();
       }
       setState({ status: "unauthenticated" });
