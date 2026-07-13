@@ -1,6 +1,7 @@
 import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Link } from 'expo-router';
 
 import { AnimatedIcon } from '@/components/animated-icon';
 import { HintRow } from '@/components/hint-row';
@@ -8,6 +9,39 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { WebBadge } from '@/components/web-badge';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { useAuth } from '@/auth/AuthContext';
+
+// F1 임시: 인증 상태 확인·로그인 진입점 — F2 홈 구현 시 교체된다.
+function AuthRow() {
+  const { state, logout } = useAuth();
+  return (
+    <ThemedView type="backgroundElement" style={styles.authRow}>
+      {state.status === 'authenticated' ? (
+        <>
+          <ThemedText type="small">{state.user.username} 님</ThemedText>
+          <Pressable onPress={logout}>
+            <ThemedText type="small" style={styles.authAction}>
+              로그아웃
+            </ThemedText>
+          </Pressable>
+        </>
+      ) : (
+        <>
+          <ThemedText type="small">
+            {state.status === 'loading' ? '세션 확인 중…' : '비로그인'}
+          </ThemedText>
+          {state.status === 'unauthenticated' && (
+            <Link href="/login">
+              <ThemedText type="small" style={styles.authAction}>
+                로그인
+              </ThemedText>
+            </Link>
+          )}
+        </>
+      )}
+    </ThemedView>
+  );
+}
 
 function getDevMenuHint() {
   if (Platform.OS === 'web') {
@@ -55,6 +89,8 @@ export default function HomeScreen() {
           />
         </ThemedView>
 
+        <AuthRow />
+
         {Platform.OS === 'web' && <WebBadge />}
       </SafeAreaView>
     </ThemedView>
@@ -94,5 +130,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.four,
     borderRadius: Spacing.four,
+  },
+  authRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.three,
+    borderRadius: Spacing.four,
+  },
+  authAction: {
+    color: '#855BFF',
+    fontWeight: '600',
   },
 });
