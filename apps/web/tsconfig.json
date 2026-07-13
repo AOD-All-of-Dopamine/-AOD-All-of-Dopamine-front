@@ -6,6 +6,16 @@
     "module": "ESNext",
     "skipLibCheck": true,
 
+    /* 모노레포 내 @types/react 이중 버전(웹 18 vs 모바일 19) 충돌 방지 —
+       react-router-dom 등 d.ts의 'react' 참조를 웹의 18 타입으로 고정 */
+    "baseUrl": ".",
+    "paths": {
+      "react": ["./node_modules/@types/react"],
+      "react/*": ["./node_modules/@types/react/*"],
+      "react-dom": ["./node_modules/@types/react-dom"],
+      "react-dom/*": ["./node_modules/@types/react-dom/*"]
+    },
+
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
