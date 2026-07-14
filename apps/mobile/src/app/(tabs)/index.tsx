@@ -167,7 +167,7 @@ export default function HomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
         <ScrollView showsVerticalScrollIndicator={false}>
           {/* 검색 바 */}
           <Pressable style={styles.searchBar} onPress={() => router.push('/search')}>

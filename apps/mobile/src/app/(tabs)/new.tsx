@@ -136,7 +136,7 @@ export default function NewReleasesScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
         {/* 헤더 (웹 Header 미러: 제목 + 검색) */}
         <View style={styles.header}>
           <ThemedText style={styles.headerTitle}>신작</ThemedText>

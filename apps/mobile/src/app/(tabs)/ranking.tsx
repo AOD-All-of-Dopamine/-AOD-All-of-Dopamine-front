@@ -233,7 +233,7 @@ export default function RankingScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
         {/* 헤더 */}
         <View style={styles.header}>
           <ThemedText style={styles.headerTitle}>랭킹</ThemedText>

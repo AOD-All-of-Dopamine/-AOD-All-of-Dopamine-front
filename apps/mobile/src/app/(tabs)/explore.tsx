@@ -111,7 +111,7 @@ export default function ExploreScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
         {/* 헤더 (웹 Header 미러) */}
         <View style={styles.header}>
           <ThemedText style={styles.headerTitle}>탐색</ThemedText>

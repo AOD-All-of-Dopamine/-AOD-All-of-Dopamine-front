@@ -65,7 +65,7 @@ export default function ProfileScreen() {
   if (state.status === 'loading') {
     return (
       <ThemedView style={styles.container}>
-        <SafeAreaView style={styles.centerScreen}>
+        <SafeAreaView edges={['top']} style={styles.centerScreen}>
           <ThemedText type="small" style={styles.loginHint}>
             세션 확인 중…
           </ThemedText>
@@ -78,7 +78,7 @@ export default function ProfileScreen() {
   if (!isAuthenticated) {
     return (
       <ThemedView style={styles.container}>
-        <SafeAreaView style={styles.centerScreen}>
+        <SafeAreaView edges={['top']} style={styles.centerScreen}>
           <ThemedText style={styles.loginTitle}>로그인이 필요합니다</ThemedText>
           <ThemedText type="small" style={styles.loginHint}>
             프로필을 보려면 로그인해주세요.
@@ -97,7 +97,7 @@ export default function ProfileScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
         {/* 헤더: 마이페이지 + 로그아웃 */}
         <View style={styles.header}>
           <ThemedText style={styles.headerTitle}>마이페이지</ThemedText>
