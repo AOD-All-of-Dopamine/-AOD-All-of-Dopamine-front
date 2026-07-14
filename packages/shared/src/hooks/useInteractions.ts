@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ReviewRequest } from "../api/interactionApi";
 import { useApis } from "./ApiProvider";
-import { reviewKeys, interactionKeys, myKeys } from "../queries/keys";
+import { reviewKeys, interactionKeys, myKeys, workKeys } from "../queries/keys";
 
 /**
  * 리뷰 목록 조회
@@ -26,8 +26,10 @@ export const useCreateReview = (contentId: number) => {
     mutationFn: (reviewData: ReviewRequest) =>
       reviewApi.createReview(contentId, reviewData),
     onSuccess: () => {
-      // 리뷰 목록 다시 불러오기
+      // 리뷰 목록 + 내 리뷰 목록/카운트 + 작품 평점 갱신
       queryClient.invalidateQueries({ queryKey: reviewKeys.byContent(contentId) });
+      queryClient.invalidateQueries({ queryKey: myKeys.reviewsRoot() });
+      queryClient.invalidateQueries({ queryKey: workKeys.detail(contentId) });
     },
   });
 };
@@ -63,7 +65,10 @@ export const useDeleteReview = (contentId: number) => {
   return useMutation({
     mutationFn: (reviewId: number) => reviewApi.deleteReview(reviewId),
     onSuccess: () => {
+      // 내 리뷰 화면(my-reviews)은 contentId를 모른 채 0을 넘기므로
+      // myReviews 전체 무효화가 없으면 삭제 후 목록이 갱신되지 않는다.
       queryClient.invalidateQueries({ queryKey: reviewKeys.byContent(contentId) });
+      queryClient.invalidateQueries({ queryKey: myKeys.reviewsRoot() });
     },
   });
 };
@@ -115,6 +120,7 @@ export const useToggleLike = (contentId: number) => {
 
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: interactionKeys.likeStats(contentId) });
+      queryClient.invalidateQueries({ queryKey: myKeys.likesRoot() });
     },
   });
 };
@@ -157,6 +163,7 @@ export const useToggleDislike = (contentId: number) => {
 
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: interactionKeys.likeStats(contentId) });
+      queryClient.invalidateQueries({ queryKey: myKeys.likesRoot() });
     },
   });
 };

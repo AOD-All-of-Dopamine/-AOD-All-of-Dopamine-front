@@ -31,11 +31,14 @@ export function createApiClients(options: ApiClientOptions): ApiClients {
   } = options;
   const { retries = 2, retryDelay = 500 } = options.retry ?? {};
 
+  // dev 로그에도 비밀번호·토큰은 남기지 않는다 (auth 요청 body/응답 마스킹)
+  const isAuthUrl = (url?: string) => !!url && url.includes("/auth/");
+
   const logRequest = (config: InternalAxiosRequestConfig) => {
     if (isDev) {
       console.log("API Request:", config.method?.toUpperCase(), config.url, {
         params: config.params,
-        data: config.data,
+        data: isAuthUrl(config.url) ? "[redacted]" : config.data,
       });
     }
     return config;
@@ -52,7 +55,7 @@ export function createApiClients(options: ApiClientOptions): ApiClients {
         "API Response:",
         response.config.method?.toUpperCase(),
         response.config.url,
-        response.data,
+        isAuthUrl(response.config.url) ? "[redacted]" : response.data,
       );
     }
     return response;

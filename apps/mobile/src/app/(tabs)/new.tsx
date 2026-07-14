@@ -75,18 +75,26 @@ export default function NewReleasesScreen() {
     ? undefined
     : Array.from(selectedPlatforms);
 
-  const { data: recentData, isLoading: isLoadingRecent } = useRecentReleases(
+  const {
+    data: recentData,
+    isLoading: isLoadingRecent,
+    error: recentError,
+  } = useRecentReleases(
     { domain: domainKey, platforms: platformsParam, page: 0, size: 20 },
     { enabled: releaseType === 'released' },
   );
-  const { data: upcomingData, isLoading: isLoadingUpcoming } =
-    useUpcomingReleases(
-      { domain: domainKey, platforms: platformsParam, page: 0, size: 20 },
-      { enabled: releaseType === 'upcoming' },
-    );
+  const {
+    data: upcomingData,
+    isLoading: isLoadingUpcoming,
+    error: upcomingError,
+  } = useUpcomingReleases(
+    { domain: domainKey, platforms: platformsParam, page: 0, size: 20 },
+    { enabled: releaseType === 'upcoming' },
+  );
 
   const isLoading =
     releaseType === 'released' ? isLoadingRecent : isLoadingUpcoming;
+  const error = releaseType === 'released' ? recentError : upcomingError;
   const works =
     (releaseType === 'released'
       ? recentData?.content
@@ -226,6 +234,12 @@ export default function NewReleasesScreen() {
           {isLoading ? (
             <View style={styles.center}>
               <ActivityIndicator color={colors.accent} />
+            </View>
+          ) : error ? (
+            <View style={styles.center}>
+              <ThemedText type="small" style={styles.muted}>
+                데이터를 불러올 수 없습니다.
+              </ThemedText>
             </View>
           ) : sortedDates.length === 0 ? (
             <View style={styles.center}>

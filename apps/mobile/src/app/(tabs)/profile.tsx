@@ -61,6 +61,19 @@ export default function ProfileScreen() {
     ]);
   };
 
+  // hydration 중에는 판단 보류 — 로그인된 사용자에게 로그인 프롬프트가 깜빡이지 않게
+  if (state.status === 'loading') {
+    return (
+      <ThemedView style={styles.container}>
+        <SafeAreaView style={styles.centerScreen}>
+          <ThemedText type="small" style={styles.loginHint}>
+            세션 확인 중…
+          </ThemedText>
+        </SafeAreaView>
+      </ThemedView>
+    );
+  }
+
   // 비로그인 (웹 미러)
   if (!isAuthenticated) {
     return (

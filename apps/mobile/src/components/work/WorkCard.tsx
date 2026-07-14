@@ -27,7 +27,11 @@ interface WorkCardProps {
 export function WorkCard({ item, onPress, width, imageHeight }: WorkCardProps) {
   return (
     <Pressable
-      style={[styles.card, width != null && { width }]}
+      style={({ pressed }) => [
+        styles.card,
+        width != null && { width },
+        pressed && styles.cardPressed,
+      ]}
       onPress={() => onPress?.(item.id)}>
       {typeof item.rank === 'number' && (
         <View style={styles.rankBadge}>
@@ -61,6 +65,9 @@ export function WorkCard({ item, onPress, width, imageHeight }: WorkCardProps) {
 const styles = StyleSheet.create({
   card: {
     width: 160,
+  },
+  cardPressed: {
+    opacity: 0.7,
   },
   rankBadge: {
     position: 'absolute',

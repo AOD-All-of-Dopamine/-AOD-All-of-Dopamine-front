@@ -151,8 +151,11 @@ export default function RankingScreen() {
     });
   };
 
-  // 웹 fetchRankings + 클라이언트 필터링 로직 미러
+  // 웹 fetchRankings + 클라이언트 필터링 로직 미러.
+  // ignore 플래그: 탭 전환 후 늦게 도착한 이전 카테고리 응답이
+  // 현재 탭 데이터를 덮어쓰는 레이스 방지 (재시도 백오프로 윈도우가 넓음).
   useEffect(() => {
+    let ignore = false;
     const fetchRankings = async () => {
       setLoading(true);
       try {
@@ -204,14 +207,17 @@ export default function RankingScreen() {
           }
         }
 
-        setRankings(mapped);
+        if (!ignore) setRankings(mapped);
       } catch {
-        setRankings([]);
+        if (!ignore) setRankings([]);
       } finally {
-        setLoading(false);
+        if (!ignore) setLoading(false);
       }
     };
     fetchRankings();
+    return () => {
+      ignore = true;
+    };
   }, [category, selectedPlatforms, rankingApi]);
 
   const handlePress = (id: string) => {

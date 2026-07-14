@@ -18,6 +18,7 @@ import { LikesIcon, BookmarksIcon } from '@/components/icons';
 import { WorkCarousel } from '@/components/work/WorkCarousel';
 import type { WorkCardItem } from '@/components/work/WorkCard';
 import { useApis, useRecentReviewedWorks } from '@aod/shared/hooks';
+import { useAuth } from '@/auth/AuthContext';
 import type { ExternalRanking } from '@aod/shared/api';
 import type { WorkSummary } from '@aod/shared/types';
 import { colors, spacing, radius } from '@/theme/tokens';
@@ -113,6 +114,19 @@ function RankingSection({
 
 export default function HomeScreen() {
   const { rankingApi } = useApis();
+  const { state: authState } = useAuth();
+
+  // 웹 handleProtectedNavigation 미러 — 비로그인 시 로그인 유도
+  const protectedPush = (path: '/profile/likes' | '/profile/bookmarks') => {
+    if (authState.status !== 'authenticated') {
+      Alert.alert('로그인이 필요한 기능입니다.', '로그인 후 이용해 주세요.', [
+        { text: '취소', style: 'cancel' },
+        { text: '로그인', onPress: () => router.push('/login') },
+      ]);
+      return;
+    }
+    router.push(path);
+  };
 
   // 웹과 동일한 페이지 전용 캐시 키
   const { data: allRankings, isLoading: isLoadingRankings } = useQuery({
@@ -176,7 +190,9 @@ export default function HomeScreen() {
                 공개예정
               </ThemedText>
             </Pressable>
-            <Pressable style={styles.quickNavItem} onPress={notReady}>
+            <Pressable
+              style={styles.quickNavItem}
+              onPress={() => protectedPush('/profile/likes')}>
               <View style={styles.quickNavCircle}>
                 <LikesIcon size={22} />
               </View>
@@ -184,7 +200,9 @@ export default function HomeScreen() {
                 좋아요
               </ThemedText>
             </Pressable>
-            <Pressable style={styles.quickNavItem} onPress={notReady}>
+            <Pressable
+              style={styles.quickNavItem}
+              onPress={() => protectedPush('/profile/bookmarks')}>
               <View style={styles.quickNavCircle}>
                 <BookmarksIcon size={22} />
               </View>

@@ -10,6 +10,7 @@ import {
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -71,6 +72,7 @@ function Stars({ rating, size = 16 }: { rating: number; size?: number }) {
 
 export default function WorkDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const insets = useSafeAreaInsets();
   const contentId = id ? Number(id) : 0;
   const { state: authState } = useAuth();
   const isAuthenticated = authState.status === 'authenticated';
@@ -203,8 +205,8 @@ export default function WorkDetailScreen() {
             style={styles.heroFade}
           />
 
-          {/* 오버레이 헤더 */}
-          <View style={styles.overlayHeader}>
+          {/* 오버레이 헤더 (상태바/노치 아래로 내려오도록 safe-area 적용) */}
+          <View style={[styles.overlayHeader, { marginTop: insets.top }]}>
             <Pressable onPress={() => router.back()} hitSlop={8}>
               <BackArrow size={24} />
             </Pressable>
@@ -679,7 +681,6 @@ const styles = StyleSheet.create({
     height: 160,
   },
   overlayHeader: {
-    marginTop: spacing.xxl + spacing.lg,
     height: 50,
     flexDirection: 'row',
     justifyContent: 'space-between',

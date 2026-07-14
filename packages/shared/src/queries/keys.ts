@@ -36,8 +36,10 @@ export const interactionKeys = {
 };
 
 export const myKeys = {
+  reviewsRoot: () => ["myReviews"] as const,
   reviews: (page: number, size: number) => ["myReviews", page, size] as const,
   bookmarksRoot: () => ["myBookmarks"] as const,
   bookmarks: (page: number, size: number) => ["myBookmarks", page, size] as const,
+  likesRoot: () => ["myLikes"] as const,
   likes: (page: number, size: number) => ["myLikes", page, size] as const,
 };

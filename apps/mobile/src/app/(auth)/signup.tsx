@@ -20,6 +20,7 @@ export default function SignupScreen() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -27,10 +28,20 @@ export default function SignupScreen() {
     username.trim().length > 0 &&
     email.trim().length > 0 &&
     password.length > 0 &&
+    passwordConfirm.length > 0 &&
     !submitting;
 
   const onSubmit = async () => {
     if (!canSubmit) return;
+    // 웹 signup 클라이언트 검증 미러
+    if (password.length < 4) {
+      setError('비밀번호는 4자 이상이어야 합니다.');
+      return;
+    }
+    if (password !== passwordConfirm) {
+      setError('비밀번호가 일치하지 않습니다.');
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -72,11 +83,19 @@ export default function SignupScreen() {
         />
         <TextInput
           style={styles.input}
-          placeholder="비밀번호"
+          placeholder="비밀번호 (4자 이상)"
           placeholderTextColor="#8E8E93"
           secureTextEntry
           value={password}
           onChangeText={setPassword}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="비밀번호 확인"
+          placeholderTextColor="#8E8E93"
+          secureTextEntry
+          value={passwordConfirm}
+          onChangeText={setPasswordConfirm}
           onSubmitEditing={onSubmit}
         />
         {error != null && <ThemedText style={styles.error}>{error}</ThemedText>}

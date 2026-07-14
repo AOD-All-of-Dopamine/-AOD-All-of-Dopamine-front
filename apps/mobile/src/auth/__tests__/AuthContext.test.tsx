@@ -23,6 +23,12 @@ jest.mock("../../lib/api", () => ({
       signup: jest.fn(),
     },
   },
+  sessionExpired: { handler: jest.fn() },
+}));
+
+const mockCacheClear = jest.fn();
+jest.mock("../../lib/queryClient", () => ({
+  queryClient: { clear: (...a: unknown[]) => mockCacheClear(...a) },
 }));
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -81,6 +87,14 @@ describe("AuthContext hydration", () => {
       expect(result.current.state.status).toBe("unauthenticated"),
     );
     expect(mockClear).not.toHaveBeenCalled();
+  });
+
+  it("tokenStorage.get() 예외 → loading 고착 없이 unauthenticated", async () => {
+    mockGet.mockRejectedValue(new Error("SecureStore failure"));
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() =>
+      expect(result.current.state.status).toBe("unauthenticated"),
+    );
   });
 
   it("login 성공 → 토큰 저장 + authenticated", async () => {

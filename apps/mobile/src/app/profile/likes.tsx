@@ -48,7 +48,7 @@ export default function MyLikesScreen() {
       ) : filtered.length === 0 ? (
         <View style={styles.center}>
           <ThemedText style={styles.emptyText}>
-            아직 좋아요한 작품이 없습니다.
+            {searchQuery ? '검색 결과가 없습니다.' : '아직 좋아요한 작품이 없습니다.'}
           </ThemedText>
           <Pressable
             style={styles.emptyButton}
@@ -60,6 +60,7 @@ export default function MyLikesScreen() {
         <FlatList
           data={filtered}
           keyExtractor={(work) => String(work.id)}
+          keyboardShouldPersistTaps="handled"
           numColumns={3}
           columnWrapperStyle={styles.gridRow}
           contentContainerStyle={styles.gridContent}

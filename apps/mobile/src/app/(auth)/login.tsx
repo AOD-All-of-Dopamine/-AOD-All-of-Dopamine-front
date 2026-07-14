@@ -30,7 +30,7 @@ export default function LoginScreen() {
     setError(null);
     try {
       await login(username.trim(), password);
-      router.replace('/');
+      router.replace('/profile'); // 웹 로그인 성공 후 이동 위치 미러
     } catch (e) {
       const msg = (e as { response?: { data?: { error?: string } } })?.response
         ?.data?.error;

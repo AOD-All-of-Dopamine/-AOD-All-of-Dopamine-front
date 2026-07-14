@@ -30,12 +30,15 @@ export default function SearchScreen() {
     domain: selectedDomain === 'ALL' ? undefined : selectedDomain,
   });
 
-  // 페이지 누적 (웹 숫자 페이지네이션의 모바일 대체 — "더 보기")
+  // 페이지 누적 (웹 숫자 페이지네이션의 모바일 대체 — "더 보기").
+  // 재연결 등으로 같은 페이지가 refetch되어도 중복 append되지 않게 id 기준 dedup.
   useEffect(() => {
     if (!data) return;
-    setItems((prev) =>
-      data.page === 0 ? data.content : [...prev, ...data.content],
-    );
+    setItems((prev) => {
+      if (data.page === 0) return data.content;
+      const seen = new Set(prev.map((w) => w.id));
+      return [...prev, ...data.content.filter((w) => !seen.has(w.id))];
+    });
   }, [data]);
 
   const submit = () => {
@@ -110,6 +113,7 @@ export default function SearchScreen() {
         <FlatList
           data={items}
           keyExtractor={(item) => String(item.id)}
+          keyboardShouldPersistTaps="handled"
           numColumns={3}
           columnWrapperStyle={styles.gridRow}
           contentContainerStyle={styles.gridContent}

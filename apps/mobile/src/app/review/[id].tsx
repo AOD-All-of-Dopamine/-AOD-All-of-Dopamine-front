@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -8,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -56,10 +59,17 @@ export default function ReviewWriteScreen() {
     );
   };
 
+  const insets = useSafeAreaInsets();
+
   return (
     <ThemedView style={styles.container}>
       <Stack.Screen options={{ headerShown: true, title: '리뷰 작성하기' }} />
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled">
         {/* 별점 */}
         <ThemedText type="small" style={styles.label}>
           별점
@@ -102,7 +112,7 @@ export default function ReviewWriteScreen() {
       </ScrollView>
 
       {/* 하단 저장 버튼 (웹 BottomButton 미러) */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { paddingBottom: spacing.xl + insets.bottom }]}>
         <Pressable
           style={[styles.saveButton, isSaveDisabled && styles.saveButtonDisabled]}
           disabled={isSaveDisabled}
@@ -110,12 +120,16 @@ export default function ReviewWriteScreen() {
           <ThemedText style={styles.saveButtonText}>저장</ThemedText>
         </Pressable>
       </View>
+      </KeyboardAvoidingView>
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  flex: {
     flex: 1,
   },
   content: {
