@@ -8,7 +8,9 @@ import {
   View,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
+import { SvgXml } from 'react-native-svg';
 
+import { MORE } from '@/components/svg-assets';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useMyReviews, useDeleteReview } from '@aod/shared/hooks';
@@ -101,8 +103,8 @@ export default function MyReviewsScreen() {
                     {review.contentTitle}
                   </ThemedText>
                 </Pressable>
-                <Pressable onPress={() => handleOptions(review.reviewId)} hitSlop={8}>
-                  <ThemedText style={styles.moreIcon}>⋯</ThemedText>
+                <Pressable onPress={() => handleOptions(review.reviewId)} hitSlop={12}>
+                  <SvgXml xml={MORE} width={4} height={16} />
                 </Pressable>
               </View>
               <Stars rating={review.rating} />

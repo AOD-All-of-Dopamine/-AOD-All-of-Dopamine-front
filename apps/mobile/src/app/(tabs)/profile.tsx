@@ -4,6 +4,9 @@ import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 
+import { SvgXml } from 'react-native-svg';
+
+import { LOGOUT, VIEW_ALL } from '@/components/svg-assets';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { WorkCarousel } from '@/components/work/WorkCarousel';
@@ -86,9 +89,7 @@ export default function ProfileScreen() {
         <View style={styles.header}>
           <ThemedText style={styles.headerTitle}>마이페이지</ThemedText>
           <Pressable onPress={handleLogout} hitSlop={8}>
-            <ThemedText type="small" style={styles.logoutText}>
-              로그아웃
-            </ThemedText>
+            <SvgXml xml={LOGOUT} width={24} height={24} />
           </Pressable>
         </View>
 
@@ -146,10 +147,13 @@ export default function ProfileScreen() {
               <ThemedText style={styles.sectionTitle}>
                 좋아요 {likeCount}
               </ThemedText>
-              <Pressable onPress={() => router.push('/profile/likes')}>
+              <Pressable
+                onPress={() => router.push('/profile/likes')}
+                style={styles.viewAllButton}>
                 <ThemedText type="small" style={styles.viewAll}>
-                  전체보기 ›
+                  전체보기
                 </ThemedText>
+                <SvgXml xml={VIEW_ALL} width={6} height={11} />
               </Pressable>
             </View>
             <ThemedText type="small" style={styles.sectionHint}>
@@ -174,10 +178,13 @@ export default function ProfileScreen() {
               <ThemedText style={styles.sectionTitle}>
                 보고 싶은 작품 {bookmarkCount}
               </ThemedText>
-              <Pressable onPress={() => router.push('/profile/bookmarks')}>
+              <Pressable
+                onPress={() => router.push('/profile/bookmarks')}
+                style={styles.viewAllButton}>
                 <ThemedText type="small" style={styles.viewAll}>
-                  전체보기 ›
+                  전체보기
                 </ThemedText>
+                <SvgXml xml={VIEW_ALL} width={6} height={11} />
               </Pressable>
             </View>
             <ThemedText type="small" style={styles.sectionHint}>
@@ -331,6 +338,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   viewAll: {
     color: colors.textMuted,

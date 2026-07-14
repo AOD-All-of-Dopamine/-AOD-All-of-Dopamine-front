@@ -16,7 +16,9 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { FilterIcon, SearchGlassIcon } from '@/components/icons';
 import { useGenresWithCount, useInfiniteWorks } from '@aod/shared/hooks';
-import { DOMAIN_LABEL_MAP, DOMAIN_PLATFORMS, PLATFORM_LABELS } from '@aod/shared/constants';
+import { DOMAIN_LABEL_MAP, DOMAIN_PLATFORMS } from '@aod/shared/constants';
+import { PLATFORM_META } from '@/constants/platforms';
+import { FallbackThumb } from '@/components/work/FallbackThumb';
 import { colors, spacing, radius } from '@/theme/tokens';
 
 // ── 웹 explore-page.tsx 미러 (기본 도메인 game 동일) ──
@@ -56,7 +58,8 @@ export default function ExploreScreen() {
 
   const availablePlatforms = (DOMAIN_PLATFORMS[domainKey] ?? []).map((key) => ({
     key,
-    label: PLATFORM_LABELS[key] ?? key,
+    label: PLATFORM_META[key]?.label ?? key,
+    logo: PLATFORM_META[key]?.logo,
   }));
 
   const platformsParam = selectedPlatforms.has('ALL')
@@ -166,12 +169,18 @@ export default function ExploreScreen() {
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 0 }}
                           style={styles.platformChip}>
+                          {platform.logo && (
+                            <Image source={platform.logo} style={styles.chipLogo} contentFit="contain" />
+                          )}
                           <ThemedText type="small" style={styles.platformChipTextActive}>
                             {platform.label}
                           </ThemedText>
                         </LinearGradient>
                       ) : (
                         <View style={[styles.platformChip, styles.platformChipInactive]}>
+                          {platform.logo && (
+                            <Image source={platform.logo} style={styles.chipLogo} contentFit="contain" />
+                          )}
                           <ThemedText type="small" style={styles.platformChipText}>
                             {platform.label}
                           </ThemedText>
@@ -282,11 +291,15 @@ export default function ExploreScreen() {
                 })
               }>
               <View style={[styles.thumbWrap, { aspectRatio: aspect }]}>
-                <Image
-                  source={item.thumbnail ? { uri: item.thumbnail } : undefined}
-                  style={styles.thumb}
-                  contentFit="cover"
-                />
+                {item.thumbnail ? (
+                  <Image
+                    source={{ uri: item.thumbnail }}
+                    style={styles.thumb}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <FallbackThumb domain={item.domain} iconSize={36} />
+                )}
               </View>
               <ThemedText type="small" numberOfLines={1} style={styles.workTitle}>
                 {item.title}
@@ -365,9 +378,17 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   platformChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     borderRadius: radius.full,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     paddingVertical: 6,
+  },
+  chipLogo: {
+    width: 20,
+    height: 20,
+    borderRadius: radius.full,
   },
   platformChipInactive: {
     backgroundColor: colors.surfaceDeep,

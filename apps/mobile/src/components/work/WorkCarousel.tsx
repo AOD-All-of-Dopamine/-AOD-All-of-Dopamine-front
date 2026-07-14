@@ -1,6 +1,8 @@
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { SvgXml } from 'react-native-svg';
 
 import { ThemedText } from '@/components/themed-text';
+import { VIEW_ALL } from '@/components/svg-assets';
 import { WorkCard, type WorkCardItem } from './WorkCard';
 import { colors, spacing } from '@/theme/tokens';
 
@@ -26,10 +28,11 @@ export function WorkCarousel({
         <View style={styles.header}>
           <ThemedText style={styles.title}>{title}</ThemedText>
           {onViewAll && (
-            <Pressable onPress={onViewAll}>
+            <Pressable onPress={onViewAll} style={styles.viewAllButton}>
               <ThemedText type="small" style={styles.viewAll}>
-                전체보기 ›
+                전체보기
               </ThemedText>
+              <SvgXml xml={VIEW_ALL} width={6} height={11} />
             </Pressable>
           )}
         </View>
@@ -68,6 +71,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '600',
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   viewAll: {
     color: colors.textMuted,

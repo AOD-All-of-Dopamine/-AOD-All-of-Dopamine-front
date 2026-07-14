@@ -15,9 +15,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { SvgXml } from 'react-native-svg';
+
 import { useApis } from '@aod/shared/hooks';
 import type { ExternalRanking } from '@aod/shared/api';
-import { DOMAIN_PLATFORMS, PLATFORM_LABELS } from '@aod/shared/constants';
+import { DOMAIN_PLATFORMS } from '@aod/shared/constants';
+import { PLATFORM_META } from '@/constants/platforms';
+import { FallbackThumb } from '@/components/work/FallbackThumb';
+import { INFO } from '@/components/svg-assets';
 import { colors, spacing, radius } from '@/theme/tokens';
 
 // ── 웹 ranking-page.tsx 미러 ──
@@ -126,7 +131,8 @@ export default function RankingScreen() {
   const domainKey = category.toUpperCase();
   const availablePlatforms = (DOMAIN_PLATFORMS[domainKey] ?? []).map((key) => ({
     key,
-    label: PLATFORM_LABELS[key] ?? key,
+    label: PLATFORM_META[key]?.label ?? key,
+    logo: PLATFORM_META[key]?.logo,
   }));
 
   const selectCategory = (next: Category) => {
@@ -267,12 +273,18 @@ export default function RankingScreen() {
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={styles.chip}>
+                    {platform.logo && (
+                      <Image source={platform.logo} style={styles.chipLogo} contentFit="contain" />
+                    )}
                     <ThemedText type="small" style={styles.chipTextActive}>
                       {platform.label}
                     </ThemedText>
                   </LinearGradient>
                 ) : (
                   <View style={[styles.chip, styles.chipInactive]}>
+                    {platform.logo && (
+                      <Image source={platform.logo} style={styles.chipLogo} contentFit="contain" />
+                    )}
                     <ThemedText type="small" style={styles.chipText}>
                       {platform.label}
                     </ThemedText>
@@ -285,8 +297,9 @@ export default function RankingScreen() {
 
         {/* 기준일 */}
         <View style={styles.infoRow}>
+          <SvgXml xml={INFO} width={14} height={14} />
           <ThemedText type="small" style={styles.infoText}>
-            ⓘ {todayLabel} 기준
+            {todayLabel} 기준
           </ThemedText>
         </View>
 
@@ -311,11 +324,15 @@ export default function RankingScreen() {
                     styles.thumbWrap,
                     { width: thumbWidth, aspectRatio: aspect },
                   ]}>
-                  <Image
-                    source={item.thumbnail ? { uri: item.thumbnail } : undefined}
-                    style={styles.thumb}
-                    contentFit="cover"
-                  />
+                  {item.thumbnail ? (
+                    <Image
+                      source={{ uri: item.thumbnail }}
+                      style={styles.thumb}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <FallbackThumb domain={domainKey} iconSize={28} />
+                  )}
                 </View>
                 <View style={styles.rowInfo}>
                   <ThemedText type="small" numberOfLines={1} style={styles.rowTitle}>
@@ -395,9 +412,17 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     borderRadius: radius.full,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     paddingVertical: 6,
+  },
+  chipLogo: {
+    width: 20,
+    height: 20,
+    borderRadius: radius.full,
   },
   chipInactive: {
     backgroundColor: colors.surfaceDeep,
@@ -413,6 +438,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
   },

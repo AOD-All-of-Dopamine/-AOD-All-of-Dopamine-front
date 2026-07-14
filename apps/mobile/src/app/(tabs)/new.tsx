@@ -14,7 +14,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useRecentReleases, useUpcomingReleases } from '@aod/shared/hooks';
-import { DOMAIN_LABEL_MAP, DOMAIN_PLATFORMS, PLATFORM_LABELS } from '@aod/shared/constants';
+import { DOMAIN_LABEL_MAP, DOMAIN_PLATFORMS } from '@aod/shared/constants';
+import { PLATFORM_META } from '@/constants/platforms';
+import { FallbackThumb } from '@/components/work/FallbackThumb';
 import type { WorkSummary } from '@aod/shared/types';
 import { colors, spacing, radius } from '@/theme/tokens';
 
@@ -65,7 +67,8 @@ export default function NewReleasesScreen() {
   const availablePlatforms = platformKeys.map((key) => ({
     id: key.toLowerCase(),
     key,
-    label: PLATFORM_LABELS[key] ?? key,
+    label: PLATFORM_META[key]?.label ?? key,
+    logo: PLATFORM_META[key]?.logo,
   }));
 
   const platformsParam = selectedPlatforms.has('all')
@@ -170,12 +173,18 @@ export default function NewReleasesScreen() {
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
                       style={styles.chip}>
+                      {platform.logo && (
+                        <Image source={platform.logo} style={styles.chipLogo} contentFit="contain" />
+                      )}
                       <ThemedText type="small" style={styles.chipTextActive}>
                         {platform.label}
                       </ThemedText>
                     </LinearGradient>
                   ) : (
                     <View style={[styles.chip, styles.chipInactive]}>
+                      {platform.logo && (
+                        <Image source={platform.logo} style={styles.chipLogo} contentFit="contain" />
+                      )}
                       <ThemedText type="small" style={styles.chipText}>
                         {platform.label}
                       </ThemedText>
@@ -246,13 +255,15 @@ export default function NewReleasesScreen() {
                         }>
                         <View
                           style={[styles.thumbWrap, { aspectRatio: aspect }]}>
-                          <Image
-                            source={
-                              work.thumbnail ? { uri: work.thumbnail } : undefined
-                            }
-                            style={styles.thumb}
-                            contentFit="cover"
-                          />
+                          {work.thumbnail ? (
+                            <Image
+                              source={{ uri: work.thumbnail }}
+                              style={styles.thumb}
+                              contentFit="cover"
+                            />
+                          ) : (
+                            <FallbackThumb domain={work.domain} iconSize={40} />
+                          )}
                         </View>
                         <ThemedText
                           type="small"
@@ -330,9 +341,17 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     borderRadius: radius.full,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     paddingVertical: 6,
+  },
+  chipLogo: {
+    width: 20,
+    height: 20,
+    borderRadius: radius.full,
   },
   chipInactive: {
     backgroundColor: colors.surfaceDeep,

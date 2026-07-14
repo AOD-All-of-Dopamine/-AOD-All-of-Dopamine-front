@@ -40,6 +40,8 @@ import {
   getPlatformLabel,
   formatFieldValue,
 } from '@aod/shared/constants';
+import { PLATFORM_META } from '@/constants/platforms';
+import { FallbackThumb } from '@/components/work/FallbackThumb';
 import { colors, spacing, radius } from '@/theme/tokens';
 
 type TabType = 'info' | 'reviews';
@@ -174,7 +176,11 @@ export default function WorkDetailScreen() {
     })
     .filter((v, i, arr) => arr.indexOf(v) === i)
     .filter((key) => PLATFORM_LABELS[key])
-    .map((key) => ({ key, label: PLATFORM_LABELS[key] }));
+    .map((key) => ({
+      key,
+      label: PLATFORM_LABELS[key],
+      logo: PLATFORM_META[key]?.logo,
+    }));
 
   const htmlFields = ['detailed_description', 'about_the_game', 'short_description'];
   const stripHtml = (s: string) => s.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -214,11 +220,15 @@ export default function WorkDetailScreen() {
                 styles.poster,
                 { width: posterWidth, aspectRatio: aspect },
               ]}>
-              <Image
-                source={work.thumbnail ? { uri: work.thumbnail } : undefined}
-                style={styles.posterImage}
-                contentFit="cover"
-              />
+              {work.thumbnail ? (
+                <Image
+                  source={{ uri: work.thumbnail }}
+                  style={styles.posterImage}
+                  contentFit="cover"
+                />
+              ) : (
+                <FallbackThumb domain={work.domain} iconSize={40} />
+              )}
             </View>
           </View>
         </View>
@@ -373,12 +383,20 @@ export default function WorkDetailScreen() {
             <View style={styles.platformSection}>
               <ThemedText style={styles.platformTitle}>플랫폼</ThemedText>
               <View style={styles.platformRow}>
-                {platformItems.map(({ key, label }) => (
+                {platformItems.map(({ key, label, logo }) => (
                   <View key={key} style={styles.platformItem}>
                     <View style={styles.platformCircle}>
-                      <ThemedText style={styles.platformInitial}>
-                        {label.slice(0, 2)}
-                      </ThemedText>
+                      {logo ? (
+                        <Image
+                          source={logo}
+                          style={styles.platformLogo}
+                          contentFit="contain"
+                        />
+                      ) : (
+                        <ThemedText style={styles.platformInitial}>
+                          {label.slice(0, 2)}
+                        </ThemedText>
+                      )}
                     </View>
                     <ThemedText style={styles.platformLabel}>{label}</ThemedText>
                   </View>
@@ -857,6 +875,11 @@ const styles = StyleSheet.create({
   platformInitial: {
     fontSize: 11,
     fontWeight: '500',
+  },
+  platformLogo: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.full,
   },
   platformLabel: {
     fontSize: 12,
