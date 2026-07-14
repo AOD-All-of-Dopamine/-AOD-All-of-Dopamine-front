@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   CalendarTabIcon,
@@ -12,6 +13,10 @@ import { colors, fonts } from '@/theme/tokens';
 // 웹 NavigationBar 미러: bg #242424, 활성 white / 비활성 gray, 아이콘+라벨 세로.
 // (NativeTabs는 png만 지원해 웹 svg 아이콘을 쓰기 위해 JS 탭바로 전환)
 export default function TabLayout() {
+  // edge-to-edge(SDK 57 기본)에서 시스템 내비바와 겹치지 않도록
+  // 고정 높이 대신 하단 safe-area를 더한다.
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       screenOptions={{
@@ -19,7 +24,8 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: colors.background,
           borderTopWidth: 0,
-          height: 72,
+          height: 64 + insets.bottom,
+          paddingBottom: insets.bottom,
           paddingTop: 8,
         },
         tabBarActiveTintColor: '#FFFFFF',
