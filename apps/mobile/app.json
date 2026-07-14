@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "mobile",
+    "name": "AOD",
     "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -40,6 +40,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1b50db71-4ae5-4e1e-ac5a-f6ee8c84c638"
+      }
+    },
+    "owner": "dfdfg42"
   }
 }
