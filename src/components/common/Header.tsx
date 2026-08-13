@@ -60,7 +60,7 @@ const Header = ({
   };
 
   return (
-    /* [전환기] 페이지별 모바일 앱바 — 데스크톱은 SiteHeader가 대체(lg:hidden). 페이지 이식 시 각 페이지에서 제거 예정 */
+    /* [전환기] 페이지별 모바일 앱바 - 데스크톱은 SiteHeader가 대체(lg:hidden). 페이지 이식 시 각 페이지에서 제거 예정 */
     <header
       className={`fixed max-w-2xl right-0 left-0 mx-auto top-0 w-full z-50 h-[50px] flex items-center justify-between px-4 lg:hidden`}
       style={{ backgroundColor: bgColor || "#F8F8F8" }}

@@ -62,9 +62,9 @@
 
 ### Phase 5: `/home`
 
-- [ ] **5.1** 피처드 히어로(1+2) — 선정 로직은 임시(최신 인기)로 두고 TODO 명시
-- [ ] **5.2** 신작 릴(`useRecentReleases`) · 리뷰 인용(`useRecentReviewedWorks`) · 랭킹 리스트 · 출시 예정(`useUpcomingReleases`)
-- [ ] **5.3** 게이트: DoD + 섹션별 레이아웃 패밀리가 목업과 일치
+- [x] **5.1** 피처드 히어로(1+2) — 임시 선정(최근 리뷰작 1+신작 2, TODO 명시), 하위 섹션 중복 제외, FeatureCard ui 신설
+- [x] **5.2** 신작 릴(RailCard+scrollbar-rail·snap) · 리뷰 인용(ReviewQuoteCard 신설 — 인용문·닉네임은 API 부재로 생략 편차) · 이번 주 인기(useAllRankings 훅 신설, 외부 랭킹 라운드 로빈 6개, RankRow feature) · 출시 예정(UpcomingCard 신설, D-day 클라 계산·과거 제외) · SearchBar 토큰 재스킨(모바일 전용 유지)
+- [x] **5.3** 게이트: 스펙 리뷰 ✅(목업 수치 대조, 편차 6건 실코드 승인) + 품질 리뷰 ✅(I-2건: FeatureCard 마크업 유효성·헤딩 아웃라인(sr-only h1), SearchBar 전환기 배경 + M-6건 반영) + grep 0건 + 빌드 그린 + 실브라우저(히어로 2fr+1fr·릴·섹션 독립 스켈레톤) — `docs/screenshots/phase5/`
 
 ### Phase 6: `/new` + `/ranking`
 

@@ -2,7 +2,7 @@ import { Link, NavLink } from "react-router-dom";
 import { MagnifyingGlass } from "@phosphor-icons/react";
 import { useAuth } from "../../contexts/AuthContext";
 
-/** 상단 사이트 내비게이션 (64px 한 줄) — 목업 nav와 동일. 모바일(<lg)에서는 메뉴 숨김 + 하단 탭 사용 */
+/** 상단 사이트 내비게이션 (64px 한 줄) - 목업 nav와 동일. 모바일(<lg)에서는 메뉴 숨김 + 하단 탭 사용 */
 const NAV_ITEMS = [
   { to: "/home", label: "홈" },
   { to: "/explore", label: "탐색" },

@@ -2,9 +2,12 @@ import { ReactNode, useState } from "react";
 import { Star, ThumbsUp, BookmarkSimple } from "@phosphor-icons/react";
 import WorkCard from "../components/ui/WorkCard";
 import RailCard from "../components/ui/RailCard";
+import FeatureCard from "../components/ui/FeatureCard";
 import RankRow from "../components/ui/RankRow";
 import PodiumCard from "../components/ui/PodiumCard";
 import ReviewCard from "../components/ui/ReviewCard";
+import ReviewQuoteCard from "../components/ui/ReviewQuoteCard";
+import UpcomingCard from "../components/ui/UpcomingCard";
 import Chip from "../components/ui/Chip";
 import DomainChip from "../components/ui/DomainChip";
 import GenreChip from "../components/ui/GenreChip";
@@ -19,10 +22,12 @@ import DeltaBadge from "../components/ui/DeltaBadge";
 import EmptyState from "../components/ui/EmptyState";
 import SkeletonCard from "../components/ui/SkeletonCard";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
+import { thumbnailFallbackMap } from "../constants/thumbnail";
 
 /**
  * /dev/components - Phase 2 공용 컴포넌트 시각 게이트용 갤러리.
- * 목업(mockups/*.html)과 동일한 샘플 데이터로 18종 컴포넌트를 전부 렌더한다.
+ * 목업(mockups/*.html)과 동일한 샘플 데이터로 22종 컴포넌트를 전부 렌더한다.
+ * (Phase 5에서 FeatureCard·ReviewQuoteCard·UpcomingCard 추가)
  * Phase 7에서 제거 예정 (프로덕션 라우트 아님).
  */
 
@@ -69,7 +74,7 @@ export default function DevComponentsPage() {
         UI 컴포넌트 갤러리
       </h1>
       <p className="mt-1.5 text-sm text-ink-2">
-        라이트 리디자인 공용 컴포넌트(src/components/ui) 18종을 mockups/*.html
+        라이트 리디자인 공용 컴포넌트(src/components/ui) 22종을 mockups/*.html
         기준 실물 샘플로 렌더합니다.
       </p>
 
@@ -190,7 +195,7 @@ export default function DevComponentsPage() {
 
       {/* 2. RailCard */}
       <Section title="RailCard">
-        <div className="flex gap-3.5 overflow-x-auto pb-1.5 scrollbar-hide">
+        <div className="scrollbar-rail flex snap-x snap-mandatory gap-3.5 overflow-x-auto pb-1.5">
           <RailCard
             title="검은 신화: 오공"
             meta="게임 · Steam"
@@ -215,6 +220,44 @@ export default function DevComponentsPage() {
             imageUrl={SEOUL}
             to="/work/movie-seoul"
           />
+          <RailCard
+            title="썸네일 누락 폴백"
+            meta="웹툰 · 2026"
+            imageUrl={null}
+            fallbackIconUrl={thumbnailFallbackMap.webtoon}
+            to="/work/webtoon-fallback"
+          />
+        </div>
+      </Section>
+
+      {/* 2-1. FeatureCard */}
+      <Section title="FeatureCard (홈 피처드 히어로)">
+        <div className="grid gap-4 min-[1024px]:grid-cols-[2fr_1fr]">
+          <FeatureCard
+            variant="main"
+            kicker="오늘의 추천 · 게임"
+            title="검은 신화: 오공"
+            sub="2024 · 평점 4.5"
+            imageUrl={BLACK_MYTH}
+            to="/work/game-blackmyth"
+          />
+          <div className="grid gap-4 min-[768px]:grid-cols-2 min-[1024px]:grid-cols-1 min-[1024px]:grid-rows-2">
+            <FeatureCard
+              variant="side"
+              kicker="웹툰"
+              title="화산귀환"
+              imageUrl={HWASAN}
+              to="/work/webtoon-hwasan"
+            />
+            <FeatureCard
+              variant="side"
+              kicker="영화"
+              title="이미지 누락 폴백"
+              imageUrl={null}
+              fallbackIconUrl={thumbnailFallbackMap.movie}
+              to="/work/movie-fallback"
+            />
+          </div>
         </div>
       </Section>
 
@@ -340,6 +383,63 @@ export default function DevComponentsPage() {
           <ReviewCard name="패링수련생" date="2026-08-02" score={4.5}>
             패링 타이밍이 빡빡하지만 손에 익는 순간 예술이 된다.
           </ReviewCard>
+        </div>
+      </Section>
+
+      {/* 5-1. ReviewQuoteCard */}
+      <Section title="ReviewQuoteCard (홈 리뷰 인용)">
+        <div className="grid grid-cols-1 gap-4 min-[768px]:grid-cols-2 min-[1024px]:grid-cols-3">
+          <ReviewQuoteCard
+            title="화산귀환"
+            score={5.0}
+            quote="청명이 궁시렁대는 것만 봐도 일주일 피로가 풀린다."
+            caption="매화검존1호팬"
+            imageUrl={HWASAN}
+            to="/work/webtoon-hwasan"
+          />
+          <ReviewQuoteCard
+            title="기생충"
+            score={4.5}
+            quote="계단 하나로 계급을 그려낸다. 두 번째 볼 때 더 무서운 영화."
+            caption="밤샘시네필"
+            imageUrl={PARASITE}
+            to="/work/movie-parasite"
+          />
+          <ReviewQuoteCard
+            title="인용문 없는 변형 (홈 실데이터)"
+            score={4.5}
+            caption="영화 · 2023"
+            imageUrl={SEOUL}
+            to="/work/movie-seoul"
+          />
+        </div>
+      </Section>
+
+      {/* 5-2. UpcomingCard */}
+      <Section title="UpcomingCard (홈 출시 예정)">
+        <div className="grid grid-cols-1 gap-4 min-[768px]:grid-cols-2 min-[1024px]:grid-cols-3">
+          <UpcomingCard
+            title="GTA VI"
+            meta="게임 · 11월 19일"
+            imageUrl={ORV}
+            to="/work/game-gta6"
+            slot={<DdayPill>D-99</DdayPill>}
+          />
+          <UpcomingCard
+            title="듄: 파트 3"
+            meta="영화 · 12월 18일"
+            imageUrl={SEOUL}
+            to="/work/movie-dune3"
+            slot={<DdayPill>D-128</DdayPill>}
+          />
+          <UpcomingCard
+            title="더 위쳐 4"
+            meta="게임 · 발매일 미정"
+            imageUrl={null}
+            fallbackIconUrl={thumbnailFallbackMap.game}
+            to="/work/game-witcher4"
+            slot={<DdayPill variant="tba">미정</DdayPill>}
+          />
         </div>
       </Section>
 

@@ -6,7 +6,7 @@ import CalendarIcon from "../../assets/calendar-icon.tsx";
 import MyIcon from "../../assets/my-icon.tsx";
 import { useLocation, useNavigate, matchPath } from "react-router-dom";
 
-/** 모바일 하단 탭 (< lg 전용) — 데스크톱은 SiteHeader가 담당 */
+/** 모바일 하단 탭 (< lg 전용) - 데스크톱은 SiteHeader가 담당 */
 const TABS = [
   { path: "/home", label: "홈", Icon: HomeIcon },
   { path: "/explore", label: "탐색", Icon: SearchIcon },

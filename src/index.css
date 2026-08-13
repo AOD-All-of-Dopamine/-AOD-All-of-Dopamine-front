@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ============================================================
-   AOD 라이트 디자인 토큰 — 단일 진실: docs/specs/2026-08-13-light-redesign-design.md
+   AOD 라이트 디자인 토큰 - 단일 진실: docs/specs/2026-08-13-light-redesign-design.md
    컴포넌트에서 임의 hex, rounded-[...], 팔레트 컬러 유틸 사용 금지 (스펙 §6 게이트)
    ============================================================ */
 @theme {
@@ -65,7 +65,15 @@ body {
   outline-offset: 2px;
 }
 
-/* 가로 릴 등 개별 컨테이너용 (전역 스크롤바 숨김은 제거 — 웹 표준 스크롤 유지) */
+/* 홈 신작 릴 전용 - 목업 .rail 스크롤바의 표준 속성 강등판.
+   Chromium 121+는 scrollbar-width/color 지정 시 ::-webkit-scrollbar를 무시하므로
+   webkit 블록 없이 표준 속성(thin + line-strong 썸)으로 전 브라우저 통일 */
+.scrollbar-rail {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+
+/* 가로 릴 등 개별 컨테이너용 (전역 스크롤바 숨김은 제거 - 웹 표준 스크롤 유지) */
 .scrollbar-hide {
   -ms-overflow-style: none; /* IE, Edge */
   scrollbar-width: none; /* Firefox */

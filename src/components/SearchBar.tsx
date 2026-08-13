@@ -1,5 +1,5 @@
 import { useState } from "react";
-import SearchIcon from "../assets/search-gray.svg";
+import { MagnifyingGlass } from "@phosphor-icons/react";
 
 interface SearchBarProps {
   onSearch?: (query: string) => void;
@@ -8,6 +8,13 @@ interface SearchBarProps {
   defaultValue?: string;
 }
 
+/**
+ * [전환기] 모바일 전용 검색바 - 데스크톱은 SiteHeader의 검색이 대체(lg:hidden 유지).
+ * 라이트 토큰(canvas pill, SiteHeader 검색과 동일 감각)으로 재스킨.
+ * fixed/offsetTop/defaultValue props는 아직 미이식 페이지(내 좋아요·북마크, 검색)가
+ * 사용하므로 시그니처 유지. fixed 모드 배경은 bg-inherit - 미이식 다크 페이지에서도
+ * 스트립이 페이지 배경을 따라가게 하는 전환기 시각 정합용 (필 자체는 토큰 고정).
+ */
 function SearchBar({
   onSearch,
   offsetTop = 0,
@@ -24,43 +31,26 @@ function SearchBar({
   };
 
   return (
-    /* [전환기] 모바일 전용 검색바 — 데스크톱은 SiteHeader의 검색이 대체(lg:hidden). 페이지 이식 시 정리 예정 */
     <div
-      className={`
-    ${fixed ? "fixed" : "relative"}
-    left-1/2 -translate-x-1/2
-    max-w-2xl mx-auto
-    w-full z-50
-    bg-[#242424]
-    px-4 py-4
-    lg:hidden
-  `}
+      className={`${
+        fixed
+          ? "fixed left-1/2 z-30 -translate-x-1/2 bg-inherit"
+          : "relative"
+      } mx-auto w-full max-w-2xl px-4 py-3 lg:hidden`}
       style={fixed ? { top: offsetTop } : undefined}
     >
-      <form onSubmit={handleSubmit}>
-        <img
-          src={SearchIcon}
-          alt="검색"
-          className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none"
-        />
+      <form
+        onSubmit={handleSubmit}
+        className="flex h-[38px] items-center gap-2 rounded-full border border-line bg-canvas px-3.5 text-ink-3 transition-colors focus-within:border-line-strong"
+      >
+        <MagnifyingGlass size={16} className="flex-none" />
         <input
-          type="text"
-          placeholder="작품을 검색하세요"
+          type="search"
+          aria-label="작품 검색"
+          placeholder="작품, 개발사, 작가 검색"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="
-            w-full
-            pl-10
-            pr-4
-            py-3
-            rounded-lg
-            bg-[#363539]
-            text-[#D3D3D3]
-            placeholder-[#D3D3D3]
-            text-sm
-            outline-none
-            transition-colors
-          "
+          className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-3"
         />
       </form>
     </div>
