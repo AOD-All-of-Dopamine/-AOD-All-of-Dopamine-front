@@ -24,6 +24,7 @@ function SearchBar({
   };
 
   return (
+    /* [전환기] 모바일 전용 검색바 — 데스크톱은 SiteHeader의 검색이 대체(lg:hidden). 페이지 이식 시 정리 예정 */
     <div
       className={`
     ${fixed ? "fixed" : "relative"}
@@ -32,6 +33,7 @@ function SearchBar({
     w-full z-50
     bg-[#242424]
     px-4 py-4
+    lg:hidden
   `}
       style={fixed ? { top: offsetTop } : undefined}
     >

@@ -6,11 +6,20 @@ import CalendarIcon from "../../assets/calendar-icon.tsx";
 import MyIcon from "../../assets/my-icon.tsx";
 import { useLocation, useNavigate, matchPath } from "react-router-dom";
 
+/** 모바일 하단 탭 (< lg 전용) — 데스크톱은 SiteHeader가 담당 */
+const TABS = [
+  { path: "/home", label: "홈", Icon: HomeIcon },
+  { path: "/explore", label: "탐색", Icon: SearchIcon },
+  { path: "/ranking", label: "랭킹", Icon: RankingIcon },
+  { path: "/new", label: "신작", Icon: CalendarIcon },
+  { path: "/profile", label: "프로필", Icon: MyIcon },
+];
+
 const NavigationBar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const isActive = (pattern: string) =>
-    !!matchPath({ path: pattern, end: false }, location.pathname);
+  const isActive = (path: string) =>
+    !!matchPath({ path: `${path}/*`, end: false }, location.pathname);
 
   const handleNavigation = (path: string) => {
     navigate(path);
@@ -18,58 +27,28 @@ const NavigationBar: React.FC = () => {
   };
 
   return (
-    <nav className="fixed max-w-2xl bottom-0 left-0 w-full mx-auto right-0 bg-[#242424] flex justify-around items-center h-18 z-[1000]">
-      <button
-        onClick={() => handleNavigation("/home")}
-        className="flex flex-col items-center gap-1 text-xs"
-      >
-        <HomeIcon color={isActive("/home/*") ? "white" : "gray"} />
-        <span className={isActive("/home/*") ? "text-white" : "text-gray-400"}>
-          홈
-        </span>
-      </button>
-      <button
-        onClick={() => handleNavigation("/explore")}
-        className="flex flex-col items-center gap-1 text-xs"
-      >
-        <SearchIcon color={isActive("/explore/*") ? "white" : "gray"} />
-        <span
-          className={isActive("/explore/*") ? "text-white" : "text-gray-400"}
-        >
-          탐색
-        </span>
-      </button>
-      <button
-        onClick={() => handleNavigation("/ranking")}
-        className="flex flex-col items-center gap-1 text-xs"
-      >
-        <RankingIcon color={isActive("/ranking/*") ? "white" : "gray"} />
-        <span
-          className={isActive("/ranking/*") ? "text-white" : "text-gray-400"}
-        >
-          랭킹
-        </span>
-      </button>
-      <button
-        onClick={() => handleNavigation("/new")}
-        className="flex flex-col items-center gap-1 text-xs"
-      >
-        <CalendarIcon color={isActive("/new/*") ? "white" : "gray"} />
-        <span className={isActive("/new/*") ? "text-white" : "text-gray-400"}>
-          신작
-        </span>
-      </button>
-      <button
-        onClick={() => handleNavigation("/profile")}
-        className="flex flex-col items-center gap-1 text-xs"
-      >
-        <MyIcon color={isActive("/profile/*") ? "white" : "gray"} />
-        <span
-          className={isActive("/profile/*") ? "text-white" : "text-gray-400"}
-        >
-          프로필
-        </span>
-      </button>
+    <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-16 items-center justify-around border-t border-line bg-surface/95 backdrop-blur-md lg:hidden">
+      {TABS.map(({ path, label, Icon }) => {
+        const active = isActive(path);
+        return (
+          <button
+            key={path}
+            onClick={() => handleNavigation(path)}
+            className="flex flex-col items-center gap-1 text-xs"
+          >
+            <Icon
+              color={active ? "var(--color-accent)" : "var(--color-ink-3)"}
+            />
+            <span
+              className={
+                active ? "font-semibold text-ink" : "text-ink-3"
+              }
+            >
+              {label}
+            </span>
+          </button>
+        );
+      })}
     </nav>
   );
 };

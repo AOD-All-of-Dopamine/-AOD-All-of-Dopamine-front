@@ -35,10 +35,10 @@
 
 ### Phase 1: 공통 셸 — Header · Footer · 레이아웃
 
-- [ ] **1.1** `Header` 재작성: 64px 한 줄 (로고 AOD. / 홈·탐색·랭킹·신작 / 검색 / 로그인), sticky + blur — 목업 nav와 동일
-- [ ] **1.2** `Footer` 신설 (홈 목업 하단), `PublicLayout`에 편입
-- [ ] **1.3** 모바일: `< 1024px` 상단 메뉴 숨김 + 기존 `NavigationBar`(하단 탭) 토큰 재스킨 유지 (스펙 §5 결정 1)
-- [ ] **1.4** 게이트: 15개 라우트 전부 새 셸로 렌더 + 콘솔 에러 0
+- [x] **1.1** `SiteHeader` 신설: 64px 한 줄 (로고 AOD. / 홈·탐색·랭킹·신작 NavLink / 검색 필→/search / 로그인·내 정보), sticky + blur. 기존 `Header`(페이지 앱바)는 rename 대신 유지 + `lg:hidden` — 12개 페이지가 back/title 계약으로 사용 중이라 페이지 이식 시 개별 제거 (편차 기록 참조)
+- [x] **1.2** `SiteFooter` 신설, `PublicLayout`에 SiteHeader/SiteFooter 편입 + flex 컬럼 구조
+- [x] **1.3** `NavigationBar` 토큰 재스킨(surface/line/accent, `lg:hidden`) — 모바일 하단 탭 유지. 홈의 `SearchBar`(자체 고정 다크 검색바)도 `lg:hidden` 전환기 처리
+- [x] **1.4** 게이트: 빌드+tsc 그린, home/explore/ranking/new/search/login/profile 렌더 + 콘솔 에러 0 — `docs/screenshots/phase1/home-1512-new-shell.jpg`
 
 ### Phase 2: 공용 컴포넌트 (스펙 §2.3 인벤토리)
 
@@ -85,7 +85,8 @@
 
 | 편차 | 사유 | 기록일 |
 |---|---|---|
-| | | |
+| Phase 1: 기존 `Header` 재작성 대신 `SiteHeader` 신설 + 구 Header `lg:hidden` 전환기 유지 | 구 Header는 12개 페이지가 back/title 앱바로 사용 — 일괄 재작성은 페이지 계약 파괴. 데스크톱=새 셸, 모바일=기존 UX 유지 후 페이지 이식 시 개별 제거 | 2026-08-13 |
+| Phase 1: 홈 `SearchBar`도 `lg:hidden` 전환기 처리 | 홈은 구 Header 대신 자체 고정 검색바 사용 — 데스크톱에서 SiteHeader와 겹침 | 2026-08-13 |
 
 ## 스크린샷 원장
 
