@@ -88,10 +88,11 @@ export const reviewApi = {
   },
 };
 
+/** 서버 실응답 (LikeService.buildResponse): 비로그인·미상호작용은 "NONE" */
 export interface LikeStats {
   likeCount: number;
   dislikeCount: number;
-  myStatus?: "LIKE" | "DISLIKE" | "NONE";
+  userLikeType: "LIKE" | "DISLIKE" | "NONE";
 }
 
 export interface BookmarkStatus {
@@ -118,8 +119,10 @@ export const interactionApi = {
   /**
    * 좋아요/싫어요 통계
    */
-  getLikeStats: async (contentId: number) => {
-    const { data } = await publicApi.get(`/api/works/${contentId}/likes`);
+  getLikeStats: async (contentId: number): Promise<LikeStats> => {
+    const { data } = await publicApi.get<LikeStats>(
+      `/api/works/${contentId}/likes`,
+    );
     return data;
   },
 

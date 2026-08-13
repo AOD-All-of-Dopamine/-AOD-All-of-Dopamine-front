@@ -56,9 +56,9 @@
 
 ### Phase 4: `/work/:id`
 
-- [ ] **4.1** 헤더(포스터/통계 필/액션/볼 수 있는 곳) — 도메인별 변형(게임 가로 포스터·리뷰 요약 필) 컴포넌트 분기
-- [ ] **4.2** 본문 2단: 시놉시스·리뷰(`useReviews`)·비슷한 작품 / 정보 패널(`domainInfo`·`platformInfo`)
-- [ ] **4.3** 관심·좋아요 실연결(`useInteractions`), 게이트: DoD
+- [x] **4.1** 헤더(포스터 도메인 분기/통계 필 실데이터만/액션 3버튼/볼 수 있는 곳) — 게임=가로 포스터+Steam 리뷰 요약 % 필(한글화 9종). Tag accent variant·ConfirmDialog(네이티브 dialog) ui 추가
+- [x] **4.2** 본문 2단: 시놉시스·리뷰(useReviews+keepPreviousData 누적 로드)·정보 패널(domainInfo 한글화, 고정 키 순서). 비슷한 작품은 추천 API 부재로 생략(편차)
+- [x] **4.3** 관심·좋아요 실연결 + 게이트: 품질 리뷰가 **Critical 1건 적발·수정**(좋아요 전환 이중 발사 → 경합 시 서버에 DISLIKE 기록 가능 — 단독 발사로 수정, 옵티미스틱을 서버 상태기계(userLikeType 전이)와 1:1 정렬, LikeStats 타입을 서버 실응답으로 교정). 이중 리뷰 승인 + StrictMode 유령 close 가드 실브라우저 검증(다이얼로그 유지·ESC·포커스 복원) + grep 0건 + 빌드 그린 — `docs/screenshots/phase4/`
 
 ### Phase 5: `/home`
 

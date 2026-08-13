@@ -18,6 +18,7 @@ import DdayPill from "../components/ui/DdayPill";
 import DeltaBadge from "../components/ui/DeltaBadge";
 import EmptyState from "../components/ui/EmptyState";
 import SkeletonCard from "../components/ui/SkeletonCard";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
 
 /**
  * /dev/components - Phase 2 공용 컴포넌트 시각 게이트용 갤러리.
@@ -52,6 +53,7 @@ function Section({
 
 export default function DevComponentsPage() {
   const [sort, setSort] = useState("review");
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [period, setPeriod] = useState("주간");
   const [periodSmall, setPeriodSmall] = useState("일간");
   const [page, setPage] = useState(4);
@@ -570,6 +572,25 @@ export default function DevComponentsPage() {
             <SkeletonCard variant="row" />
           </div>
         </div>
+      </Section>
+
+      <Section title="ConfirmDialog">
+        <button
+          type="button"
+          onClick={() => setDialogOpen(true)}
+          className="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-surface active:scale-[0.98]"
+        >
+          로그인 유도 다이얼로그 열기
+        </button>
+        {dialogOpen && (
+          <ConfirmDialog
+            title="로그인이 필요한 기능이에요"
+            description="관심 등록과 좋아요는 로그인 후 이용할 수 있어요."
+            confirmLabel="로그인 하기"
+            onCancel={() => setDialogOpen(false)}
+            onConfirm={() => setDialogOpen(false)}
+          />
+        )}
       </Section>
 
       <div className="mt-14 flex items-center gap-2.5">
