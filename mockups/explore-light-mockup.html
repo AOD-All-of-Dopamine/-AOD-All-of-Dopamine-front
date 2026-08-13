@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AOD 탐색 목업 (라이트 테마 예시안)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>
+/* ============================================================
+   AOD 탐색 페이지 라이트 테마 예시안 (2026-08-12)
+   팔레트: 웜 뉴트럴 + 액센트 1개(번트 오렌지) + 별점 앰버(시맨틱)
+   라운드 규칙: 카드/패널 12px, 입력 8px, 칩/태그 pill  — 전 페이지 공통
+   ============================================================ */
+:root {
+  --bg: #f7f6f4;
+  --surface: #fdfdfc;
+  --border: #e7e5e1;
+  --border-strong: #d8d5cf;
+  --text: #1c1b19;
+  --text-2: #716f6a;
+  --text-3: #9c9993;
+  --accent: #e2542c;
+  --accent-ink: #b23d1c;
+  --accent-tint: #faeee9;
+  --star: #d9930d;
+  --shadow: 0 1px 2px rgb(58 48 40 / .05), 0 4px 14px rgb(58 48 40 / .06);
+  --shadow-lift: 0 2px 4px rgb(58 48 40 / .06), 0 10px 28px rgb(58 48 40 / .10);
+  --r-panel: 12px;
+  --r-input: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { color-scheme: light; }
+body {
+  font-family: "Pretendard Variable", Pretendard, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg); color: var(--text);
+  line-height: 1.5; font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: none; }
+button:active { transform: scale(.98); }
+::selection { background: var(--accent-tint); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+/* ---------- 상단 내비게이션 ---------- */
+.nav {
+  position: sticky; top: 0; z-index: 20; height: 64px;
+  background: rgb(253 253 252 / .88); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-inner {
+  max-width: 1440px; margin: 0 auto; height: 100%; padding: 0 24px;
+  display: flex; align-items: center; gap: 28px;
+}
+.logo { font-weight: 800; font-size: 21px; letter-spacing: -.04em; text-decoration: none; color: var(--text); }
+.logo em { font-style: normal; color: var(--accent); }
+.nav-menu { display: flex; gap: 4px; list-style: none; }
+.nav-menu a {
+  display: block; padding: 8px 12px; border-radius: var(--r-input);
+  color: var(--text-2); text-decoration: none; font-weight: 500;
+}
+.nav-menu a:hover { color: var(--text); background: rgb(28 27 25 / .04); }
+.nav-menu a[aria-current] { color: var(--text); font-weight: 700; }
+.nav-search {
+  margin-left: auto; display: flex; align-items: center; gap: 8px;
+  width: 300px; height: 38px; padding: 0 14px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 999px; color: var(--text-3);
+}
+.nav-search:focus-within { border-color: var(--border-strong); background: var(--surface); }
+.nav-search input { flex: 1; border: none; outline: none; background: none; color: var(--text); }
+.nav-search input::placeholder { color: var(--text-3); }
+.btn-login {
+  padding: 9px 18px; border-radius: 999px;
+  background: var(--text); color: var(--surface); font-weight: 600; font-size: 14px;
+  transition: background .15s;
+}
+.btn-login:hover { background: #33312d; }
+
+/* ---------- 도메인 탭 ---------- */
+.domain-tabs { max-width: 1440px; margin: 0 auto; padding: 20px 24px 0; display: flex; gap: 6px; overflow-x: auto; }
+.domain-tab {
+  padding: 9px 18px; border-radius: 999px; white-space: nowrap;
+  font-weight: 600; font-size: 14.5px; color: var(--text-2);
+  border: 1px solid transparent; transition: background .15s, color .15s;
+}
+.domain-tab:hover:not(:disabled) { background: rgb(28 27 25 / .05); color: var(--text); }
+.domain-tab[aria-selected="true"] { background: var(--text); color: var(--surface); }
+.domain-tab:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ---------- 레이아웃 ---------- */
+.layout {
+  max-width: 1440px; margin: 0 auto; padding: 20px 24px 72px;
+  display: grid; grid-template-columns: 256px 1fr; gap: 32px; align-items: start;
+}
+
+/* ---------- 필터 레일 ---------- */
+.filters { position: sticky; top: 84px; max-height: calc(100vh - 100px); overflow-y: auto; }
+.filters summary { display: none; }
+.filter-head { display: flex; align-items: baseline; justify-content: space-between; padding: 4px 2px 14px; }
+.filter-head h2 { font-size: 15px; font-weight: 700; }
+.filter-reset { font-size: 13px; color: var(--text-2); display: inline-flex; align-items: center; gap: 4px; }
+.filter-reset:hover { color: var(--accent-ink); }
+.filter-group { border-top: 1px solid var(--border); padding: 16px 2px; }
+.filter-group h3 { font-size: 13.5px; font-weight: 700; margin-bottom: 10px; }
+.filter-list { display: flex; flex-direction: column; gap: 2px; }
+.filter-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 5px 6px; margin: 0 -6px; border-radius: var(--r-input);
+  font-size: 14px; color: var(--text-2); cursor: pointer; transition: background .12s;
+}
+.filter-item:hover { background: rgb(28 27 25 / .04); color: var(--text); }
+.filter-item input { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
+.filter-item input:checked ~ span { color: var(--text); font-weight: 600; }
+.filter-item.disabled { opacity: .45; cursor: not-allowed; }
+.filter-item.disabled input { pointer-events: none; }
+.soon {
+  margin-left: auto; font-size: 11px; font-weight: 600; color: var(--text-3);
+  border: 1px solid var(--border); border-radius: 999px; padding: 1px 7px;
+}
+
+/* ---------- 툴바 · 칩 ---------- */
+.toolbar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.toolbar h1 { font-size: 26px; font-weight: 800; letter-spacing: -.03em; }
+.result-count { color: var(--text-2); font-size: 14.5px; font-variant-numeric: tabular-nums; }
+.sort {
+  margin-left: auto; appearance: none; -webkit-appearance: none;
+  padding: 9px 34px 9px 14px; border: 1px solid var(--border); border-radius: var(--r-input);
+  background: var(--surface) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 256 256" fill="%23716f6a"><path d="M213.7 101.7l-80 80a8 8 0 0 1-11.4 0l-80-80A8 8 0 0 1 53.7 90.3L128 164.7l74.3-74.4a8 8 0 0 1 11.4 11.4Z"/></svg>') no-repeat right 12px center;
+  font-size: 14px; font-weight: 500; cursor: pointer;
+}
+.sort:hover { border-color: var(--border-strong); }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.chips:empty { display: none; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 8px 6px 13px; border-radius: 999px;
+  background: var(--accent-tint); color: var(--accent-ink); font-size: 13.5px; font-weight: 600;
+}
+.chip button { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 999px; color: var(--accent-ink); font-size: 12px; }
+.chip button:hover { background: rgb(178 61 28 / .14); }
+
+/* ---------- 카드 그리드 ---------- */
+.grid { margin-top: 22px; display: grid; gap: 20px 18px; }
+.grid.landscape { grid-template-columns: repeat(4, 1fr); }
+.grid.portrait { grid-template-columns: repeat(5, 1fr); }
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-panel);
+  overflow: hidden; text-decoration: none; color: inherit; box-shadow: var(--shadow);
+  transition: transform .18s cubic-bezier(.16,1,.3,1), box-shadow .18s;
+  display: flex; flex-direction: column;
+}
+.card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift); }
+.card-thumb { background: #ece9e4; overflow: hidden; }
+.grid.landscape .card-thumb { aspect-ratio: 460 / 215; }
+.grid.portrait .card-thumb { aspect-ratio: 2 / 3; }
+.card-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.card-body { padding: 13px 15px 14px; display: flex; flex-direction: column; gap: 7px; flex: 1; }
+.card-title { font-size: 15.5px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-meta { font-size: 13px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+.tag {
+  font-size: 11.5px; font-weight: 600; color: var(--text-2);
+  background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 2.5px 9px;
+}
+.card-foot {
+  margin-top: auto; padding-top: 9px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 7px;
+  font-size: 12.5px; color: var(--text-2); font-variant-numeric: tabular-nums;
+}
+.card-foot img { width: 14px; height: 14px; opacity: .55; }
+.review-pct { margin-left: auto; font-weight: 700; color: var(--text); }
+.free-badge { font-weight: 700; color: var(--accent-ink); }
+.star-score { margin-left: auto; font-weight: 700; color: var(--text); display: inline-flex; align-items: center; gap: 3px; }
+.star-score i { color: var(--star); font-size: 13px; }
+.status-tag { font-weight: 600; }
+
+/* ---------- 빈 상태 ---------- */
+.empty {
+  display: none; margin-top: 22px; padding: 88px 24px;
+  background: var(--surface); border: 1px dashed var(--border-strong); border-radius: var(--r-panel);
+  text-align: center;
+}
+.empty.show { display: block; }
+.empty i { font-size: 44px; color: var(--text-3); }
+.empty p { margin-top: 14px; font-size: 16px; font-weight: 600; }
+.empty small { display: block; margin-top: 5px; color: var(--text-2); }
+.empty button { margin-top: 20px; padding: 10px 22px; border-radius: 999px; background: var(--text); color: var(--surface); font-weight: 600; font-size: 14px; }
+
+/* ---------- 페이지네이션 ---------- */
+.pagination { margin-top: 40px; display: flex; justify-content: center; gap: 5px; }
+.page-btn {
+  min-width: 38px; height: 38px; padding: 0 6px; display: grid; place-items: center;
+  border-radius: var(--r-input); font-size: 14px; font-weight: 500; color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.page-btn:hover { background: rgb(28 27 25 / .05); color: var(--text); }
+.page-btn[aria-current] { background: var(--text); color: var(--surface); font-weight: 700; }
+.page-btn:disabled { opacity: .35; cursor: default; }
+.page-ellipsis { align-self: center; color: var(--text-3); padding: 0 4px; }
+
+/* ---------- 반응형 ---------- */
+@media (max-width: 1200px) {
+  .grid.landscape { grid-template-columns: repeat(3, 1fr); }
+  .grid.portrait { grid-template-columns: repeat(4, 1fr); }
+}
+@media (max-width: 1023px) {
+  .layout { grid-template-columns: 1fr; gap: 16px; }
+  .filters { position: static; max-height: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-panel); padding: 4px 16px; }
+  .filters summary { display: flex; align-items: center; gap: 8px; padding: 12px 2px; font-weight: 700; cursor: pointer; list-style: none; }
+  .filters summary::-webkit-details-marker { display: none; }
+  .nav-menu { display: none; }
+  .nav-search { width: auto; flex: 1; }
+  .grid.portrait { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 767px) {
+  .grid.landscape { grid-template-columns: repeat(2, 1fr); gap: 14px 12px; }
+  .grid.portrait { grid-template-columns: repeat(2, 1fr); gap: 14px 12px; }
+}
+@media (max-width: 479px) { .grid.landscape { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) {
+  .card, button { transition: none; }
+  .card:hover { transform: none; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="logo" href="home-light-mockup.html">AOD<em>.</em></a>
+    <ul class="nav-menu">
+      <li><a href="home-light-mockup.html">홈</a></li>
+      <li><a href="#" aria-current="page">탐색</a></li>
+      <li><a href="ranking-mockup.html">랭킹</a></li>
+      <li><a href="new-releases-mockup.html">신작</a></li>
+    </ul>
+    <div class="nav-search">
+      <i class="ph ph-magnifying-glass"></i>
+      <input type="search" placeholder="작품, 개발사, 작가 검색">
+    </div>
+    <button class="btn-login">로그인</button>
+  </div>
+</nav>
+
+<div class="domain-tabs" role="tablist" id="domainTabs">
+  <button class="domain-tab" disabled title="예시안 범위 밖">전체</button>
+  <button class="domain-tab" role="tab" data-domain="movie">영화</button>
+  <button class="domain-tab" disabled title="예시안 범위 밖">시리즈</button>
+  <button class="domain-tab" role="tab" data-domain="game" aria-selected="true">게임</button>
+  <button class="domain-tab" role="tab" data-domain="webtoon">웹툰</button>
+  <button class="domain-tab" disabled title="예시안 범위 밖">웹소설</button>
+</div>
+
+<div class="layout">
+  <details class="filters" id="filterDrawer" open>
+    <summary><i class="ph ph-funnel"></i> 필터</summary>
+    <div class="filter-head">
+      <h2>필터</h2>
+      <button class="filter-reset" id="resetBtn"><i class="ph ph-arrow-counter-clockwise"></i> 초기화</button>
+    </div>
+    <div id="filterGroups"><!-- JS 렌더 --></div>
+  </details>
+
+  <main>
+    <div class="toolbar">
+      <h1 id="domainTitle">게임</h1>
+      <span class="result-count" id="resultCount"></span>
+      <select class="sort" id="sortSelect" aria-label="정렬"></select>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="grid landscape" id="grid"><!-- 샘플 데이터, 수치는 공개 집계 기준 근사값 --></div>
+    <div class="empty" id="empty">
+      <i class="ph ph-ghost"></i>
+      <p>조건에 맞는 작품이 없어요</p>
+      <small>필터를 조금 풀어보시면 더 많은 작품을 만날 수 있어요.</small>
+      <button id="emptyReset">필터 초기화</button>
+    </div>
+    <nav class="pagination" aria-label="페이지">
+      <button class="page-btn" disabled><i class="ph ph-caret-left"></i></button>
+      <button class="page-btn" aria-current="page">1</button>
+      <button class="page-btn">2</button>
+      <button class="page-btn">3</button>
+      <span class="page-ellipsis">…</span>
+      <button class="page-btn">12</button>
+      <button class="page-btn"><i class="ph ph-caret-right"></i></button>
+    </nav>
+  </main>
+</div>
+
+<script>
+/* ==================== 샘플 데이터 ==================== */
+const GAMES = [
+  { id: 2358720, title: "검은 신화: 오공", dev: "Game Science", year: 2024, genres: ["액션","RPG","소울라이크"], review: 96, level: "압도적으로 긍정적", free: false },
+  { id: 2379780, title: "Balatro", dev: "LocalThunk", year: 2024, genres: ["로그라이크","전략","인디"], review: 98, level: "압도적으로 긍정적", free: false },
+  { id: 1868140, title: "데이브 더 다이버", dev: "민트로켓", year: 2023, genres: ["어드벤처","시뮬레이션","인디"], review: 97, level: "압도적으로 긍정적", free: false },
+  { id: 1627720, title: "P의 거짓", dev: "네오위즈", year: 2023, genres: ["소울라이크","액션","RPG"], review: 91, level: "매우 긍정적", free: false },
+  { id: 730, title: "카운터 스트라이크 2", dev: "Valve", year: 2023, genres: ["FPS","액션"], review: 81, level: "대체로 긍정적", free: true },
+  { id: 1966720, title: "리썰 컴퍼니", dev: "Zeekerss", year: 2023, genres: ["서바이벌","인디"], review: 97, level: "압도적으로 긍정적", free: false },
+  { id: 1245620, title: "엘든 링", dev: "FromSoftware", year: 2022, genres: ["RPG","소울라이크","오픈월드"], review: 92, level: "매우 긍정적", free: false },
+  { id: 892970, title: "발헤임", dev: "Iron Gate", year: 2021, genres: ["샌드박스","서바이벌","오픈월드"], review: 94, level: "매우 긍정적", free: false },
+  { id: 1091500, title: "사이버펑크 2077", dev: "CD PROJEKT RED", year: 2020, genres: ["RPG","액션","오픈월드"], review: 86, level: "매우 긍정적", free: false },
+  { id: 1145360, title: "하데스", dev: "Supergiant Games", year: 2020, genres: ["로그라이크","액션","인디"], review: 98, level: "압도적으로 긍정적", free: false },
+  { id: 646570, title: "슬레이 더 스파이어", dev: "Mega Crit", year: 2019, genres: ["로그라이크","전략","인디"], review: 97, level: "압도적으로 긍정적", free: false },
+  { id: 413150, title: "스타듀 밸리", dev: "ConcernedApe", year: 2016, genres: ["시뮬레이션","인디"], review: 98, level: "압도적으로 긍정적", free: false },
+  { id: 271590, title: "그랜드 테프트 오토 V", dev: "Rockstar Games", year: 2013, genres: ["액션","오픈월드"], review: 86, level: "매우 긍정적", free: false },
+  { id: 570, title: "도타 2", dev: "Valve", year: 2013, genres: ["전략","액션"], review: 82, level: "대체로 긍정적", free: true },
+  { id: 105600, title: "테라리아", dev: "Re-Logic", year: 2011, genres: ["샌드박스","어드벤처"], review: 97, level: "압도적으로 긍정적", free: false },
+  { id: 70, title: "하프라이프", dev: "Valve", year: 1998, genres: ["FPS","액션"], review: 96, level: "압도적으로 긍정적", free: false },
+];
+
+const WEBTOONS = [
+  { seed: "hwasan", title: "화산귀환", author: "비가 / LICO", genres: ["무협","회귀","판타지"], status: "연재중", weekday: "수", age: "15", start: 2021 },
+  { seed: "chamgyoyuk", title: "참교육", author: "채용택 / 한가람", genres: ["액션","드라마"], status: "연재중", weekday: "월", age: "15", start: 2020 },
+  { seed: "kimbujang", title: "김부장", author: "박만사 / 정종택", genres: ["액션","드라마"], status: "연재중", weekday: "화", age: "15", start: 2019 },
+  { seed: "maru", title: "마루는 강쥐", author: "모죠", genres: ["일상","힐링"], status: "연재중", weekday: "목", age: "전체", start: 2022 },
+  { seed: "tower", title: "신의 탑", author: "SIU", genres: ["판타지","액션"], status: "연재중", weekday: "일", age: "12", start: 2010 },
+  { seed: "lookism", title: "외모지상주의", author: "박태준", genres: ["드라마","액션"], status: "연재중", weekday: "금", age: "15", start: 2014 },
+  { seed: "orv", title: "전지적 독자 시점", author: "슬리피-C / UMI", genres: ["판타지","액션","회귀"], status: "연재중", weekday: "수", age: "15", start: 2020 },
+  { seed: "nano", title: "나노마신", author: "한중월야 / 금강불괴", genres: ["무협","액션"], status: "연재중", weekday: "토", age: "15", start: 2020 },
+  { seed: "yumi", title: "유미의 세포들", author: "이동건", genres: ["로맨스","일상"], status: "완결", weekday: null, age: "전체", start: 2015 },
+  { seed: "sound", title: "마음의소리", author: "조석", genres: ["개그","일상"], status: "완결", weekday: null, age: "전체", start: 2006 },
+  { seed: "beauty", title: "여신강림", author: "야옹이", genres: ["로맨스","드라마"], status: "완결", weekday: null, age: "12", start: 2018 },
+  { seed: "sweethome", title: "스위트홈", author: "김칸비 / 황영찬", genres: ["스릴러","공포"], status: "완결", weekday: null, age: "15", start: 2017 },
+];
+
+const MOVIES = [
+  { seed: "parasite", title: "기생충", director: "봉준호", year: 2019, genres: ["드라마","스릴러"], rating: 8.5, ott: ["넷플릭스","왓챠"] },
+  { seed: "oldboy", title: "올드보이", director: "박찬욱", year: 2003, genres: ["스릴러","미스터리"], rating: 8.3, ott: ["왓챠"] },
+  { seed: "decision", title: "헤어질 결심", director: "박찬욱", year: 2022, genres: ["로맨스","미스터리"], rating: 7.9, ott: ["왓챠","티빙"] },
+  { seed: "busan", title: "부산행", director: "연상호", year: 2016, genres: ["액션","스릴러"], rating: 7.8, ott: ["넷플릭스"] },
+  { seed: "endgame", title: "어벤져스: 엔드게임", director: "루소 형제", year: 2019, genres: ["액션","SF"], rating: 8.3, ott: ["디즈니+"] },
+  { seed: "interstellar", title: "인터스텔라", director: "크리스토퍼 놀란", year: 2014, genres: ["SF","드라마"], rating: 8.4, ott: ["넷플릭스","웨이브"] },
+  { seed: "lalaland", title: "라라랜드", director: "데이미언 셔젤", year: 2016, genres: ["로맨스","뮤지컬"], rating: 7.9, ott: ["왓챠","웨이브"] },
+  { seed: "madmax", title: "매드맥스: 분노의 도로", director: "조지 밀러", year: 2015, genres: ["액션","SF"], rating: 7.6, ott: ["넷플릭스"] },
+  { seed: "spiderverse", title: "스파이더맨: 뉴 유니버스", director: "밥 퍼시케티", year: 2018, genres: ["애니메이션","액션"], rating: 8.4, ott: ["넷플릭스"] },
+  { seed: "dune2", title: "듄: 파트 2", director: "드니 빌뇌브", year: 2024, genres: ["SF","어드벤처"], rating: 8.2, ott: ["쿠팡플레이"] },
+  { seed: "seoul", title: "서울의 봄", director: "김성수", year: 2023, genres: ["드라마","역사"], rating: 8.1, ott: ["넷플릭스","티빙"] },
+  { seed: "roundup4", title: "범죄도시 4", director: "허명행", year: 2024, genres: ["액션","범죄"], rating: 6.9, ott: ["티빙","쿠팡플레이"] },
+];
+
+/* ==================== 도메인 설정 ==================== */
+const DOMAINS = {
+  game: {
+    title: "게임", cardType: "landscape", works: GAMES,
+    sorts: [
+      { v: "year", label: "최신 출시순", fn: (a, b) => b.year - a.year },
+      { v: "review", label: "평가 높은 순", fn: (a, b) => b.review - a.review },
+      { v: "name", label: "이름순", fn: (a, b) => a.title.localeCompare(b.title, "ko") },
+    ],
+    /* 필터 축은 contents 마스터 + 도메인 엔티티 컬럼만 (attr 기반 축 금지 — 가격·리뷰 평가는 표시 전용) */
+    groups: [
+      { name: "genre", title: "장르", type: "check", options: ["액션","RPG","FPS","어드벤처","시뮬레이션","로그라이크","소울라이크","전략","샌드박스","오픈월드","서바이벌","인디"] },
+      { name: "platform", title: "플랫폼", type: "check", options: ["Steam"], checked: ["Steam"], soon: ["Epic Games"] },
+      { name: "era", title: "출시 시기", type: "radio", def: "all", options: [["all","전체"],["2024","2024년 이후"],["2020","2020년대 초"],["2010","2010년대"],["old","2009년 이전"]] },
+    ],
+    pred(w, s) {
+      return s.genre.every(g => w.genres.includes(g))
+        && inEra(w.year, s.era);
+    },
+    card(w) {
+      return `<a class="card" href="work-detail-mockup.html?d=game">
+        <div class="card-thumb"><img loading="lazy" width="460" height="215"
+          src="https://cdn.akamai.steamstatic.com/steam/apps/${w.id}/header.jpg" alt="${w.title} 대표 이미지"></div>
+        <div class="card-body">
+          <div class="card-title">${w.title}</div>
+          <div class="card-meta">${w.year} · ${w.dev}</div>
+          <div class="card-tags">${tags(w.genres)}</div>
+          <div class="card-foot">
+            <img src="https://cdn.simpleicons.org/steam/716f6a" alt="Steam">
+            <span>${w.level}</span>${w.free ? '<span class="free-badge">무료</span>' : ""}
+            <span class="review-pct">${w.review}%</span>
+          </div>
+        </div></a>`;
+    },
+  },
+
+  webtoon: {
+    title: "웹툰", cardType: "portrait", works: WEBTOONS,
+    sorts: [
+      { v: "start", label: "연재 시작 최신순", fn: (a, b) => b.start - a.start },
+      { v: "name", label: "이름순", fn: (a, b) => a.title.localeCompare(b.title, "ko") },
+    ],
+    groups: [
+      { name: "genre", title: "장르", type: "check", options: ["무협","액션","판타지","로맨스","일상","개그","드라마","스릴러","회귀","힐링","공포"] },
+      { name: "platform", title: "플랫폼", type: "check", options: ["네이버웹툰"], checked: ["네이버웹툰"], soon: ["카카오웹툰"] },
+      { name: "status", title: "연재 상태", type: "radio", def: "all", options: [["all","전체"],["연재중","연재중"],["완결","완결"]] },
+      { name: "weekday", title: "연재 요일", type: "check", options: ["월","화","수","목","금","토","일"] },
+      { name: "age", title: "연령 등급", type: "check", options: [["전체","전체이용가"],["12","12세 이용가"],["15","15세 이용가"]] },
+    ],
+    pred(w, s) {
+      return s.genre.every(g => w.genres.includes(g))
+        && (s.status === "all" || w.status === s.status)
+        && (s.weekday.length === 0 || (w.weekday && s.weekday.includes(w.weekday)))
+        && (s.age.length === 0 || s.age.includes(w.age));
+    },
+    card(w) {
+      const sub = w.status === "연재중" ? `${w.weekday}요웹툰` : "완결";
+      return `<a class="card" href="work-detail-mockup.html?d=webtoon">
+        <div class="card-thumb"><img loading="lazy" width="400" height="600"
+          src="https://picsum.photos/seed/aod-webtoon-${w.seed}/400/600" alt="${w.title} 표지"></div>
+        <div class="card-body">
+          <div class="card-title">${w.title}</div>
+          <div class="card-meta">${w.author}</div>
+          <div class="card-tags">${tags(w.genres)}</div>
+          <div class="card-foot">
+            <span class="status-tag">${sub}</span>
+            <span class="review-pct">${w.age === "전체" ? "전체" : w.age + "세"}</span>
+          </div>
+        </div></a>`;
+    },
+  },
+
+  movie: {
+    title: "영화", cardType: "portrait", works: MOVIES,
+    sorts: [
+      { v: "year", label: "최신 개봉순", fn: (a, b) => b.year - a.year },
+      { v: "rating", label: "평점 높은 순", fn: (a, b) => b.rating - a.rating },
+      { v: "name", label: "이름순", fn: (a, b) => a.title.localeCompare(b.title, "ko") },
+    ],
+    /* OTT(볼 수 있는 곳)는 contents.platforms 마스터 배열 — 평점은 attr 기반이라 필터 축에서 제외 (표시 전용) */
+    groups: [
+      { name: "genre", title: "장르", type: "check", options: ["드라마","스릴러","액션","SF","로맨스","미스터리","애니메이션","범죄","역사","뮤지컬","어드벤처"] },
+      { name: "ott", title: "볼 수 있는 곳", type: "check", options: ["넷플릭스","왓챠","디즈니+","티빙","웨이브","쿠팡플레이"] },
+      { name: "era", title: "개봉 시기", type: "radio", def: "all", options: [["all","전체"],["2024","2024년 이후"],["2020","2020년대 초"],["2010","2010년대"],["old","2009년 이전"]] },
+    ],
+    pred(w, s) {
+      return s.genre.every(g => w.genres.includes(g))
+        && (s.ott.length === 0 || s.ott.some(o => w.ott.includes(o)))
+        && inEra(w.year, s.era);
+    },
+    card(w) {
+      const otts = w.ott.slice(0, 2).join(" · ") + (w.ott.length > 2 ? ` 외 ${w.ott.length - 2}` : "");
+      return `<a class="card" href="work-detail-mockup.html?d=movie">
+        <div class="card-thumb"><img loading="lazy" width="400" height="600"
+          src="https://picsum.photos/seed/aod-movie-${w.seed}/400/600" alt="${w.title} 포스터"></div>
+        <div class="card-body">
+          <div class="card-title">${w.title}</div>
+          <div class="card-meta">${w.year} · ${w.director}</div>
+          <div class="card-tags">${tags(w.genres)}</div>
+          <div class="card-foot">
+            <span>${otts}</span>
+            <span class="star-score"><i class="ph-fill ph-star"></i>${w.rating.toFixed(1)}</span>
+          </div>
+        </div></a>`;
+    },
+  },
+};
+
+/* ==================== 공통 로직 ==================== */
+let current = "game";
+const $ = id => document.getElementById(id);
+const grid = $("grid"), chipsEl = $("chips"), countEl = $("resultCount"),
+      emptyEl = $("empty"), sortSelect = $("sortSelect"), groupsEl = $("filterGroups");
+
+function tags(list) { return list.map(g => `<span class="tag">${g}</span>`).join(""); }
+function inEra(year, era) {
+  if (era === "all") return true;
+  if (era === "2024") return year >= 2024;
+  if (era === "2020") return year >= 2020 && year <= 2023;
+  if (era === "2010") return year >= 2010 && year <= 2019;
+  return year <= 2009;
+}
+
+function renderSidebar() {
+  const cfg = DOMAINS[current];
+  groupsEl.innerHTML = cfg.groups.map(g => {
+    const items = g.options.map(o => {
+      const [value, label] = Array.isArray(o) ? o : [o, o];
+      const checked = (g.type === "radio" ? g.def === value : (g.checked || []).includes(value)) ? "checked" : "";
+      return `<label class="filter-item"><input type="${g.type === "radio" ? "radio" : "checkbox"}" name="${g.name}" value="${value}" ${checked}><span>${label}</span></label>`;
+    }).join("");
+    const soon = (g.soon || []).map(label =>
+      `<label class="filter-item disabled"><input type="checkbox" disabled><span>${label}</span><span class="soon">준비 중</span></label>`).join("");
+    return `<div class="filter-group"><h3>${g.title}</h3><div class="filter-list">${items}${soon}</div></div>`;
+  }).join("");
+  groupsEl.querySelectorAll("input").forEach(i => i.addEventListener("change", render));
+
+  sortSelect.innerHTML = cfg.sorts.map(s => `<option value="${s.v}">${s.label}</option>`).join("");
+  $("domainTitle").textContent = cfg.title;
+  grid.className = "grid " + cfg.cardType;
+}
+
+function readState() {
+  const cfg = DOMAINS[current], s = {};
+  cfg.groups.forEach(g => {
+    if (g.type === "radio") s[g.name] = groupsEl.querySelector(`input[name="${g.name}"]:checked`)?.value ?? g.def;
+    else s[g.name] = [...groupsEl.querySelectorAll(`input[name="${g.name}"]:checked`)].map(i => i.value);
+  });
+  return s;
+}
+
+function render() {
+  const cfg = DOMAINS[current], s = readState();
+  /* platform 그룹은 단일 항목이라 시연에서는 결과에 영향 없음 (실서비스: platforms 필터) */
+  let items = cfg.works.filter(w => cfg.pred(w, s));
+  const sort = cfg.sorts.find(x => x.v === sortSelect.value) || cfg.sorts[0];
+  items = [...items].sort(sort.fn);
+
+  grid.innerHTML = items.map(cfg.card).join("");
+  countEl.textContent = items.length + "개 작품";
+  emptyEl.classList.toggle("show", items.length === 0);
+  document.querySelector(".pagination").style.display = items.length === 0 ? "none" : "";
+  renderChips(cfg, s);
+}
+
+function renderChips(cfg, s) {
+  chipsEl.innerHTML = "";
+  cfg.groups.forEach(g => {
+    if (g.name === "platform") return;                     /* 기본 체크된 단일 플랫폼은 칩 생략 */
+    const add = (label, undo) => {
+      const el = document.createElement("span");
+      el.className = "chip";
+      el.innerHTML = `${label} <button aria-label="${label} 필터 해제"><i class="ph ph-x"></i></button>`;
+      el.querySelector("button").addEventListener("click", () => { undo(); render(); });
+      chipsEl.appendChild(el);
+    };
+    if (g.type === "radio") {
+      if (s[g.name] !== g.def) {
+        const input = groupsEl.querySelector(`input[name="${g.name}"]:checked`);
+        add(input.closest("label").innerText.trim(), () => { groupsEl.querySelector(`input[name="${g.name}"][value="${g.def}"]`).checked = true; });
+      }
+    } else {
+      s[g.name].forEach(v => {
+        const input = groupsEl.querySelector(`input[name="${g.name}"][value="${v}"]`);
+        add(input.closest("label").innerText.trim(), () => { input.checked = false; });
+      });
+    }
+  });
+}
+
+function resetAll() { renderSidebar(); render(); }
+
+document.querySelectorAll(".domain-tab[data-domain]").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".domain-tab").forEach(t => t.removeAttribute("aria-selected"));
+    tab.setAttribute("aria-selected", "true");
+    current = tab.dataset.domain;
+    renderSidebar(); render();
+    window.scrollTo({ top: 0 });
+  });
+});
+sortSelect.addEventListener("change", render);
+$("resetBtn").addEventListener("click", resetAll);
+$("emptyReset").addEventListener("click", resetAll);
+
+if (window.matchMedia("(max-width: 1023px)").matches) $("filterDrawer").open = false;
+
+renderSidebar();
+render();
+</script>
+</body>
+</html>
