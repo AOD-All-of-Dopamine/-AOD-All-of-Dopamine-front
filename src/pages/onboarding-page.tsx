@@ -1,7 +1,16 @@
-import { useEffect, useState } from "react";
-import Header from "../components/common/Header";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "@phosphor-icons/react";
 import BottomButton from "../components/common/BottomButton";
+import GenreChip from "../components/ui/GenreChip";
+
+/**
+ * /onboarding - 목업 없음 + 스펙상 플로우 재설계 스코프 제외. 기존 구조
+ * (안내 문구 + 장르 칩 그리드 + 하단 다음 버튼) 유지, 토큰만 입힘.
+ * - 구 Header 제거 -> 상단 뒤로가기(work-detail 관례).
+ * - 장르 선택 칩은 2차 칩 위계(GenreChip, 활성=액센트 틴트) 재사용.
+ * - body overflow 잠금 이펙트 제거 - 셸 스크롤에 맡긴다.
+ */
 
 const GENRES = [
   "액션",
@@ -39,59 +48,40 @@ export default function OnboardingPage() {
 
   const isValid = selectedGenres.length >= 1 && selectedGenres.length <= 5;
 
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = "auto";
-    };
-  }, []);
-
   return (
-    <div className="relative bg-[#242424] min-h-full">
-      <Header
-        leftIcon="back"
-        onLeftClick={() => navigate("/home")}
-        bgColor="#242424"
-      />
-      <div className="flex-1 px-6 pt-18 pb-24">
-        <h1 className="font-[PretendardVariable] text-white text-[16px] font-semibold leading-snug mb-2">
-          좋아하는 장르를 골라주세요
-          <br />
-          취향에 맞는 콘텐츠를 추천해드려요
-        </h1>
+    <div className="mx-auto max-w-[720px] px-6 pb-32 pt-6">
+      <button
+        type="button"
+        onClick={() => navigate("/home")}
+        className="-ml-2.5 inline-flex items-center gap-1.5 rounded-input px-2.5 py-1.5 text-sm font-medium text-ink-2 transition-colors hover:bg-ink/5 hover:text-ink"
+      >
+        <ArrowLeft size={16} />
+        뒤로 가기
+      </button>
 
-        <p className="font-[PretendardVariable] text-[#B2B1B3] text-[14px] mb-6">
-          최대 5개 선택 가능해요
-        </p>
+      <h1 className="mt-6 text-[22px] font-extrabold leading-snug tracking-[-0.02em] text-ink">
+        좋아하는 장르를 골라주세요
+        <br />
+        취향에 맞는 콘텐츠를 추천해드려요
+      </h1>
 
-        {/* 장르 태그 */}
-        <div className="flex flex-wrap gap-2">
-          {GENRES.map((genre) => {
-            const selected = selectedGenres.includes(genre);
+      <p className="mt-2 text-[14.5px] text-ink-2">최대 5개 선택 가능해요</p>
 
-            return (
-              <button
-                key={genre}
-                onClick={() => toggleGenre(genre)}
-                className={`
-                  px-4 py-2 rounded-full text-[14px] font-[PretendardVariable] font-medium transition
-                  ${
-                    selected
-                      ? "bg-[#855BFF] text-white"
-                      : "bg-[#2F2F32] text-[#D3D3D3]"
-                  }
-                `}
-              >
-                {genre}
-              </button>
-            );
-          })}
-        </div>
+      {/* 장르 태그 */}
+      <div className="mt-6 flex flex-wrap gap-2">
+        {GENRES.map((genre) => (
+          <GenreChip
+            key={genre}
+            active={selectedGenres.includes(genre)}
+            onClick={() => toggleGenre(genre)}
+          >
+            {genre}
+          </GenreChip>
+        ))}
       </div>
 
       <div className="fixed bottom-0 left-0 w-full">
-        <div className="max-w-2xl mx-auto">
+        <div className="mx-auto max-w-[720px]">
           <BottomButton
             buttons={[
               {
@@ -101,7 +91,7 @@ export default function OnboardingPage() {
                   // API 저장
                   navigate("/home");
                 },
-                variant: "purple",
+                variant: "primary",
                 disabled: !isValid,
               },
             ]}

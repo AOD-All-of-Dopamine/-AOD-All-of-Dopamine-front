@@ -227,7 +227,7 @@ export default function HomePage() {
       <h1 className="sr-only">홈</h1>
 
       {/* 모바일 전용 검색 - 데스크톱(lg~)은 SiteHeader 검색이 담당 */}
-      <SearchBar fixed={false} onSearch={handleSearch} />
+      <SearchBar onSearch={handleSearch} />
 
       <div className="mx-auto max-w-[1280px] px-6 pb-[72px] pt-7">
         {/* 피처드 히어로: 메인 1 + 서브 2 */}

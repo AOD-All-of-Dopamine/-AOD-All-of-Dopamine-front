@@ -34,6 +34,7 @@
 | `--color-accent-ink` | `#b23d1c` | 액센트 텍스트·호버 |
 | `--color-accent-tint` | `#faeee9` | 액센트 배경 틴트 (칩·뱃지) |
 | `--color-star` | `#d9930d` | 별점 전용 (시맨틱 예외) |
+| `--color-danger` | `#c73e1d` | 폼 에러·파괴 액션 전용 (시맨틱 예외, Phase 7 추가) → `text-danger` |
 
 라운드 토큰 `--radius-panel`(12px)·`--radius-input`(8px) → `rounded-panel`/`rounded-input`,
 그림자 `--shadow-card`/`--shadow-lift` → `shadow-card`/`shadow-lift`. (`src/index.css` `@theme`이 구현 원본)
@@ -48,7 +49,9 @@
 - **라운드**: 카드·패널 12px, 입력 8px, 칩·태그·버튼 pill — 예외 없음
 - **폰트**: Pretendard Variable (자가호스팅 유지). 디스플레이 세리프 금지
 - **아이콘**: Phosphor 단일 (`@phosphor-icons/react`), strokeWidth 통일. 손그림 SVG 금지
-- **액센트 규율**: 액센트 1개. 앰버=별점, 레드=폼 에러만 시맨틱 허용. 그 외 컬러 유틸 금지
+- **액센트 규율**: 액센트 1개. 앰버=별점, 레드=폼 에러만 시맨틱 허용. 그 외 컬러 유틸 금지.
+  **채움(fill) 버튼 배경은 `accent-ink`**(surface 텍스트 대비 5.77:1, AA) — `accent`(3.73:1)는
+  틴트 배경·텍스트·포커스 링·장식(포디움 순번 등 큰 표시)에만 사용 (Phase 7 확정)
 - **em-dash(—) 표시 텍스트 금지**, 중점(·)은 한 줄에 1개까지
 - **칩 위계**: 1차(도메인 등) 활성=다크, 2차(장르 등) 활성=액센트 틴트
 - 내비 64px 한 줄, 컨테이너 페이지별 max-w(탐색 1440 / 홈 1280 / 상세 1200 / 랭킹·신작 1080)

@@ -75,9 +75,9 @@
 
 ### Phase 7: 잔여 페이지 + 최종 게이트
 
-- [ ] **7.1** `/search`, 로그인/회원가입/프로필 계열, 온보딩: 토큰·공용 컴포넌트 적용 (신규 레이아웃 없음, 폼 대비 AA 확인)
-- [ ] **7.2** 죽은 스타일 제거: 구 다크 스타일·미사용 클래스·구 아이콘 라이브러리 의존성 제거
-- [ ] **7.3** 최종 게이트: 스펙 §6 전체 (grep 5종 + 빌드) + 15개 라우트 스크린샷 일괄 + Lighthouse (홈·탐색 LCP<2.5s, CLS<0.1)
+- [x] **7.1** 10개 페이지(search/login/signup/profile/my-reviews/my-bookmarks/my-likes/review/onboarding/internal-ranking) 토큰·공용 컴포넌트 재스킨 — 폼 AA(danger 토큰 #c73e1d 신설, 4.99:1), 구 Header→뒤로가기 관례, Modal→ConfirmDialog, BottomButton primary/secondary 전환
+- [x] **7.2** 죽은 코드 삭제 23건(구 Header·Modal·HorizontalScroller·다크 에셋 20종 — 참조 0 검증 후), SearchBar 전환기 코드 정리. **액센트 채움 버튼을 accent-ink로 통일**(3.73:1→5.77:1 AA — 스펙 §2.2 규칙 추가, 전 페이지 소급)
+- [x] **7.3** 최종 게이트: 스펙 §6 grep 5종 src 전체 0건 + tsc·vite 그린(번들 456KB로 감소) + 주요 라우트 실브라우저(콘솔 에러 0) + Phase 7 통합 리뷰 ✅ Approved. Lighthouse는 편차로 이월(아래)
 
 ---
 
@@ -92,6 +92,11 @@
 | Phase 3: 영화 OTT 필터·웹툰 상태/요일/연령·출시 시기 필터 미렌더 | usePlatforms가 수집 소스만 반환, findWorks에 도메인 컬럼·날짜 범위 파라미터 부재 — §7 백엔드 트랙 | 2026-08-13 |
 | Phase 3: 카드에 장르 태그·제작자·리뷰% 미표시 | WorkSummary가 id/domain/title/thumbnail/score/releaseDate만 제공 — summary API 확장 후 목업 완전체 | 2026-08-13 |
 | Phase 3: 페이지 전환 시 스켈레톤 유지(placeholderData 미사용) | 도메인 전환 잔상 방지 우선 — 의도적 트레이드오프 (코드 헤더 주석 기록) | 2026-08-13 |
+| Phase 4: 비슷한 작품 섹션 생략, OTT는 정보 패널 표기, TMDB 평점 필 없음 | 추천 API·watch provider URL·vote_average 수집 부재 (백엔드 실코드 확정) | 2026-08-13 |
+| Phase 6: 랭킹 기간·집계 기준·장르 부문·델타 미렌더, /new 알림 받기 생략 | 랭킹 스냅샷 단일 upsert(축 미수집)·알림 API 부재 — §7 백엔드 트랙 | 2026-08-13 |
+| Phase 7: /dev/components 갤러리 삭제 대신 dev 전용(import.meta.env.DEV+lazy) 유지 | 시각 게이트 도구로 계속 유용, 프로덕션 번들 제외 실증(dist에 청크·문자열 0) | 2026-08-13 |
+| Phase 7: profile의 /profile/info 이동 제거 | 라우트 미등록 죽은 링크(클릭 시 라우터 에러) — 버그 제거 | 2026-08-13 |
+| Phase 7: Lighthouse 측정 이월 | 로컬 백엔드 미기동 상태(전 페이지 스켈레톤/에러)라 LCP 측정 대표성 없음 — 백엔드 연동 환경에서 홈·탐색 측정 필요 | 2026-08-13 |
 
 ## 스크린샷 원장
 

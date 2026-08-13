@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from "react";
+﻿import { ReactNode, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { keepPreviousData } from "@tanstack/react-query";
@@ -471,7 +471,7 @@ export default function WorkDetailPage() {
                 type="button"
                 onClick={handleBookmark}
                 disabled={toggleBookmarkMutation.isPending}
-                className={`${actionBtnClass} bg-accent text-surface hover:bg-accent-ink`}
+                className={`${actionBtnClass} bg-accent-ink text-surface hover:opacity-90`}
               >
                 <BookmarkSimple
                   size={17}

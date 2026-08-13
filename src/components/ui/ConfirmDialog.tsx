@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useId, useRef } from "react";
+﻿import { ReactNode, useEffect, useId, useRef } from "react";
 
 /**
  * 토큰 스타일 확인 다이얼로그 (라이트 리디자인용).
@@ -93,7 +93,7 @@ const ConfirmDialog = ({
           <button
             type="button"
             onClick={onConfirm}
-            className="flex-1 rounded-full bg-accent py-2.5 text-sm font-semibold text-surface transition-colors hover:bg-accent-ink active:scale-[0.98]"
+            className="flex-1 rounded-full bg-accent-ink py-2.5 text-sm font-semibold text-surface transition-colors hover:opacity-90 active:scale-[0.98]"
           >
             {confirmLabel}
           </button>

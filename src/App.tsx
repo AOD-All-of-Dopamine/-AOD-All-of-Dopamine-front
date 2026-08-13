@@ -21,7 +21,6 @@ import InternalRankingPage from "./pages/internal-ranking-page";
 import OnboardingPage from "./pages/onboarding-page";
 import ReviewPage from "./pages/review-page";
 import SearchPage from "./pages/search-page";
-import DevComponentsPage from "./pages/dev-components-page";
 
 const publicRoutes: RouteObject[] = [
   {
@@ -44,8 +43,20 @@ const publicRoutes: RouteObject[] = [
       { path: "onboarding", element: <OnboardingPage /> },
       { path: "review/:id", element: <ReviewPage /> },
       { path: "search", element: <SearchPage /> },
-      // Phase 2 공용 컴포넌트 시각 게이트용 갤러리 - Phase 7에서 제거
-      { path: "dev/components", element: <DevComponentsPage /> },
+      // dev 전용 - 시각 게이트 도구 (공용 컴포넌트 갤러리).
+      // 플랜 편차: 삭제 대신 DEV 게이트로 유지 - 프로덕션 번들에서는
+      // import.meta.env.DEV가 false 상수로 접혀 lazy import째 제외된다.
+      ...(import.meta.env.DEV
+        ? [
+            {
+              path: "dev/components",
+              lazy: async () => ({
+                Component: (await import("./pages/dev-components-page"))
+                  .default,
+              }),
+            },
+          ]
+        : []),
     ],
   },
 ];

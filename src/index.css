@@ -21,6 +21,7 @@
   --color-accent-ink: #b23d1c;
   --color-accent-tint: #faeee9;
   --color-star: #d9930d;          /* 별점 전용 */
+  --color-danger: #c73e1d;        /* 폼 에러·파괴 액션 전용 (시맨틱 레드 1종) */
 
   /* 라운드: 카드·패널 12 / 입력 8 / 칩·버튼은 rounded-full */
   --radius-panel: 12px;
