@@ -21,6 +21,7 @@ import InternalRankingPage from "./pages/internal-ranking-page";
 import OnboardingPage from "./pages/onboarding-page";
 import ReviewPage from "./pages/review-page";
 import SearchPage from "./pages/search-page";
+import DevComponentsPage from "./pages/dev-components-page";
 
 const publicRoutes: RouteObject[] = [
   {
@@ -43,6 +44,8 @@ const publicRoutes: RouteObject[] = [
       { path: "onboarding", element: <OnboardingPage /> },
       { path: "review/:id", element: <ReviewPage /> },
       { path: "search", element: <SearchPage /> },
+      // Phase 2 공용 컴포넌트 시각 게이트용 갤러리 - Phase 7에서 제거
+      { path: "dev/components", element: <DevComponentsPage /> },
     ],
   },
 ];

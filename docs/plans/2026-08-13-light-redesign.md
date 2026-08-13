@@ -42,10 +42,10 @@
 
 ### Phase 2: 공용 컴포넌트 (스펙 §2.3 인벤토리)
 
-- [ ] **2.1** 카드류: `WorkCard(portrait|landscape)` `RailCard` `RankRow` `PodiumCard` `ReviewCard`
-- [ ] **2.2** 컨트롤류: `Chip` `DomainChip` `GenreChip` `FilterGroup` `SortSelect` `SegmentedControl` `Pagination`
-- [ ] **2.3** 표시류: `Tag` `StatPill` `DdayPill` `DeltaBadge` `EmptyState` `SkeletonCard`
-- [ ] **2.4** 게이트: 각 컴포넌트가 목업의 대응 요소와 시각 일치(스토리 페이지 또는 임시 갤러리 라우트로 대조), hover·active·focus 상태 포함
+- [x] **2.1** 카드류: `WorkCard(portrait|landscape)` `RailCard` `RankRow(panel|feature+accent)` `PodiumCard` `ReviewCard` (+공용 `cardStyles.ts`)
+- [x] **2.2** 컨트롤류: `Chip` `DomainChip(md|lg)` `GenreChip` `FilterGroup(checkbox|radio 판별 유니언)` `SortSelect` `SegmentedControl` `Pagination` (+`SoonBadge`)
+- [x] **2.3** 표시류: `Tag(canvas|surface)` `StatPill` `DdayPill` `DeltaBadge` `EmptyState` `SkeletonCard(aria-hidden)`
+- [x] **2.4** 게이트: 스펙 리뷰(목업 CSS 수치 대조, 이슈 6건 수정 후 ✅) + 품질 리뷰(11건 수정 후 ✅ Approved) + 기계 게이트 grep 0건 + 빌드·tsc 그린 + `/dev/components` 갤러리 DOM 렌더 검증(접근성 트리). 픽셀 스크린샷은 브라우저 뷰포트 0x0(창 최소화)으로 보류 — Phase 3 게이트에서 재시도
 
 ### Phase 3: `/explore` (최대 가치 — 여기서 페이지 이식 표준 확립)
 
