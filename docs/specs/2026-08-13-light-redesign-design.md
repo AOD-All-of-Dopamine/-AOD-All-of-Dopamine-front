@@ -23,17 +23,20 @@
 
 | 토큰 | 값 | 용도 |
 |---|---|---|
-| `--color-bg` | `#f7f6f4` | 페이지 배경 (웜 뉴트럴, 순백 금지) |
-| `--color-surface` | `#fdfdfc` | 카드·패널·내비 표면 |
-| `--color-border` | `#e7e5e1` | 기본 테두리 |
-| `--color-border-strong` | `#d8d5cf` | 호버 테두리 |
-| `--color-ink` | `#1c1b19` | 본문 텍스트 (순흑 금지) |
+| `--color-canvas` | `#f7f6f4` | 페이지 배경 (웜 뉴트럴, 순백 금지) → `bg-canvas` |
+| `--color-surface` | `#fdfdfc` | 카드·패널·내비 표면 → `bg-surface` |
+| `--color-line` | `#e7e5e1` | 기본 테두리 → `border-line` |
+| `--color-line-strong` | `#d8d5cf` | 호버 테두리 |
+| `--color-ink` | `#1c1b19` | 본문 텍스트 (순흑 금지) → `text-ink` |
 | `--color-ink-2` | `#716f6a` | 보조 텍스트 |
 | `--color-ink-3` | `#9c9993` | 힌트·비활성 |
 | `--color-accent` | `#e2542c` | 유일한 액센트 (번트 오렌지) |
 | `--color-accent-ink` | `#b23d1c` | 액센트 텍스트·호버 |
 | `--color-accent-tint` | `#faeee9` | 액센트 배경 틴트 (칩·뱃지) |
 | `--color-star` | `#d9930d` | 별점 전용 (시맨틱 예외) |
+
+라운드 토큰 `--radius-panel`(12px)·`--radius-input`(8px) → `rounded-panel`/`rounded-input`,
+그림자 `--shadow-card`/`--shadow-lift` → `shadow-card`/`shadow-lift`. (`src/index.css` `@theme`이 구현 원본)
 
 그림자 2단계(`shadow`, `shadow-lift`)는 배경 색조로 틴트(`rgb(58 48 40 / …)`), 순흑 그림자 금지.
 

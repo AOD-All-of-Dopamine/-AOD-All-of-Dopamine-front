@@ -28,10 +28,10 @@
 
 ### Phase 0: 기반 — 토큰 · 목업 커밋 · 안전망
 
-- [ ] **0.1** `mockups/` 6장 + 본 스펙·플랜 커밋 (디자인 스펙으로 고정)
-- [ ] **0.2** `index.css`: Vite 기본 다크 잔재 제거(`#242424`, `color-scheme: light dark` → `light`), 스펙 §2.1 토큰을 `@theme`으로 정의, 그림자·라운드 토큰 포함
-- [ ] **0.3** `@phosphor-icons/react` 설치, 기존 아이콘 사용처 인벤토리 grep (교체는 각 Phase에서)
-- [ ] **0.4** 게이트: 빌드 그린 + 앱이 라이트 배경으로 뜨는지 확인 (스타일 깨짐은 허용 — 이후 Phase에서 수복)
+- [x] **0.1** `mockups/` 6장 + 본 스펙·플랜 커밋 (디자인 스펙으로 고정) — 7884034
+- [x] **0.2** `index.css`: Vite 기본 다크 잔재 제거(`#242424`, `color-scheme: light dark` → `light`), 스펙 §2.1 토큰을 `@theme`으로 정의, 그림자·라운드 토큰 포함. 전역 스크롤바 숨김도 제거(웹 표준 스크롤 — `.scrollbar-hide` 유틸은 릴용으로 유지)
+- [x] **0.3** `@phosphor-icons/react` 설치. 기존 외부 아이콘 라이브러리 의존 0건 확인 (인라인 SVG는 각 Phase에서 교체)
+- [x] **0.4** 게이트: `npm run build`(tsc+vite) 그린 + dev 서버(포트 3000) 스크린샷으로 라이트 캔버스 확인 — `docs/screenshots/phase0/home-1512-light-canvas-legacy-components.jpg` (기존 컴포넌트는 자체 다크 스타일 잔존 — 예정된 상태)
 
 ### Phase 1: 공통 셸 — Header · Footer · 레이아웃
 
