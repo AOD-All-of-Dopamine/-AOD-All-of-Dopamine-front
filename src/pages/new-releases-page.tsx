@@ -1,344 +1,362 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { ReactNode, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
+import { WarningCircle } from "@phosphor-icons/react";
 import { useRecentReleases, useUpcomingReleases } from "../hooks/useWorks";
-import Header from "../components/common/Header";
-import { DOMAIN_LABEL_MAP } from "../constants/domain";
-import { DOMAIN_PLATFORMS, PLATFORM_META } from "../constants/platforms";
-import {
-  Category,
-  imageAspectMap,
-  thumbnailFallbackMap,
-} from "../constants/thumbnail";
+import { DOMAIN_FILTERS, DOMAIN_LABEL_MAP } from "../constants/domain";
+import { thumbnailFallbackMap, type Category } from "../constants/thumbnail";
+import { WorkSummary } from "../types/api";
+import { dDayOf, parseYmd } from "../utils/releaseDate";
+import DomainChip from "../components/ui/DomainChip";
+import ReleaseRow from "../components/ui/ReleaseRow";
+import Tag from "../components/ui/Tag";
+import DdayPill from "../components/ui/DdayPill";
+import EmptyState from "../components/ui/EmptyState";
 
-type ReleaseType = "released" | "upcoming";
+/**
+ * /new - mockups/new-releases-mockup.html 이식.
+ * 레이아웃: h1 신작 + 도메인 칩 / 최근 출시(날짜 그룹 타임라인) /
+ * 출시 예정(월 그룹 + DdayPill). 컨테이너 max-w 1080.
+ * 그룹 = 좌측 sticky 날짜 라벨(148px) + 우측 행 리스트, 모바일은 라벨 인라인.
+ *
+ * 히스토리 정책: 도메인 칩 전환은 push (탭 성격) + 동일 값 no-op 가드.
+ * URL 쿼리(?domain=)가 상태의 단일 출처, all(전체)은 파라미터 생략.
+ *
+ * 백엔드 계약(WorkApiService.getRecent/UpcomingReleases 기준) 편차:
+ * - 행 메타(목업 "작가 · 플랫폼"): WorkSummary에 작가·플랫폼 필드가 없어
+ *   평점(score>0일 때만)으로 대체. 도메인 태그는 Tag(canvas) 재사용 -
+ *   목업 .domain(12px, 패딩 3px 11px)과 수치가 약간 다르나 컴포넌트 재사용
+ *   우선 원칙으로 의도적 유지.
+ * - 출시 예정 "미정(TBA)" 그룹 미렌더: findUpcomingReleases가
+ *   releaseDate > 오늘 AND <= +1년 조건이라 날짜 없는 작품이 응답에 없다.
+ * - "알림 받기" 버튼 생략: 백엔드에 알림 API가 없고(북마크=관심 등록과 의미가 달라
+ *   라벨 왜곡), 행마다 북마크 상태 조회 N회가 필요해 미이식. 상세 페이지의
+ *   관심 등록으로 대체된다.
+ * - 페이지네이션 없음(목업 동일): 최근 출시는 3개월 범위 중 최신 40건,
+ *   출시 예정은 1년 범위 중 가까운 40건만 표시.
+ * - 날짜 라벨(오늘/어제)과 D-day는 클라이언트 로컬 시간 기준 - 서버(LocalDate)
+ *   경계와 어긋날 수 있으나 home 출시 예정 섹션과 동일한 관례로 수용.
+ */
 
-const categories: { id: Category; label: string }[] = [
-  { id: "movie", label: "영화" },
-  { id: "tv", label: "시리즈" },
-  { id: "game", label: "게임" },
-  { id: "webtoon", label: "웹툰" },
-  { id: "webnovel", label: "웹소설" },
+const RECENT_SIZE = 40;
+const UPCOMING_SIZE = 40;
+
+const DOMAIN_IDS = DOMAIN_FILTERS.map((d) => d.id.toLowerCase());
+
+const WEEKDAY_LABELS = [
+  "일요일",
+  "월요일",
+  "화요일",
+  "수요일",
+  "목요일",
+  "금요일",
+  "토요일",
 ];
 
+const categoryOf = (domain?: string): Category => {
+  const key = domain?.toLowerCase() as Category;
+  return key in thumbnailFallbackMap ? key : "movie";
+};
+
+const domainLabel = (domain?: string) =>
+  DOMAIN_LABEL_MAP[domain ?? ""] ?? domain ?? "";
+
+/**
+ * 출시 예정 행 meta - "게임 · 11월 19일" (다른 해면 연도 표기).
+ * 날짜 없으면 도메인만 표기 - 월 그룹 라벨이 날짜 맥락을 주는 데다 API가
+ * 날짜 없는 작품을 반환하지 않는 방어 분기다. 홈은 그룹 라벨이 없어
+ * "발매일 미정"을 명시하므로 문구가 다르다 (페이지별 유지).
+ */
+const upcomingMeta = (work: WorkSummary) => {
+  const domain = domainLabel(work.domain);
+  const ymd = parseYmd(work.releaseDate);
+  if (!ymd) return domain;
+  const datePart =
+    ymd.y === new Date().getFullYear()
+      ? `${ymd.m}월 ${ymd.d}일`
+      : `${ymd.y}년 ${ymd.m}월 ${ymd.d}일`;
+  return `${domain} · ${datePart}`;
+};
+
+interface ReleaseGroup {
+  key: string;
+  /** 그룹 라벨 - 날짜("8월 12일") 또는 월("11월") */
+  main: string;
+  /** 보조 라벨 - 오늘/어제/요일 또는 연도 */
+  sub: string;
+  items: WorkSummary[];
+}
+
+/** 첫 등장 순서로 그룹을 만들고, 같은 키의 항목은 해당 그룹으로 병합 (API 정렬 보존) */
+const groupBy = (
+  works: WorkSummary[],
+  toGroup: (work: WorkSummary) => Omit<ReleaseGroup, "items"> | null,
+): ReleaseGroup[] => {
+  const groups: ReleaseGroup[] = [];
+  const indexByKey = new Map<string, number>();
+  for (const work of works) {
+    const head = toGroup(work);
+    if (!head) continue;
+    const at = indexByKey.get(head.key);
+    if (at === undefined) {
+      indexByKey.set(head.key, groups.length);
+      groups.push({ ...head, items: [work] });
+    } else {
+      groups[at].items.push(work);
+    }
+  }
+  return groups;
+};
+
+/** 최근 출시 그룹 헤더 - "M월 D일" + 오늘/어제/요일 */
+const recentGroupOf = (work: WorkSummary) => {
+  const ymd = parseYmd(work.releaseDate);
+  if (!ymd) return null;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const date = new Date(ymd.y, ymd.m - 1, ymd.d);
+  const diff = Math.round((today.getTime() - date.getTime()) / 86_400_000);
+  const main =
+    ymd.y === now.getFullYear()
+      ? `${ymd.m}월 ${ymd.d}일`
+      : `${ymd.y}년 ${ymd.m}월 ${ymd.d}일`;
+  const sub =
+    diff === 0 ? "오늘" : diff === 1 ? "어제" : WEEKDAY_LABELS[date.getDay()];
+  // 키는 upcomingGroupOf와 동일하게 파싱값 조립("y-m-d")으로 통일
+  return { key: `${ymd.y}-${ymd.m}-${ymd.d}`, main, sub };
+};
+
+/** 출시 예정 그룹 헤더 - "M월" + 연도 */
+const upcomingGroupOf = (work: WorkSummary) => {
+  const ymd = parseYmd(work.releaseDate);
+  if (!ymd) return null;
+  return { key: `${ymd.y}-${ymd.m}`, main: `${ymd.m}월`, sub: String(ymd.y) };
+};
+
+/** 날짜 그룹 1개 - 좌 sticky 라벨(148px) + 우 행 리스트 (모바일은 라벨 인라인) */
+const DateGroup = ({
+  group,
+  children,
+}: {
+  group: ReleaseGroup;
+  children: ReactNode;
+}) => (
+  <div className="mt-[26px] grid gap-2.5 min-[768px]:grid-cols-[148px_1fr] min-[768px]:gap-6">
+    <div className="flex items-baseline gap-2 min-[768px]:sticky min-[768px]:top-22 min-[768px]:block min-[768px]:self-start">
+      <h3 className="text-base font-extrabold text-ink">{group.main}</h3>
+      <span className="text-[13px] text-ink-3 min-[768px]:mt-0.5 min-[768px]:block">
+        {group.sub}
+      </span>
+    </div>
+    <div className="flex flex-col gap-2.5">{children}</div>
+  </div>
+);
+
+/** 섹션 단위 인라인 에러 (전체 페이지 붕괴 금지) */
+const SectionError = ({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry: () => void;
+}) => (
+  <div
+    role="status"
+    className="mt-[26px] flex items-center gap-2.5 rounded-panel border border-line bg-surface px-4 py-3.5 text-sm text-ink-2"
+  >
+    <WarningCircle size={18} className="flex-none text-ink-3" />
+    <span className="min-w-0">{message}</span>
+    <button
+      type="button"
+      onClick={onRetry}
+      className="ml-auto flex-none rounded-full border border-line bg-canvas px-3.5 py-1.5 text-[13px] font-semibold text-ink transition-colors hover:border-line-strong"
+    >
+      다시 시도
+    </button>
+  </div>
+);
+
+/** ReleaseRow 형태 스켈레톤 그룹 (라벨 + 행 3개) */
+const GroupSkeleton = () => (
+  <div
+    aria-hidden="true"
+    className="mt-[26px] grid animate-pulse gap-2.5 min-[768px]:grid-cols-[148px_1fr] min-[768px]:gap-6"
+  >
+    <div className="flex items-baseline gap-2 min-[768px]:block min-[768px]:self-start">
+      <div className="h-5 w-20 rounded-input bg-line" />
+      <div className="h-3.5 w-12 rounded-input bg-line min-[768px]:mt-1.5" />
+    </div>
+    <div className="flex flex-col gap-2.5">
+      {Array.from({ length: 3 }, (_, i) => (
+        <div
+          key={i}
+          className="flex items-center gap-4 rounded-panel border border-line bg-surface px-4 py-3 shadow-card"
+        >
+          <div className="aspect-[2/3] w-[52px] flex-none rounded-input bg-line" />
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <div className="h-4 w-2/5 rounded-input bg-line" />
+            <div className="h-3 w-1/4 rounded-input bg-canvas" />
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
 export default function NewReleasesPage() {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [selectedCategory, setSelectedCategory] = useState<Category>(() => {
-    const cat = searchParams.get("category");
-    return (categories.find((c) => c.id === cat)?.id as Category) || "game";
+  // URL 쿼리(?domain=)가 상태의 단일 출처 - 직접 진입·새로고침·뒤로가기 복원
+  const domainId = useMemo(() => {
+    const raw = (searchParams.get("domain") ?? "all").toLowerCase();
+    return DOMAIN_IDS.includes(raw) ? raw : "all";
+  }, [searchParams]);
+  const domainKey = domainId === "all" ? undefined : domainId.toUpperCase();
+
+  // 도메인 칩 전환 = push (탭 성격), 동일 값이면 히스토리 no-op
+  const handleDomainChange = (id: string) => {
+    if (id === domainId) return;
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      if (id === "all") params.delete("domain");
+      else params.set("domain", id);
+      return params;
+    });
+    window.scrollTo({ top: 0 });
+  };
+
+  const recent = useRecentReleases({ domain: domainKey, size: RECENT_SIZE });
+  const upcoming = useUpcomingReleases({
+    domain: domainKey,
+    size: UPCOMING_SIZE,
   });
 
-  const [selectedPlatforms, setSelectedPlatforms] = useState<Set<string>>(
-    () => {
-      const platforms = searchParams.get("platforms");
-      return platforms ? new Set(platforms.split(",")) : new Set(["all"]);
-    },
+  // 서버 정렬 보존 그룹핑 - 최근: releaseDate DESC 날짜 그룹, 예정: ASC 월 그룹
+  const recentGroups = useMemo(
+    () => groupBy(recent.data?.content ?? [], recentGroupOf),
+    [recent.data],
+  );
+  const upcomingGroups = useMemo(
+    () => groupBy(upcoming.data?.content ?? [], upcomingGroupOf),
+    [upcoming.data],
   );
 
-  const [releaseType, setReleaseType] = useState<ReleaseType>(() => {
-    const type = searchParams.get("type");
-    return type === "upcoming" ? "upcoming" : "released";
-  });
-
-  const [page, setPage] = useState(() => {
-    const p = searchParams.get("page");
-    return p ? parseInt(p, 10) : 0;
-  });
-
-  // URL 동기화
-  useEffect(() => {
-    const params = new URLSearchParams();
-    params.set("category", selectedCategory);
-    params.set("type", releaseType);
-    params.set("page", page.toString());
-
-    if (!selectedPlatforms.has("all") && selectedPlatforms.size > 0) {
-      params.set("platforms", Array.from(selectedPlatforms).join(","));
-    }
-
-    setSearchParams(params, { replace: true });
-  }, [selectedCategory, selectedPlatforms, releaseType, page]);
-
-  // 도메인 매핑
-  const domainMap: Record<Category, string> = {
-    movie: "MOVIE",
-    tv: "TV",
-    game: "GAME",
-    webtoon: "WEBTOON",
-    webnovel: "WEBNOVEL",
-  };
-
-  const domainKey = domainMap[selectedCategory];
-  const platformKeys = DOMAIN_PLATFORMS[domainKey] || [];
-
-  const availablePlatforms = platformKeys.map((key) => {
-    const meta = PLATFORM_META[key];
-    return {
-      id: key.toLowerCase(),
-      key,
-      label: meta?.label ?? key,
-      logo: meta?.logo,
-    };
-  });
-
-  // 선택된 플랫폼을 배열로 변환
-  const selectedPlatformsArray = selectedPlatforms.has("all")
-    ? undefined
-    : Array.from(selectedPlatforms);
-
-  // API 호출
-  const {
-    data: recentData,
-    isLoading: isLoadingRecent,
-    error: recentError,
-  } = useRecentReleases(
-    {
-      domain: domainMap[selectedCategory],
-      platforms: selectedPlatformsArray,
-      page,
-      size: 20,
-    },
-    { enabled: releaseType === "released" },
-  );
-
-  const {
-    data: upcomingData,
-    isLoading: isLoadingUpcoming,
-    error: upcomingError,
-  } = useUpcomingReleases(
-    {
-      domain: domainMap[selectedCategory],
-      platforms: selectedPlatformsArray,
-      page,
-      size: 20,
-    },
-    { enabled: releaseType === "upcoming" },
-  );
-
-  // API 데이터 사용
-  const isLoading =
-    releaseType === "released" ? isLoadingRecent : isLoadingUpcoming;
-  const error = releaseType === "released" ? recentError : upcomingError;
-  const works =
-    releaseType === "released"
-      ? recentData?.content || []
-      : upcomingData?.content || [];
-
-  const handleCategoryChange = (category: Category) => {
-    setSelectedCategory(category);
-    setSelectedPlatforms(new Set());
-    setPage(0); // 카테고리 변경 시 페이지 초기화
-  };
-
-  const togglePlatform = (platformId: string) => {
-    const newSelection = new Set(selectedPlatforms);
-
-    if (platformId === "all") {
-      newSelection.clear();
-      newSelection.add("all");
-    } else {
-      if (newSelection.has(platformId)) {
-        newSelection.delete(platformId);
-      } else {
-        newSelection.add(platformId);
-      }
-      newSelection.delete("all");
-
-      if (newSelection.size === 0) {
-        newSelection.add("all");
-      }
-    }
-    setSelectedPlatforms(newSelection);
-    setPage(0); // 필터 변경 시 페이지 초기화
-  };
-
-  const formatGroupDate = (dateString: string) => {
-    const d = new Date(dateString);
-    const year = String(d.getFullYear()).slice(2); // 2025 → 25
-    const month = d.getMonth() + 1;
-    const day = d.getDate();
-
-    return `${year} / ${month} / ${day}`;
-  };
-
-  const groupedWorks = works.reduce<Record<string, any[]>>((acc, work) => {
-    if (!work.releaseDate) return acc;
-
-    const key = formatGroupDate(work.releaseDate);
-
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(work);
-
-    return acc;
-  }, {});
-
-  const sortedDates = Object.keys(groupedWorks).sort((a, b) => {
-    const [ay, am, ad] = a.split(" / ").map(Number);
-    const [by, bm, bd] = b.split(" / ").map(Number);
-
-    const aDate = new Date(2000 + ay, am - 1, ad);
-    const bDate = new Date(2000 + by, bm - 1, bd);
-
-    return bDate.getTime() - aDate.getTime();
-  });
+  const emptySuffix = domainId === "all" ? "아직 없어요." : "없어요.";
+  const emptyPrefix = domainId === "all" ? "" : "이 도메인의 ";
 
   return (
-    <div className="flex flex-col h-screen">
-      <Header
-        title="신작"
-        rightIcon="search"
-        onRightClick={() => navigate("/search")}
-        bgColor="#242424"
-      />
-      <div className="w-full max-w-2xl mx-auto px-5">
-        <div className="sticky top-[40px] z-[100] bg-[#242424] border-b border-[#333] pt-3">
-          {/* 카테고리 선택 */}
-          <div className="flex justify-around border-b border-white/0">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => handleCategoryChange(cat.id)}
-                className={`flex-1 text-center py-3 transition-all select-none ${
-                  selectedCategory === cat.id
-                    ? "border-b-2 border-white text-white font-semibold"
-                    : "text-gray-400"
-                }`}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        {/* 플랫폼 */}
-        <div className="pb-4 py-5 mt-[30px]">
-          <div className="flex gap-3 overflow-x-auto scrollbar-hide">
-            {availablePlatforms.map((platform) => {
-              const isSelected = selectedPlatforms.has(platform.id);
+    <div className="mx-auto max-w-[1080px] px-6 pb-20 pt-7">
+      <h1 className="text-[26px] font-extrabold tracking-[-0.03em] text-ink">
+        신작
+      </h1>
 
-              return (
-                <button
-                  key={platform.id}
-                  onClick={() => togglePlatform(platform.id)}
-                  className={`flex items-center gap-2 py-1.5 rounded-full border text-sm font-medium transition-all flex-shrink-0
-    ${platform.key === "ALL" ? "px-4" : "px-2"}
-    ${
-      isSelected
-        ? "border-transparent text-white bg-gradient-to-r from-[#855BFF] to-[#445FD1]"
-        : "border-[#403F43] bg-[#2a2a2a] text-[#D3D3D3] hover:border-[#855BFF]"
-    }`}
-                >
-                  {platform.logo && (
-                    <img
-                      src={platform.logo}
-                      alt={platform.label}
-                      className="w-5 h-5 rounded-full object-contain"
-                    />
-                  )}
-                  <span>{platform.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* 신작 / 예정 탭 */}
-          <div className="flex gap-2 pt-3">
-            <button
-              className={`flex-1 py-2 rounded-lg text-sm font-[PretendardVariable] font-medium transition
-          ${
-            releaseType === "released"
-              ? "bg-[#855BFF] text-white"
-              : "bg-[#2a2a2a] text-[#888]"
-          }`}
-              onClick={() => setReleaseType("released")}
+      {/* 도메인 칩 필터 */}
+      <div className="mt-4 flex flex-wrap gap-1.5">
+        {DOMAIN_FILTERS.map((d) => {
+          const id = d.id.toLowerCase();
+          return (
+            <DomainChip
+              key={d.id}
+              active={domainId === id}
+              onClick={() => handleDomainChange(id)}
             >
-              신작
-            </button>
-            <button
-              className={`flex-1 py-2 rounded-lg text-sm font-[PretendardVariable] font-medium transition
-          ${
-            releaseType === "upcoming"
-              ? "bg-[#855BFF] text-white"
-              : "bg-[#2a2a2a] text-[#888]"
-          }`}
-              onClick={() => setReleaseType("upcoming")}
-            >
-              공개 예정
-            </button>
-          </div>
-        </div>
-
-        {/* 콘텐츠 영역 */}
-        <div className="flex-1 overflow-y-auto pb-40">
-          {isLoading ? (
-            <div className="text-center text-gray-500 py-20">로딩 중...</div>
-          ) : error ? (
-            <div className="text-center text-gray-500 py-20">
-              데이터를 불러올 수 없습니다.
-            </div>
-          ) : works.length > 0 ? (
-            <div className="flex flex-col gap-10">
-              {sortedDates.map((date) => (
-                <section key={date}>
-                  <div className="flex items-center gap-3 mb-4">
-                    {/* 날짜 왼쪽 세로줄 */}
-                    <div className="w-1 h-6 bg-[#8D8C8E]" />
-
-                    {/* 날짜 텍스트 */}
-                    <h3 className="text-white text-lg font-medium">{date}</h3>
-                  </div>
-
-                  {/* 카드 그리드 */}
-                  <div className="grid grid-cols-3 gap-5">
-                    {groupedWorks[date].map((work) => (
-                      <div
-                        key={work.id}
-                        onClick={() => navigate(`/work/${work.id}`)}
-                        className="cursor-pointer transition-transform hover:-translate-y-1"
-                      >
-                        <div
-                          className={`relative w-full ${imageAspectMap[selectedCategory]} rounded-lg mb-2 bg-[#302F31] overflow-hidden`}
-                        >
-                          {work.thumbnail ? (
-                            <img
-                              src={work.thumbnail}
-                              alt={work.title}
-                              className="w-full h-full object-cover rounded-lg"
-                            />
-                          ) : (
-                            <img
-                              src={thumbnailFallbackMap[selectedCategory]}
-                              alt="기본 썸네일"
-                              className="absolute inset-0 m-auto object-contain
-        w-[clamp(32px,30%,64px)]
-        h-[clamp(32px,30%,64px)]
-        opacity-80"
-                            />
-                          )}
-                        </div>
-
-                        <div className="text-white text-sm font-[PretendardVariable] font-semibold truncate">
-                          {work.title}
-                        </div>
-
-                        <div className="font-[PretendardVariable] text-gray-400 text-xs mt-0.5">
-                          {DOMAIN_LABEL_MAP[work.domain] ?? work.domain}
-                          {work.releaseDate &&
-                            ` • ${new Date(work.releaseDate).getFullYear()}`}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center text-gray-500 py-20">
-              데이터가 없습니다.
-            </div>
-          )}
-        </div>
+              {d.label}
+            </DomainChip>
+          );
+        })}
       </div>
+
+      {/* 최근 출시 */}
+      <section className="mt-10">
+        <h2 className="text-[19px] font-extrabold tracking-[-0.02em] text-ink">
+          최근 출시
+        </h2>
+        {recent.isLoading ? (
+          <>
+            <GroupSkeleton />
+            <GroupSkeleton />
+          </>
+        ) : recent.isError ? (
+          <SectionError
+            message="최근 출시작을 불러오지 못했어요."
+            onRetry={() => recent.refetch()}
+          />
+        ) : recentGroups.length === 0 ? (
+          <div className="mt-[26px]">
+            <EmptyState
+              variant="note"
+              title={`${emptyPrefix}최근 출시작이 ${emptySuffix}`}
+            />
+          </div>
+        ) : (
+          recentGroups.map((group) => (
+            <DateGroup key={group.key} group={group}>
+              {group.items.map((work) => (
+                <ReleaseRow
+                  key={work.id}
+                  title={work.title}
+                  meta={
+                    work.score > 0 ? `평점 ${work.score.toFixed(1)}` : undefined
+                  }
+                  imageUrl={work.thumbnail}
+                  fallbackIconUrl={thumbnailFallbackMap[categoryOf(work.domain)]}
+                  to={`/work/${work.id}`}
+                  slot={
+                    // 목업과 동일하게 모바일에서는 도메인 태그 숨김
+                    <span className="hidden min-[768px]:inline-flex">
+                      <Tag>{domainLabel(work.domain)}</Tag>
+                    </span>
+                  }
+                />
+              ))}
+            </DateGroup>
+          ))
+        )}
+      </section>
+
+      {/* 출시 예정 */}
+      <section className="mt-10">
+        <h2 className="text-[19px] font-extrabold tracking-[-0.02em] text-ink">
+          출시 예정
+        </h2>
+        {upcoming.isLoading ? (
+          <GroupSkeleton />
+        ) : upcoming.isError ? (
+          <SectionError
+            message="출시 예정작을 불러오지 못했어요."
+            onRetry={() => upcoming.refetch()}
+          />
+        ) : upcomingGroups.length === 0 ? (
+          <div className="mt-[26px]">
+            <EmptyState
+              variant="note"
+              title={`${emptyPrefix}출시 예정작이 ${emptySuffix}`}
+            />
+          </div>
+        ) : (
+          upcomingGroups.map((group) => (
+            <DateGroup key={group.key} group={group}>
+              {group.items.map((work) => {
+                const dday = dDayOf(work.releaseDate);
+                return (
+                  <ReleaseRow
+                    key={work.id}
+                    title={work.title}
+                    meta={upcomingMeta(work)}
+                    imageUrl={work.thumbnail}
+                    fallbackIconUrl={
+                      thumbnailFallbackMap[categoryOf(work.domain)]
+                    }
+                    to={`/work/${work.id}`}
+                    slot={
+                      <DdayPill variant={dday.variant}>{dday.label}</DdayPill>
+                    }
+                  />
+                );
+              })}
+            </DateGroup>
+          ))
+        )}
+      </section>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import PodiumCard from "../components/ui/PodiumCard";
 import ReviewCard from "../components/ui/ReviewCard";
 import ReviewQuoteCard from "../components/ui/ReviewQuoteCard";
 import UpcomingCard from "../components/ui/UpcomingCard";
+import ReleaseRow from "../components/ui/ReleaseRow";
 import Chip from "../components/ui/Chip";
 import DomainChip from "../components/ui/DomainChip";
 import GenreChip from "../components/ui/GenreChip";
@@ -26,8 +27,9 @@ import { thumbnailFallbackMap } from "../constants/thumbnail";
 
 /**
  * /dev/components - Phase 2 공용 컴포넌트 시각 게이트용 갤러리.
- * 목업(mockups/*.html)과 동일한 샘플 데이터로 22종 컴포넌트를 전부 렌더한다.
- * (Phase 5에서 FeatureCard·ReviewQuoteCard·UpcomingCard 추가)
+ * 목업(mockups/*.html)과 동일한 샘플 데이터로 23종 컴포넌트를 전부 렌더한다.
+ * (Phase 5에서 FeatureCard·ReviewQuoteCard·UpcomingCard 추가,
+ *  Phase 6에서 ReleaseRow 신설 + DomainChip sm + EmptyState note 변형 추가)
  * Phase 7에서 제거 예정 (프로덕션 라우트 아님).
  */
 
@@ -74,7 +76,7 @@ export default function DevComponentsPage() {
         UI 컴포넌트 갤러리
       </h1>
       <p className="mt-1.5 text-sm text-ink-2">
-        라이트 리디자인 공용 컴포넌트(src/components/ui) 22종을 mockups/*.html
+        라이트 리디자인 공용 컴포넌트(src/components/ui) 23종을 mockups/*.html
         기준 실물 샘플로 렌더합니다.
       </p>
 
@@ -443,6 +445,33 @@ export default function DevComponentsPage() {
         </div>
       </Section>
 
+      {/* 5-3. ReleaseRow */}
+      <Section title="ReleaseRow (신작 타임라인 행)">
+        <div className="flex max-w-[720px] flex-col gap-2.5">
+          <ReleaseRow
+            title="검은 신화: 오공"
+            meta="평점 4.5"
+            imageUrl={BLACK_MYTH}
+            to="/work/game-blackmyth"
+            slot={<Tag>게임</Tag>}
+          />
+          <ReleaseRow
+            title="GTA VI"
+            meta="게임 · 11월 19일"
+            imageUrl={ORV}
+            to="/work/game-gta6"
+            slot={<DdayPill>D-99</DdayPill>}
+          />
+          <ReleaseRow
+            title="썸네일 누락 폴백"
+            imageUrl={null}
+            fallbackIconUrl={thumbnailFallbackMap.webtoon}
+            to="/work/webtoon-fallback"
+            slot={<Tag>웹툰</Tag>}
+          />
+        </div>
+      </Section>
+
       {/* 6. Chip */}
       <Section title="Chip (제거 가능)">
         <div className="flex flex-wrap gap-2">
@@ -500,6 +529,15 @@ export default function DevComponentsPage() {
           <DomainChip size="lg">웹툰</DomainChip>
           <DomainChip size="lg" disabled>
             시리즈
+          </DomainChip>
+        </div>
+        {/* sm = 랭킹 플랫폼 칩 (ranking-mockup .pchip) */}
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          <DomainChip size="sm" active>
+            네이버웹툰
+          </DomainChip>
+          <DomainChip size="sm" disabled soonLabel="준비 중">
+            카카오웹툰
           </DomainChip>
         </div>
       </Section>
@@ -655,6 +693,10 @@ export default function DevComponentsPage() {
             </button>
           }
         />
+        {/* note = 신작 섹션 0건 안내 (new-releases-mockup .empty-note) */}
+        <div className="mt-4">
+          <EmptyState variant="note" title="이 도메인의 최근 출시작이 없어요." />
+        </div>
       </Section>
 
       {/* 18. SkeletonCard */}
@@ -667,9 +709,14 @@ export default function DevComponentsPage() {
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <SkeletonCard variant="landscape" />
           </div>
-          <div className="rounded-panel border border-line bg-surface px-3 shadow-card">
+          {/* row = 홈 인기(feature) 리스트, panel-row = 랭킹 패널 리스트 */}
+          <div>
             <SkeletonCard variant="row" />
             <SkeletonCard variant="row" />
+          </div>
+          <div className="rounded-panel border border-line bg-surface py-1 shadow-card">
+            <SkeletonCard variant="panel-row" />
+            <SkeletonCard variant="panel-row" />
           </div>
         </div>
       </Section>

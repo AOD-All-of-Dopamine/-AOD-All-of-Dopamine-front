@@ -11,6 +11,7 @@ import { useAllRankings } from "../hooks/useRankings";
 import { WorkSummary } from "../types/api";
 import { DOMAIN_LABEL_MAP } from "../constants/domain";
 import { thumbnailFallbackMap, type Category } from "../constants/thumbnail";
+import { daysUntil, dDayOf, parseYmd } from "../utils/releaseDate";
 import SearchBar from "../components/SearchBar";
 import FeatureCard from "../components/ui/FeatureCard";
 import RailCard from "../components/ui/RailCard";
@@ -83,38 +84,11 @@ const heroSub = (work: WorkSummary) => {
   return parts.length > 0 ? parts.join(" · ") : undefined;
 };
 
-/** "yyyy-MM-dd" 파싱 (타임존·NaN 문제 회피). 실패 시 null */
-const parseYmd = (
-  value?: string,
-): { y: number; m: number; d: number } | null => {
-  const [y, m, d] = (value ?? "").split("-").map(Number);
-  return y && m && d ? { y, m, d } : null;
-};
-
-/** 오늘 0시 기준 남은 일수. 날짜 없음·파싱 실패면 null */
-const daysUntil = (releaseDate?: string): number | null => {
-  const ymd = parseYmd(releaseDate);
-  if (!ymd) return null;
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  return Math.round(
-    (new Date(ymd.y, ymd.m - 1, ymd.d).getTime() - today.getTime()) /
-      86_400_000,
-  );
-};
-
-/** D-day 클라 계산 - 오늘 이하=D-DAY, 미래=D-n, 날짜 없음·파싱 실패=미정(tba) */
-const dDayOf = (
-  releaseDate?: string,
-): { label: string; variant: "default" | "tba" } => {
-  const diff = daysUntil(releaseDate);
-  if (diff === null) return { label: "미정", variant: "tba" };
-  return diff <= 0
-    ? { label: "D-DAY", variant: "default" }
-    : { label: `D-${diff}`, variant: "default" };
-};
-
-/** 출시 예정 meta - "게임 · 11월 19일" (다른 해면 연도 표기, 날짜 없으면 미정) */
+/**
+ * 출시 예정 meta - "게임 · 11월 19일" (다른 해면 연도 표기).
+ * 날짜 없으면 "발매일 미정" 표기 - 홈 카드에는 날짜 맥락(그룹 라벨)이 없어
+ * 명시가 필요하다. /new는 월 그룹 라벨이 맥락을 주므로 도메인만 표기 (페이지별 유지).
+ */
 const upcomingMeta = (work: WorkSummary) => {
   const domain = domainLabel(work.domain);
   const ymd = parseYmd(work.releaseDate);

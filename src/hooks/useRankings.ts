@@ -13,3 +13,19 @@ export const useAllRankings = (
     ...options,
   });
 };
+
+/**
+ * 플랫폼별 외부 랭킹 조회 hook
+ * platform: NaverWebtoon | NaverSeries | Steam | TMDB_MOVIE | TMDB_TV
+ */
+export const usePlatformRankings = (
+  platform: string,
+  options?: Omit<UseQueryOptions<ExternalRanking[]>, "queryKey" | "queryFn">,
+) => {
+  return useQuery<ExternalRanking[]>({
+    queryKey: ["rankings", "platform", platform],
+    queryFn: () => rankingApi.getRankingsByPlatform(platform),
+    enabled: !!platform,
+    ...options,
+  });
+};
