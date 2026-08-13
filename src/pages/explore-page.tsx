@@ -1,433 +1,444 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { useGenresWithCount, useInfiniteWorks } from "../hooks/useWorks";
-import Header from "../components/common/Header";
-import { DOMAIN_PLATFORMS, PLATFORM_META } from "../constants/platforms";
-import PurpleStar from "../assets/purple-star.svg";
-import FilterIcon from "../assets/filter-icon.svg";
-
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
-  type Category,
-  imageAspectMap,
-  thumbnailFallbackMap,
-} from "../constants/thumbnail";
+  ArrowCounterClockwise,
+  Funnel,
+  SortDescending,
+  Star,
+  WarningCircle,
+} from "@phosphor-icons/react";
+import { useGenres, usePlatforms, useWorks } from "../hooks/useWorks";
+import { DOMAIN_FILTERS, DOMAIN_LABEL_MAP } from "../constants/domain";
+import { PLATFORM_META } from "../constants/platforms";
+import { thumbnailFallbackMap, type Category } from "../constants/thumbnail";
+import WorkCard from "../components/ui/WorkCard";
+import Chip from "../components/ui/Chip";
+import DomainChip from "../components/ui/DomainChip";
+import FilterGroup from "../components/ui/FilterGroup";
+import Pagination from "../components/ui/Pagination";
+import EmptyState from "../components/ui/EmptyState";
+import SkeletonCard from "../components/ui/SkeletonCard";
 
-import { useVirtualizer } from "@tanstack/react-virtual";
+/**
+ * /explore - mockups/explore-light-mockup.html 이식.
+ * 레이아웃: 도메인 탭 행 / 좌 256px sticky 필터 레일(모바일 details 서랍) /
+ * 툴바(h1+결과수) / 활성 필터 칩 행 / 카드 그리드 / 페이지네이션.
+ *
+ * 히스토리 정책: 도메인 탭 전환과 페이지 이동은 push, 필터 조작(장르/플랫폼 토글,
+ * 칩 제거, 초기화)은 replace. 결과 상태가 현재와 같으면 히스토리 no-op.
+ *
+ * 백엔드 계약(WorkController.getWorks -> ContentRepository.findWorks) 기준 편차:
+ * - platforms 검색이 배열 포함(@>, AND)이라 다중 선택 OR이 불가능하다.
+ *   따라서 플랫폼은 라디오(단일 선택)로 임시 처리. OR 파라미터가 백엔드에 추가되면
+ *   checkbox 다중 선택으로 되돌린다.
+ * - 정렬: 도메인 지정 경로와 필터 경로 모두 서버가 sortBy를 무시하고
+ *   release_date DESC 고정이므로 SortSelect를 생략하고 정적 라벨만 표시한다.
+ * - 목업의 출시 시기(era), 웹툰 상태·요일·연령 필터는 workApi에 파라미터가 없어
+ *   렌더하지 않는다 (백엔드 도메인 컬럼 필터 추가 후 연결).
+ * - 장르·플랫폼 필터는 백엔드가 domain 필수라 전체 탭에서는 노출하지 않는다.
+ * - placeholderData(keepPreviousData)는 의도적으로 미적용 - 도메인 전환 시 이전
+ *   도메인 카드 잔상 방지를 우선하고 페이지 전환 스켈레톤은 수용한다.
+ */
 
-const categories: { id: Category; label: string }[] = [
-  { id: "movie", label: "영화" },
-  { id: "tv", label: "시리즈" },
-  { id: "game", label: "게임" },
-  { id: "webtoon", label: "웹툰" },
-  { id: "webnovel", label: "웹소설" },
-];
+const PAGE_SIZE = 20;
 
-const domainLabelMap: Record<string, string> = {
-  MOVIE: "영화",
-  TV: "시리즈",
-  GAME: "게임",
-  WEBTOON: "웹툰",
-  WEBNOVEL: "웹소설",
+const DOMAIN_IDS = DOMAIN_FILTERS.map((d) => d.id.toLowerCase());
+
+/**
+ * 아직 수집 전인 플랫폼의 로드맵 표기 (목업 "준비 중" 항목).
+ * 백엔드 수집 시작 시 API 목록(usePlatforms)으로 자동 대체됨 -
+ * API 결과에 같은 라벨이 나타나면 아래 중복 제거 필터로 이 목록에서 빠진다.
+ */
+const SOON_PLATFORMS: Record<string, string[]> = {
+  GAME: ["Epic Games"],
+  WEBTOON: ["카카오웹툰"],
+  WEBNOVEL: ["카카오페이지"],
+};
+
+const categoryOf = (domain: string): Category => {
+  const key = domain?.toLowerCase() as Category;
+  return key in thumbnailFallbackMap ? key : "movie";
+};
+
+interface ParamPatch {
+  domain?: string;
+  genres?: string[];
+  platform?: string;
+  page?: number;
+}
+
+/** URL 쿼리를 유효한 화면 상태로 정규화 (잘못된 값은 안전 폴백) */
+const parseParams = (p: URLSearchParams) => {
+  const raw = (p.get("domain") ?? "game").toLowerCase();
+  const domainId = DOMAIN_IDS.includes(raw) ? raw : "game";
+  const isAll = domainId === "all";
+  // 전체 탭에서는 백엔드가 장르·플랫폼 필터를 무시하므로 URL 값도 무시한다.
+  const genres = isAll
+    ? []
+    : (p.get("genres") ?? "")
+        .split(",")
+        .map((g) => g.trim())
+        .filter(Boolean);
+  const platform = isAll ? "" : (p.get("platform") ?? "");
+  const rawPage = Number.parseInt(p.get("page") ?? "1", 10);
+  const page = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
+  return { domainId, isAll, genres, platform, page };
+};
+
+/** no-op 판정용 상태 직렬화 - URL 표기가 달라도 같은 화면이면 같은 키 */
+const stateKey = (p: URLSearchParams) => {
+  const s = parseParams(p);
+  return [s.domainId, s.genres.join(","), s.platform, s.page].join("|");
+};
+
+/** 부분 변경(patch)만 반영하고 나머지 파라미터(미지 포함)는 보존 */
+const buildParams = (base: URLSearchParams, patch: ParamPatch) => {
+  const params = new URLSearchParams(base);
+  if (patch.domain !== undefined) params.set("domain", patch.domain);
+  if (patch.genres !== undefined) {
+    if (patch.genres.length > 0) params.set("genres", patch.genres.join(","));
+    else params.delete("genres");
+  }
+  if (patch.platform !== undefined) {
+    if (patch.platform) params.set("platform", patch.platform);
+    else params.delete("platform");
+  }
+  if (patch.page !== undefined) {
+    if (patch.page > 1) params.set("page", String(patch.page));
+    else params.delete("page");
+  }
+  return params;
 };
 
 export default function ExplorePage() {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [selectedCategory, setSelectedCategory] = useState<Category>(() => {
-    const cat = searchParams.get("category");
-    return (categories.find((c) => c.id === cat)?.id as Category) || "game";
-  });
-
-  const [selectedPlatforms, setSelectedPlatforms] = useState<Set<string>>(
-    () => {
-      const platforms = searchParams.get("platforms");
-      return platforms ? new Set(platforms.split(",")) : new Set(["ALL"]);
-    },
+  // URL 쿼리(?domain=&genres=&platform=&page=)가 상태의 단일 출처 -
+  // 직접 URL 진입, 새로고침, 뒤로가기 모두 여기서 복원된다.
+  const { domainId, isAll, genres, platform, page } = useMemo(
+    () => parseParams(searchParams),
+    [searchParams],
   );
+  const domainKey = isAll ? undefined : domainId.toUpperCase();
 
-  const [selectedGenres, setSelectedGenres] = useState<Set<string>>(() => {
-    const genres = searchParams.get("genres");
-    return genres ? new Set(genres.split(",")) : new Set();
-  });
-
-  const [showGenreFilter, setShowGenreFilter] = useState(false);
-
-  // URL 동기화
-  useEffect(() => {
-    const params = new URLSearchParams();
-    params.set("category", selectedCategory);
-
-    if (!selectedPlatforms.has("ALL") && selectedPlatforms.size > 0) {
-      params.set("platforms", Array.from(selectedPlatforms).join(","));
+  // 결과 상태가 현재와 같으면 히스토리를 건드리지 않고 false 반환 (no-op 가드)
+  const writeParams = (patch: ParamPatch, opts?: { replace?: boolean }) => {
+    if (stateKey(buildParams(searchParams, patch)) === stateKey(searchParams)) {
+      return false;
     }
+    setSearchParams(
+      (prev) => buildParams(prev, patch),
+      opts?.replace ? { replace: true } : undefined,
+    );
+    return true;
+  };
 
-    if (selectedGenres.size > 0) {
-      params.set("genres", Array.from(selectedGenres).join(","));
+  // 도메인 전환(push) 시 필터·페이지 전부 리셋 (목업 동작과 동일)
+  const handleDomainChange = (id: string) => {
+    if (writeParams({ domain: id, genres: [], platform: "", page: 1 })) {
+      window.scrollTo({ top: 0 });
     }
+  };
+  const handleGenresChange = (next: string[]) =>
+    writeParams({ genres: next, page: 1 }, { replace: true });
+  const handlePlatformChange = (next: string) =>
+    writeParams({ platform: next, page: 1 }, { replace: true });
+  const handleReset = () =>
+    writeParams({ genres: [], platform: "", page: 1 }, { replace: true });
+  const handlePageChange = (next: number) => {
+    if (writeParams({ page: next })) {
+      window.scrollTo({ top: 0 });
+    }
+  };
 
-    setSearchParams(params, { replace: true });
-  }, [selectedCategory, selectedPlatforms, selectedGenres]);
-
-  const { data: genresWithCountData } = useGenresWithCount(
-    selectedCategory.toUpperCase(),
-  );
-
-  // 장르를 작품 수 기준 내림차순으로 정렬
-  const sortedGenres = genresWithCountData
-    ? Object.entries(genresWithCountData).sort(
-      ([, countA], [, countB]) => countB - countA,
-    )
-    : [];
-
-  const domainKey = selectedCategory.toUpperCase();
-
-  const availablePlatforms =
-    DOMAIN_PLATFORMS[domainKey]?.map((key) => ({
-      key,
-      ...PLATFORM_META[key],
-    })) || [];
-
-  const selectedPlatformsArray = selectedPlatforms.has("ALL")
-    ? undefined
-    : Array.from(selectedPlatforms);
-  const selectedGenresArray =
-    selectedGenres.size > 0 ? Array.from(selectedGenres) : undefined;
-
-  // 정렬 옵션 - 최신순만 지원
-  const {
-    data,
-    isLoading,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isError,
-  } = useInfiniteWorks({
-    domain: selectedCategory.toUpperCase(),
-    platforms: selectedPlatformsArray,
-    genres: selectedGenresArray,
-    size: 60,
+  const { data, isLoading, isError, refetch } = useWorks({
+    domain: domainKey,
+    genres: genres.length > 0 ? genres : undefined,
+    platforms: platform ? [platform] : undefined,
+    page: page - 1,
+    size: PAGE_SIZE,
+    // 도메인 경로에서는 서버가 정렬을 무시하지만(release_date DESC 고정),
+    // 전체 탭(findAll 경로)만은 이 값을 따르므로 최신순으로 통일해 보낸다.
     sortBy: "releaseDate",
     sortDirection: "desc",
   });
 
-  const items = useMemo(
-    () => data?.pages.flatMap((p) => p.content) ?? [],
-    [data],
+  const { data: genreOptions } = useGenres(domainKey, { enabled: !isAll });
+  const { data: platformOptions } = usePlatforms(domainKey, { enabled: !isAll });
+
+  const sortedGenres = useMemo(
+    () => [...(genreOptions ?? [])].sort((a, b) => a.localeCompare(b, "ko")),
+    [genreOptions],
   );
-  const totalElements = data?.pages?.[0]?.totalElements ?? 0;
 
-  const handleCategoryChange = (category: Category) => {
-    setSelectedCategory(category);
-    setSelectedPlatforms(new Set(["ALL"]));
-    setSelectedGenres(new Set());
-  };
+  const items = data?.content ?? [];
+  const totalElements = data?.totalElements ?? 0;
+  const totalPages = data?.totalPages ?? 0;
 
-  const togglePlatform = (platformId: string) => {
-    const newSelection = new Set(selectedPlatforms);
-
-    if (platformId === "ALL") {
-      newSelection.clear();
-      newSelection.add("ALL");
-    } else {
-      if (newSelection.has(platformId)) {
-        newSelection.delete(platformId);
-      } else {
-        newSelection.add(platformId);
-      }
-      newSelection.delete("ALL");
-
-      if (newSelection.size === 0) {
-        newSelection.add("ALL");
-      }
-    }
-
-    setSelectedPlatforms(newSelection);
-  };
-
-  const toggleGenre = (genre: string) => {
-    const newSelection = new Set(selectedGenres);
-    if (newSelection.has(genre)) newSelection.delete(genre);
-    else newSelection.add(genre);
-    setSelectedGenres(newSelection);
-  };
-
-  const handleCardClick = (id: string) => {
-    navigate(`/work/${id}`);
-  };
-
-  const parentRef = useRef<HTMLDivElement>(null);
-  const COLS = 3;
-  const rowCount = Math.ceil(items.length / COLS);
-
-  const rowVirtualizer = useVirtualizer({
-    count: rowCount,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 340,
-    overscan: 6,
-  });
-
+  // 데이터 로드 후 URL의 page가 실제 범위를 넘으면 1페이지로 정정 (replace)
   useEffect(() => {
-    if (!hasNextPage || isFetchingNextPage) return;
-    const virtualRows = rowVirtualizer.getVirtualItems();
-    const lastRow = virtualRows[virtualRows.length - 1];
-    if (!lastRow) return;
-
-    if (lastRow.index >= rowCount - 3) {
-      fetchNextPage();
+    if (!isLoading && !isError && data && page > 1 && page > totalPages) {
+      writeParams({ page: 1 }, { replace: true });
     }
-  }, [
-    rowVirtualizer.getVirtualItems(),
-    rowCount,
-    hasNextPage,
-    isFetchingNextPage,
-    fetchNextPage,
-  ]);
+    // writeParams는 매 렌더 재생성되지만 위 조건이 반응할 값은 아래가 전부다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, isError, data, page, totalPages]);
+
+  const title = isAll ? "전체" : (DOMAIN_LABEL_MAP[domainKey!] ?? domainId);
+  const variant = domainId === "game" ? "landscape" : "portrait";
+  const hasActiveFilters = genres.length > 0 || platform !== "";
+  const platformLabel = (key: string) => PLATFORM_META[key]?.label ?? key;
+
+  // "준비 중" 항목 - API 목록에 이미 같은 라벨이 있으면 중복 추가하지 않는다
+  // (예: WEBNOVEL은 usePlatforms가 KakaoPage를 이미 반환할 수 있음)
+  const apiPlatformLabels = (platformOptions ?? []).map(platformLabel);
+  const soonPlatforms = (SOON_PLATFORMS[domainKey ?? ""] ?? []).filter(
+    (label) => !apiPlatformLabels.includes(label),
+  );
+
+  // 목업 반응형 그대로 - landscape 4/3/2/1열, portrait 5/4/3/2열 (1200/1023/767/479px)
+  const gridClass =
+    variant === "landscape"
+      ? "mt-[22px] grid grid-cols-1 gap-y-3.5 gap-x-3 min-[480px]:grid-cols-2 min-[768px]:grid-cols-3 min-[768px]:gap-y-5 min-[768px]:gap-x-[18px] min-[1201px]:grid-cols-4"
+      : "mt-[22px] grid grid-cols-2 gap-y-3.5 gap-x-3 min-[768px]:grid-cols-3 min-[768px]:gap-y-5 min-[768px]:gap-x-[18px] min-[1024px]:grid-cols-4 min-[1201px]:grid-cols-5";
+
+  // 모바일에서는 서랍을 닫힌 채로, 데스크톱에서는 열린 채로 시작 (목업 동작).
+  // 첫 페인트 전 설정(useLayoutEffect)으로 데스크톱 플래시를 막고,
+  // 모바일에서 데스크톱으로 리사이즈 진입 시에도 change 리스너로 다시 연다.
+  const drawerRef = useRef<HTMLDetailsElement>(null);
+  useLayoutEffect(() => {
+    const mql = window.matchMedia("(min-width: 1024px)");
+    const syncOpen = () => {
+      if (mql.matches && drawerRef.current) {
+        drawerRef.current.open = true;
+      }
+    };
+    syncOpen();
+    mql.addEventListener("change", syncOpen);
+    return () => mql.removeEventListener("change", syncOpen);
+  }, []);
+
+  const resetButton = (
+    <button
+      type="button"
+      onClick={handleReset}
+      className="rounded-full bg-ink px-[22px] py-2.5 text-sm font-semibold text-surface transition-opacity hover:opacity-85 active:scale-[0.98]"
+    >
+      필터 초기화
+    </button>
+  );
 
   return (
-    <div className="flex flex-col h-screen">
-      {/* 헤더 */}
-      <Header
-        title="탐색"
-        rightIcon="search"
-        onRightClick={() => navigate("/search")}
-        bgColor="#242424"
-      />
-      <div className="w-full max-w-2xl mx-auto px-5">
-        <div className="sticky top-[40px] z-100 bg-[#242424] border-b border-[#333] pt-3">
-          {/* 카테고리 탭 */}
-          <div className="flex justify-around border-b border-white/0">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => handleCategoryChange(cat.id)}
-                className={`flex-1 text-center py-3 transition-all select-none ${selectedCategory === cat.id
-                    ? "border-b-2 border-white text-white font-semibold"
-                    : "text-gray-400"
-                  }`}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-        </div>
+    <>
+      {/* 도메인 탭 행 */}
+      <div className="mx-auto flex max-w-[1440px] gap-1.5 overflow-x-auto px-6 pt-5 scrollbar-hide">
+        {DOMAIN_FILTERS.map((d) => {
+          const id = d.id.toLowerCase();
+          return (
+            <DomainChip
+              key={d.id}
+              size="lg"
+              active={domainId === id}
+              onClick={() => handleDomainChange(id)}
+            >
+              {d.label}
+            </DomainChip>
+          );
+        })}
+      </div>
 
-        {/* 필터 & 컨텐츠 영역 */}
-        <div className="flex-1 py-5 mt-[30px] pb-40">
-          {/* 플랫폼 필터 */}
-          <div className="mb-4">
-            <div className="flex gap-3 overflow-x-auto scrollbar-hide">
-              {availablePlatforms.map((platform) => {
-                const isSelected = selectedPlatforms.has(platform.key);
-
-                return (
-                  <button
-                    key={platform.key}
-                    onClick={() => togglePlatform(platform.key)}
-                    className={`flex items-center gap-2 py-1.5 rounded-full border text-sm font-medium transition-all flex-shrink-0
-    ${platform.key === "ALL" ? "px-4" : "px-2"}
-    ${isSelected
-                        ? "border-transparent text-white bg-gradient-to-r from-[#855BFF] to-[#445FD1]"
-                        : "border-[#403F43] bg-[#2a2a2a] text-[#D3D3D3] hover:border-[#855BFF]"
-                      }`}
-                  >
-                    {platform.logo && (
-                      <img
-                        src={platform.logo}
-                        alt={platform.label}
-                        className="w-5 h-5 rounded-full object-contain"
-                      />
-                    )}
-                    <span className="font-[PretendardVariable]">
-                      {platform.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+      {/* 좌 필터 레일 + 본문 */}
+      <div className="mx-auto grid max-w-[1440px] items-start gap-4 px-6 pb-[72px] pt-5 lg:grid-cols-[256px_1fr] lg:gap-8">
+        <details
+          ref={drawerRef}
+          className="rounded-panel border border-line bg-surface px-4 py-1 lg:sticky lg:top-[84px] lg:max-h-[calc(100vh-100px)] lg:overflow-y-auto lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0"
+        >
+          <summary className="flex cursor-pointer select-none list-none items-center gap-2 py-3 font-bold text-ink [&::-webkit-details-marker]:hidden lg:hidden">
+            <Funnel size={16} />
+            필터
+          </summary>
+          <div className="flex items-baseline justify-between px-0.5 pb-3.5 pt-1">
+            <h2 className="text-[15px] font-bold text-ink">필터</h2>
+            <button
+              type="button"
+              onClick={handleReset}
+              className="inline-flex items-center gap-1 text-[13px] text-ink-2 transition-colors hover:text-accent-ink"
+            >
+              <ArrowCounterClockwise size={13} />
+              초기화
+            </button>
           </div>
 
-          <div className="mb-4">
-            <div className="flex items-start gap-2 flex-wrap">
-              <button
-                onClick={() => setShowGenreFilter((prev) => !prev)}
-                className="relative flex items-center gap-1 px-2 py-2 rounded-md border text-sm
-        text-[#8D8C8E] border-[#403F43] hover:border-[#855BFF]"
+          {isAll ? (
+            // findWorks는 domain 없이는 장르·플랫폼 필터를 적용하지 않으므로 숨긴다
+            <p className="border-t border-line px-0.5 py-4 text-[13px] leading-relaxed text-ink-2">
+              전체 탭에서는 필터를 지원하지 않아요. 도메인을 선택하면 장르와
+              플랫폼 필터를 쓸 수 있어요.
+            </p>
+          ) : (
+            <>
+              {sortedGenres.length > 0 && (
+                <FilterGroup
+                  title="장르"
+                  type="checkbox"
+                  values={genres}
+                  onChange={handleGenresChange}
+                  options={sortedGenres.map((g) => ({ value: g, label: g }))}
+                />
+              )}
+              {(platformOptions?.length ?? 0) > 0 && (
+                // 백엔드 platforms 검색이 @>(AND)라 다중 선택 OR 미지원 - 단일 선택 임시 처리
+                <FilterGroup
+                  title="플랫폼"
+                  type="radio"
+                  value={platform}
+                  onChange={handlePlatformChange}
+                  options={[
+                    { value: "", label: "전체" },
+                    ...(platformOptions ?? []).map((p) => ({
+                      value: p,
+                      label: platformLabel(p),
+                    })),
+                    ...soonPlatforms.map((label) => ({
+                      value: `soon-${label}`,
+                      label,
+                      disabled: true,
+                      soonLabel: "준비 중",
+                    })),
+                  ]}
+                />
+              )}
+            </>
+          )}
+        </details>
+
+        <main>
+          {/* 툴바: 제목 + 결과 수 + 정렬 표시 */}
+          <div className="flex flex-wrap items-center gap-3.5">
+            <h1 className="text-[26px] font-extrabold tracking-[-0.03em] text-ink">
+              {title}
+            </h1>
+            {!isLoading && !isError && (
+              <span
+                role="status"
+                className="text-[14.5px] tabular-nums text-ink-2"
               >
-                <img src={FilterIcon} alt="필터 아이콘" className="w-5 h-5" />
-                <span className="font-[PretendardVariable]">필터</span>
+                {totalElements.toLocaleString()}개 작품
+              </span>
+            )}
+            {/* 서버 정렬이 release_date DESC 고정이라 SortSelect 대신 정적 라벨 */}
+            <span className="ml-auto inline-flex items-center gap-1.5 text-sm font-medium text-ink-2">
+              <SortDescending size={14} />
+              최신 출시순
+            </span>
+          </div>
 
-                {selectedGenres.size > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-[#855BFF] text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
-                    {selectedGenres.size}
-                  </span>
-                )}
-              </button>
-
-              {Array.from(selectedGenres).map((genre) => (
-                <div
-                  key={genre}
-                  className="flex items-center gap-1 px-2 py-2 rounded-md font-[PretendardVariable] text-sm rounded-full bg-[#855BFF] text-white"
-                >
-                  <span>{genre}</span>
-                  <button
-                    onClick={() => toggleGenre(genre)}
-                    className="font-[PretendardVariable] text-white hover:text-white"
-                  >
-                    ✕
-                  </button>
-                </div>
+          {/* 활성 필터 칩 행 */}
+          {hasActiveFilters && (
+            <div className="mt-3.5 flex flex-wrap gap-2">
+              {platform && (
+                <Chip
+                  label={platformLabel(platform)}
+                  onRemove={() => handlePlatformChange("")}
+                />
+              )}
+              {genres.map((g) => (
+                <Chip
+                  key={g}
+                  label={g}
+                  onRemove={() =>
+                    handleGenresChange(genres.filter((v) => v !== g))
+                  }
+                />
               ))}
             </div>
-
-            {showGenreFilter && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {sortedGenres.map(([genre, count]) => {
-                  const isSelected = selectedGenres.has(genre);
-                  return (
-                    <button
-                      key={genre}
-                      onClick={() => toggleGenre(genre)}
-                      className={`px-3 py-1 rounded-full text-xs border transition-all ${isSelected
-                          ? "border-[#646cff] bg-[#646cff22] text-white"
-                          : "border-gray-700 text-gray-400 hover:border-gray-500"
-                        }`}
-                    >
-                      {genre}{" "}
-                      <span className="font-[PretendardVariable] text-[10px] opacity-60">
-                        ({count})
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* 총 개수 및 정렬 */}
-          {items.length > 0 && (
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-gray-400 text-sm">
-                총{" "}
-                <span className="text-white font-semibold">
-                  {totalElements?.toLocaleString() || 0}
-                </span>
-                개
-              </span>
-              <div className="text-gray-400 text-sm">최신순</div>
-            </div>
           )}
 
-          {isError && (
-            <div className="text-center text-gray-500 py-20">
-              불러오기에 실패했습니다.
-            </div>
-          )}
-
-          {/* 작품 목록 */}
+          {/* 상태 3종: 로딩 스켈레톤 / 에러 / 빈 결과 + 카드 그리드 */}
           {isLoading ? (
-            <div className="text-center text-gray-500 py-20">로딩 중...</div>
-          ) : items.length > 0 ? (
-            <div
-              ref={parentRef}
-              className="overflow-y-auto scrollbar-hide"
-              style={{ height: "calc(100vh - 260px)" }}
-            >
-              <div
-                style={{
-                  height: rowVirtualizer.getTotalSize(),
-                  position: "relative",
-                }}
-              >
-                {rowVirtualizer.getVirtualItems().map((vRow) => {
-                  const startIndex = vRow.index * COLS;
-                  const rowItems = items.slice(startIndex, startIndex + COLS);
-
-                  return (
-                    <div
-                      key={vRow.key}
-                      ref={rowVirtualizer.measureElement}
-                      data-index={vRow.index}
-                      style={{
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        width: "100%",
-                        transform: `translateY(${vRow.start}px)`,
-                      }}
-                    >
-                      <div className="grid grid-cols-3 gap-5">
-                        {rowItems.map((work) => (
-                          <div
-                            key={work.id}
-                            onClick={() => handleCardClick(String(work.id))}
-                            className="cursor-pointer transition-transform hover:-translate-y-1"
-                          >
-                            <div
-                              className={`relative w-full ${imageAspectMap[selectedCategory]} rounded-lg mb-2 bg-[#302F31] overflow-hidden`}
-                            >
-                              {work.thumbnail ? (
-                                <img
-                                  src={work.thumbnail}
-                                  alt={work.title}
-                                  className="w-full h-full object-cover rounded-lg"
-                                />
-                              ) : (
-                                <img
-                                  src={thumbnailFallbackMap[selectedCategory]}
-                                  alt="기본 썸네일"
-                                  className="absolute inset-0 m-auto object-contain
-        w-[clamp(32px,30%,64px)]
-        h-[clamp(32px,30%,64px)]
-        opacity-80"
-                                />
-                              )}
-                            </div>
-
-                            <div className="font-[PretendardVariable] text-white text-sm font-semibold truncate">
-                              {work.title}
-                            </div>
-
-                            <div className="font-[PretendardVariable] text-gray-400 text-xs mt-0.5">
-                              {domainLabelMap[work.domain] || work.domain}
-                              {work.releaseDate &&
-                                ` • ${new Date(work.releaseDate).getFullYear()}`}
-                            </div>
-
-                            <div className="flex items-center text-[#855BFF] text-sm font-medium mt-1 gap-1 mb-3">
-                              <img
-                                src={PurpleStar}
-                                alt="평점"
-                                className="w-4 h-4"
-                              />{" "}
-                              {(work.score || 0).toFixed(1)}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {isFetchingNextPage && (
-                <div className="text-center text-grey-500 py-10">
-                  불러오는 중...
-                </div>
-              )}
-              {!hasNextPage && items.length > 0 && (
-                <div className="text-center text-grey-600 py-10">
-                  더 불러올 작품이 없습니다.
-                </div>
-              )}
+            <div className={gridClass} aria-hidden="true">
+              {Array.from({ length: PAGE_SIZE }, (_, i) => (
+                <SkeletonCard key={i} variant={variant} />
+              ))}
+            </div>
+          ) : isError ? (
+            <div className="mt-[22px]">
+              <EmptyState
+                icon={<WarningCircle size={44} />}
+                title="작품을 불러오지 못했어요"
+                description="네트워크 상태를 확인한 뒤 다시 시도해 주세요."
+                action={
+                  <button
+                    type="button"
+                    onClick={() => refetch()}
+                    className="rounded-full bg-ink px-[22px] py-2.5 text-sm font-semibold text-surface transition-opacity hover:opacity-85 active:scale-[0.98]"
+                  >
+                    다시 시도
+                  </button>
+                }
+              />
+            </div>
+          ) : items.length === 0 ? (
+            <div className="mt-[22px]">
+              <EmptyState
+                title="조건에 맞는 작품이 없어요"
+                description={
+                  hasActiveFilters
+                    ? "필터를 조금 풀어보시면 더 많은 작품을 만날 수 있어요."
+                    : "아직 수집된 작품이 없어요. 조금만 기다려 주세요."
+                }
+                action={hasActiveFilters ? resetButton : undefined}
+              />
             </div>
           ) : (
-            <div className="text-center text-gray-500 py-20">
-              선택한 필터에 맞는 작품이 없습니다.
-            </div>
+            <>
+              <div className={gridClass}>
+                {items.map((work) => {
+                  // "yyyy-MM-dd" 문자열에서 직접 연도 추출 (타임존·NaN 문제 회피)
+                  const year = work.releaseDate?.slice(0, 4) || undefined;
+                  return (
+                    <WorkCard
+                      key={work.id}
+                      variant={variant}
+                      title={work.title}
+                      meta={year}
+                      imageUrl={work.thumbnail}
+                      fallbackIconUrl={
+                        thumbnailFallbackMap[categoryOf(work.domain)]
+                      }
+                      to={`/work/${work.id}`}
+                      footer={
+                        <>
+                          <span>
+                            {DOMAIN_LABEL_MAP[work.domain] ?? work.domain}
+                          </span>
+                          <span className="ml-auto inline-flex items-center gap-1 font-bold text-ink">
+                            <Star
+                              weight="fill"
+                              size={13}
+                              className="text-star"
+                            />
+                            {(work.score ?? 0).toFixed(1)}
+                          </span>
+                        </>
+                      }
+                    />
+                  );
+                })}
+              </div>
+              {totalPages > 1 && (
+                <div className="mt-10">
+                  <Pagination
+                    page={page}
+                    totalPages={totalPages}
+                    onChange={handlePageChange}
+                  />
+                </div>
+              )}
+            </>
           )}
-        </div>
+        </main>
       </div>
-    </div>
+    </>
   );
 }

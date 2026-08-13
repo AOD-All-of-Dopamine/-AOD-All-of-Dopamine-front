@@ -49,10 +49,10 @@
 
 ### Phase 3: `/explore` (최대 가치 — 여기서 페이지 이식 표준 확립)
 
-- [ ] **3.1** (백엔드 병행 확인) platforms OR 파라미터 — 준비 전이면 플랫폼 필터는 단일 선택으로 임시 처리하고 편차 기록
-- [ ] **3.2** 필터 레일(도메인별 그룹 구성) + 칩 + 정렬 + 페이지네이션, `useWorks`/`useGenres`/`usePlatforms` 연결
-- [ ] **3.3** URL 쿼리 동기화 (`?domain=&genres=&platforms=&sort=&page=`) — 새로고침·공유 복원
-- [ ] **3.4** 상태 3종 + 게이트: DoD 전 항목, 목업 대조 스크린샷
+- [x] **3.1** platforms OR 미지원 확인(백엔드 `@>` 실코드 검증) → 플랫폼 필터 단일 선택(radio) 임시 처리 + "준비 중" 항목(SOON_PLATFORMS, API 목록 도착 시 자동 은퇴)
+- [x] **3.2** 필터 레일(도메인별 구성, 백엔드 지원 축만) + 칩 + 페이지네이션. 정렬은 서버가 sortBy를 버려 정적 라벨 "최신 출시순"으로 (편차 기록)
+- [x] **3.3** URL 쿼리 단일 출처(`?domain=&genres=&platform=&page=`) — 직접 진입·새로고침·뒤로가기 복원, 히스토리 정책(탭·페이지=push, 필터=replace, no-op 가드) 확립
+- [x] **3.4** 상태 3종(스켈레톤 그리드/EmptyState/에러 EmptyState+재시도) + 게이트: 스펙 리뷰 ✅(목업 수치 전수 대조, 편차 7건 백엔드 실코드 확정 승인) + 품질 리뷰 ✅(I-2건·M-5건 반영) + grep 0건 + 실브라우저 확인(게임 landscape 4열·웹툰 portrait 5열 전환, URL 동기화) — `docs/screenshots/phase3/`
 
 ### Phase 4: `/work/:id`
 
@@ -87,6 +87,11 @@
 |---|---|---|
 | Phase 1: 기존 `Header` 재작성 대신 `SiteHeader` 신설 + 구 Header `lg:hidden` 전환기 유지 | 구 Header는 12개 페이지가 back/title 앱바로 사용 — 일괄 재작성은 페이지 계약 파괴. 데스크톱=새 셸, 모바일=기존 UX 유지 후 페이지 이식 시 개별 제거 | 2026-08-13 |
 | Phase 1: 홈 `SearchBar`도 `lg:hidden` 전환기 처리 | 홈은 구 Header 대신 자체 고정 검색바 사용 — 데스크톱에서 SiteHeader와 겹침 | 2026-08-13 |
+| Phase 3: 정렬 셀렉트 → 정적 라벨 "최신 출시순" | 백엔드 getWorks가 모든 필터 경로에서 sortBy 무시(release_date DESC 고정) — 스펙 §7 정렬 결정 대기 | 2026-08-13 |
+| Phase 3: 플랫폼 필터 단일 선택(radio) | `platforms @>` = AND 시맨틱, OR 미지원 — §7 배열 겹침 파라미터 추가 시 checkbox 복원 | 2026-08-13 |
+| Phase 3: 영화 OTT 필터·웹툰 상태/요일/연령·출시 시기 필터 미렌더 | usePlatforms가 수집 소스만 반환, findWorks에 도메인 컬럼·날짜 범위 파라미터 부재 — §7 백엔드 트랙 | 2026-08-13 |
+| Phase 3: 카드에 장르 태그·제작자·리뷰% 미표시 | WorkSummary가 id/domain/title/thumbnail/score/releaseDate만 제공 — summary API 확장 후 목업 완전체 | 2026-08-13 |
+| Phase 3: 페이지 전환 시 스켈레톤 유지(placeholderData 미사용) | 도메인 전환 잔상 방지 우선 — 의도적 트레이드오프 (코드 헤더 주석 기록) | 2026-08-13 |
 
 ## 스크린샷 원장
 

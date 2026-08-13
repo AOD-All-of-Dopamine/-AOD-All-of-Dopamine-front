@@ -14,9 +14,12 @@ export interface WorkCardProps {
   tags?: string[];
   /** 카드 하단 행 - 페이지마다 다른 내용(평점·리뷰율·요일 등)을 그대로 전달 */
   footer?: ReactNode;
-  imageUrl: string;
+  /** null이면 fallbackIconUrl 아이콘을 중앙 표시 (실데이터 썸네일 누락 대응) */
+  imageUrl: string | null;
   /** 제목이 인접 텍스트로 함께 렌더되므로 기본은 장식 이미지("") 취급 */
   imageAlt?: string;
+  /** imageUrl 부재 시 썸네일 영역 중앙에 표시할 도메인별 아이콘 */
+  fallbackIconUrl?: string;
   to: string;
 }
 
@@ -28,6 +31,7 @@ const WorkCard = ({
   footer,
   imageUrl,
   imageAlt = "",
+  fallbackIconUrl,
   to,
 }: WorkCardProps) => {
   return (
@@ -37,12 +41,25 @@ const WorkCard = ({
           variant === "landscape" ? "aspect-[460/215]" : "aspect-[2/3]"
         }`}
       >
-        <img
-          src={imageUrl}
-          alt={imageAlt}
-          loading="lazy"
-          className="h-full w-full object-cover"
-        />
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={imageAlt}
+            loading="lazy"
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="grid h-full w-full place-items-center">
+            {fallbackIconUrl && (
+              <img
+                src={fallbackIconUrl}
+                alt={imageAlt}
+                loading="lazy"
+                className="w-[clamp(32px,30%,64px)] opacity-80"
+              />
+            )}
+          </div>
+        )}
       </div>
       <div className="flex flex-1 flex-col gap-[7px] px-[15px] pb-[14px] pt-[13px]">
         <div className="truncate text-[15.5px] font-bold tracking-[-0.01em] text-ink">
