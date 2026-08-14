@@ -182,7 +182,35 @@ function ReviewSkeleton() {
 function DetailSkeleton() {
   return (
     <div aria-hidden="true" className="animate-pulse">
-      <div className="mt-4 grid items-start gap-5 md:grid-cols-[auto_1fr] md:gap-9">
+      {/* <lg 최종 레이아웃 형상: 포스터 헤더 블록 + 태그 행 + 시놉시스 텍스트 행
+          (상단 바는 Shell이 실물로 렌더 - 로드 완료 시 레이아웃 점프 방지) */}
+      <div className="lg:hidden">
+        <div className="flex gap-3.5 pt-4">
+          <div className="aspect-[3/4] w-[108px] flex-none rounded-panel bg-line" />
+          <div className="min-w-0 flex-1">
+            <div className="h-[22px] w-14 rounded-full bg-line" />
+            <div className="mt-2 h-6 w-4/5 rounded-input bg-line" />
+            <div className="mt-2 h-4 w-28 rounded-input bg-canvas" />
+          </div>
+        </div>
+        <div className="mt-3 flex gap-1.5">
+          <div className="h-6 w-14 rounded-full bg-line" />
+          <div className="h-6 w-16 rounded-full bg-line" />
+        </div>
+        <div className="mt-6 h-5 w-20 rounded-input bg-line" />
+        <div className="mt-3 flex flex-col gap-2">
+          <div className="h-3.5 w-full rounded-input bg-line" />
+          <div className="h-3.5 w-4/5 rounded-input bg-line" />
+          <div className="h-3.5 w-3/5 rounded-input bg-line" />
+        </div>
+        <div className="mt-6 h-5 w-16 rounded-input bg-line" />
+        <div className="mt-3 flex flex-col gap-3.5">
+          <ReviewSkeleton />
+        </div>
+      </div>
+
+      {/* lg+ 기존 스켈레톤 (불변) */}
+      <div className="mt-4 hidden items-start gap-5 md:grid-cols-[auto_1fr] md:gap-9 lg:grid">
         <div className="aspect-[2/3] w-[180px] rounded-panel bg-line md:w-[232px]" />
         <div>
           <div className="h-[22px] w-14 rounded-full bg-line" />
@@ -203,7 +231,7 @@ function DetailSkeleton() {
           </div>
         </div>
       </div>
-      <div className="mt-11 grid items-start gap-10 lg:grid-cols-[1fr_320px]">
+      <div className="mt-11 hidden items-start gap-10 lg:grid lg:grid-cols-[1fr_320px]">
         <div>
           <div className="h-6 w-24 rounded-input bg-line" />
           <div className="mt-3.5 flex max-w-[560px] flex-col gap-2">
@@ -275,11 +303,28 @@ export default function WorkDetailPage() {
   }, [contentId]);
 
   // 클램프 상태(<lg 4줄)에서 실제로 넘치는 경우에만 더보기 버튼을 노출.
-  // lg+는 클램프도 버튼도 없어(lg:line-clamp-none, lg:hidden) 판정값과 무관.
+  // 1회 측정 고정이면 lg 진입 후 <lg 리사이즈/회전, 폰트 스왑 시 재측정이 없어
+  // 4줄 잘림인데 버튼이 안 뜬다 - ResizeObserver 재측정 + fonts.ready 후 1회 보정.
+  // 열림 상태는 클램프가 풀려 측정이 무의미(항상 false 오판)하므로 관찰을 멈추고
+  // 마지막 판정값을 유지한다("접기" 버튼 보존). lg+는 버튼 자체가 lg:hidden.
+  // StrictMode 이중 실행에도 측정-구독-해제만 반복되는 멱등 구조.
   useEffect(() => {
     const el = synopsisRef.current;
-    if (el) setSynopsisClamped(el.scrollHeight > el.clientHeight + 1);
-  }, [work?.synopsis]);
+    if (!el || isSynopsisOpen) return;
+    const measure = () =>
+      setSynopsisClamped(el.scrollHeight > el.clientHeight + 1);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    let cancelled = false;
+    document.fonts?.ready.then(() => {
+      if (!cancelled) measure();
+    });
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+    };
+  }, [work?.synopsis, isSynopsisOpen]);
 
   const handleBookmark = () => {
     if (!isAuthenticated) {
@@ -907,8 +952,13 @@ export default function WorkDetailPage() {
         </div>
       </Shell>
 
-      {/* <lg 하단 고정 액션 바 (목업 d-actionbar) - lg+ 헤더 버튼과 동일 핸들러 공유 */}
-      <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-2.5 border-t border-line bg-surface/95 px-4 pb-3.5 pt-2.5 backdrop-blur-md lg:hidden">
+      {/* <lg 하단 고정 액션 바 (목업 d-actionbar) - lg+ 헤더 버튼과 동일 핸들러 공유.
+          홈 인디케이터 기기는 safe-area만큼 하단 패딩 확장 (임의값 클래스 게이트
+          회피를 위해 style로 - 미지원 환경은 max()의 14px 폴백) */}
+      <div
+        style={{ paddingBottom: "max(14px, env(safe-area-inset-bottom))" }}
+        className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-2.5 border-t border-line bg-surface/95 px-4 pt-2.5 backdrop-blur-md lg:hidden"
+      >
         <button
           type="button"
           onClick={handleBookmark}

@@ -51,6 +51,10 @@
 - 프로필/로그인/회원가입 페이지 모바일 폴리시
 - 스와이프 제스처, pull-to-refresh 등 네이티브 제스처
 - 필터 레일의 "Netflix Standard with Ads" 영문 원문 노출 (별도 백로그 항목)
+- NavigationBar 하단 탭 safe-area-inset-bottom 미반영 - 상세 액션 바에는 반영
+  했으나 탭바는 Task A 파일 보호로 이번 회차 미수정
+- lg+ 상세 장르 태그 중복 key 경고(pre-existing) - lg 불변 룰 해제 시
+  <lg dedupe(mobileTags)를 공용으로 승격
 
 ## 편차 기록
 
@@ -92,3 +96,10 @@
 - B: 시놉시스 더보기는 4줄 클램프 실측 overflow일 때만 노출하고 열림 후
   "접기" 토글 제공 - 목업은 정적 "더보기"만 있으나 짧은 시놉시스에서 무의미한
   버튼 노출 방지.
+- B: 리뷰 반영 - 클램프 측정을 ResizeObserver+fonts.ready 재측정으로 보강
+  (lg 진입 후 <lg 리사이즈/회전·폰트 스왑 대응, 열림 중엔 관찰 중지로 오판 방지).
+- B: 리뷰 반영 - DetailSkeleton <lg 분기 추가(포스터 헤더+태그+시놉시스 행
+  형상, 도메인 미확정이라 다수 도메인인 포스터형 기준) - lg+ 스켈레톤 불변.
+- B: 리뷰 반영 - 액션 바 하단 패딩을 max(14px, env(safe-area-inset-bottom))
+  style로 적용(임의값 클래스 게이트 회피), 상세 <lg 푸터는 public-layout에서
+  액션 바 높이만큼 여백(max-lg:pb-24) 확보해 영구 가림 해소.
