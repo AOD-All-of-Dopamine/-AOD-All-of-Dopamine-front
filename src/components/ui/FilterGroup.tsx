@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 import SoonBadge from "./SoonBadge";
 
 /** 목업 .filter-group / .filter-item / .soon (explore-light-mockup.html) */
@@ -16,6 +16,8 @@ export type FilterGroupProps =
       options: FilterOption[];
       values: string[];
       onChange: (values: string[]) => void;
+      /** 목록 아래 부가 요소 (예: 장르 더 보기/접기 토글) */
+      footer?: ReactNode;
     }
   | {
       title: string;
@@ -23,10 +25,12 @@ export type FilterGroupProps =
       options: FilterOption[];
       value: string;
       onChange: (value: string) => void;
+      /** 목록 아래 부가 요소 (예: 장르 더 보기/접기 토글) */
+      footer?: ReactNode;
     };
 
 const FilterGroup = (props: FilterGroupProps) => {
-  const { title, type, options } = props;
+  const { title, type, options, footer } = props;
   const name = useId();
 
   const isChecked = (value: string) =>
@@ -76,6 +80,7 @@ const FilterGroup = (props: FilterGroupProps) => {
           );
         })}
       </div>
+      {footer}
     </div>
   );
 };

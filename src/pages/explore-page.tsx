@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   ArrowCounterClockwise,
@@ -24,18 +24,26 @@ import SkeletonCard from "../components/ui/SkeletonCard";
  * 레이아웃: 도메인 탭 행 / 좌 256px sticky 필터 레일(모바일 details 서랍) /
  * 툴바(h1+결과수) / 활성 필터 칩 행 / 카드 그리드 / 페이지네이션.
  *
- * 히스토리 정책: 도메인 탭 전환과 페이지 이동은 push, 필터 조작(장르/플랫폼 토글,
+ * URL 쿼리(?domain=&genres=&platforms=&era=&status=&weekdays=&ages=&page=)가
+ * 상태의 단일 출처. 다중 값은 콤마 직렬화.
+ *
+ * 히스토리 정책: 도메인 탭 전환과 페이지 이동은 push, 필터 조작(토글,
  * 칩 제거, 초기화)은 replace. 결과 상태가 현재와 같으면 히스토리 no-op.
  *
- * 백엔드 계약(WorkController.getWorks -> ContentRepository.findWorks) 기준 편차:
- * - platforms 검색이 배열 포함(@>, AND)이라 다중 선택 OR이 불가능하다.
- *   따라서 플랫폼은 라디오(단일 선택)로 임시 처리. OR 파라미터가 백엔드에 추가되면
- *   checkbox 다중 선택으로 되돌린다.
+ * 도메인별 필터 축 (백엔드 ContentRepository.findWorks 계약 기준):
+ * - 공통: 장르(@> 포함, AND) / 플랫폼(&& 겹침, OR 다중)
+ * - 게임, 웹소설: + 출시 시기(era 프리셋 -> releaseFrom/To)
+ * - 영화, 시리즈: 플랫폼 대신 "볼 수 있는 곳"(수집 소스 TMDB_* 제외한 OTT만)
+ *   + 개봉 시기(era)
+ * - 웹툰: + 연재 상태(status) / 연재 요일(weekdays) / 연령 등급(ageRatings).
+ *   이 세 축은 webtoon_contents EXISTS 서브쿼리라 타 도메인에 보내면 결과가
+ *   0건이 되므로 웹툰 탭에서만 파싱, 전송한다.
+ *
+ * 남은 편차:
  * - 정렬: 도메인 지정 경로와 필터 경로 모두 서버가 sortBy를 무시하고
  *   release_date DESC 고정이므로 SortSelect를 생략하고 정적 라벨만 표시한다.
- * - 목업의 출시 시기(era), 웹툰 상태·요일·연령 필터는 workApi에 파라미터가 없어
- *   렌더하지 않는다 (백엔드 도메인 컬럼 필터 추가 후 연결).
- * - 장르·플랫폼 필터는 백엔드가 domain 필수라 전체 탭에서는 노출하지 않는다.
+ * - attr(JSONB) 기반 축은 필터 금지 (가격, 리뷰 평가 등은 표시 전용).
+ * - 장르, 플랫폼 필터는 백엔드가 domain 필수라 전체 탭에서는 노출하지 않는다.
  * - placeholderData(keepPreviousData)는 의도적으로 미적용 - 도메인 전환 시 이전
  *   도메인 카드 잔상 방지를 우선하고 페이지 전환 스켈레톤은 수용한다.
  */
@@ -55,54 +63,174 @@ const SOON_PLATFORMS: Record<string, string[]> = {
   WEBNOVEL: ["카카오페이지"],
 };
 
+/** 수집 소스 식별자 - OTT가 아니므로 영화, 시리즈의 "볼 수 있는 곳"에서 제외 */
+const COLLECTION_SOURCES = ["TMDB_MOVIE", "TMDB_TV"];
+
+/** 출시 시기 radio 프리셋 (목업 era 그룹) */
+const ERA_OPTIONS = [
+  { value: "", label: "전체" },
+  { value: "2024", label: "2024년 이후" },
+  { value: "2020", label: "2020년대 초" },
+  { value: "2010", label: "2010년대" },
+  { value: "old", label: "2009년 이전" },
+];
+
+/** era 프리셋 -> releaseFrom/To(yyyy-MM-dd) 매핑 */
+const ERA_RANGE: Record<string, { from?: string; to?: string }> = {
+  "2024": { from: "2024-01-01" },
+  "2020": { from: "2020-01-01", to: "2023-12-31" },
+  "2010": { from: "2010-01-01", to: "2019-12-31" },
+  old: { to: "2009-12-31" },
+};
+
+/** 웹툰 연재 상태 - DB 실측값(webtoon_contents.status) 그대로 */
+const STATUS_VALUES = ["연재중", "완결"];
+
+/** 웹툰 연재 요일 - 값은 DB 실측값(mon~sun), 라벨은 월~일 */
+const WEEKDAY_OPTIONS = [
+  { value: "mon", label: "월" },
+  { value: "tue", label: "화" },
+  { value: "wed", label: "수" },
+  { value: "thu", label: "목" },
+  { value: "fri", label: "금" },
+  { value: "sat", label: "토" },
+  { value: "sun", label: "일" },
+];
+const WEEKDAY_VALUES = WEEKDAY_OPTIONS.map((o) => o.value);
+
+/**
+ * 웹툰 연령 등급 - DB 실측값(webtoon_contents.age_rating) 그대로.
+ * 19세이용가는 크롤러 파서가 반환 가능한 값이라 성인작 데이터 유입에 대비해 포함.
+ */
+const AGE_OPTIONS = ["전체이용가", "12세이용가", "15세이용가", "19세이용가"];
+
+/** 장르 접기 기본 노출 개수 - 웹툰 장르(네이버 태그 원천)가 수십 개라 접기 필요 */
+const GENRE_COLLAPSE_LIMIT = 12;
+
 const categoryOf = (domain: string): Category => {
   const key = domain?.toLowerCase() as Category;
   return key in thumbnailFallbackMap ? key : "movie";
 };
 
+const eraLabel = (value: string) =>
+  ERA_OPTIONS.find((o) => o.value === value)?.label ?? value;
+
+const weekdayChipLabel = (value: string) => {
+  const day = WEEKDAY_OPTIONS.find((o) => o.value === value)?.label ?? value;
+  return `${day}요일`;
+};
+
 interface ParamPatch {
   domain?: string;
   genres?: string[];
-  platform?: string;
+  platforms?: string[];
+  era?: string;
+  status?: string;
+  weekdays?: string[];
+  ages?: string[];
   page?: number;
 }
+
+/** 모든 필터 축을 비우는 patch (도메인 전환, 초기화 공용) */
+const CLEAR_FILTERS: ParamPatch = {
+  genres: [],
+  platforms: [],
+  era: "",
+  status: "",
+  weekdays: [],
+  ages: [],
+  page: 1,
+};
+
+const parseList = (raw: string | null) =>
+  (raw ?? "")
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
 
 /** URL 쿼리를 유효한 화면 상태로 정규화 (잘못된 값은 안전 폴백) */
 const parseParams = (p: URLSearchParams) => {
   const raw = (p.get("domain") ?? "game").toLowerCase();
   const domainId = DOMAIN_IDS.includes(raw) ? raw : "game";
   const isAll = domainId === "all";
-  // 전체 탭에서는 백엔드가 장르·플랫폼 필터를 무시하므로 URL 값도 무시한다.
-  const genres = isAll
+  const isWebtoon = domainId === "webtoon";
+  // 전체 탭에서는 백엔드가 필터를 적용하지 않으므로 URL 값도 무시한다.
+  const genres = isAll ? [] : parseList(p.get("genres"));
+  // 구 URL(?platform= 단수, radio 시절) 호환 - platforms 부재 시에만 이관
+  const platforms = isAll
     ? []
-    : (p.get("genres") ?? "")
-        .split(",")
-        .map((g) => g.trim())
-        .filter(Boolean);
-  const platform = isAll ? "" : (p.get("platform") ?? "");
+    : parseList(p.get("platforms") ?? p.get("platform"));
+  // era는 웹툰 레일에 없는 축 (웹툰은 연재 상태/요일/연령이 대신한다)
+  const rawEra = p.get("era") ?? "";
+  const eraValid = ERA_OPTIONS.some((o) => o.value !== "" && o.value === rawEra);
+  const era = !isAll && !isWebtoon && eraValid ? rawEra : "";
+  // 웹툰 도메인 컬럼 축은 웹툰 탭 전용 (타 도메인 전송 시 결과 0건)
+  const rawStatus = p.get("status") ?? "";
+  const status =
+    isWebtoon && STATUS_VALUES.includes(rawStatus) ? rawStatus : "";
+  // 완결작은 weekday가 null이라 요일과 조합하면 항상 0건 - 완결이면 요일 무시
+  const weekdays =
+    isWebtoon && status !== "완결"
+      ? parseList(p.get("weekdays")).filter((w) => WEEKDAY_VALUES.includes(w))
+      : [];
+  const ages = isWebtoon
+    ? parseList(p.get("ages")).filter((a) => AGE_OPTIONS.includes(a))
+    : [];
   const rawPage = Number.parseInt(p.get("page") ?? "1", 10);
   const page = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
-  return { domainId, isAll, genres, platform, page };
+  return {
+    domainId,
+    isAll,
+    isWebtoon,
+    genres,
+    platforms,
+    era,
+    status,
+    weekdays,
+    ages,
+    page,
+  };
 };
 
 /** no-op 판정용 상태 직렬화 - URL 표기가 달라도 같은 화면이면 같은 키 */
 const stateKey = (p: URLSearchParams) => {
   const s = parseParams(p);
-  return [s.domainId, s.genres.join(","), s.platform, s.page].join("|");
+  return [
+    s.domainId,
+    s.genres.join(","),
+    s.platforms.join(","),
+    s.era,
+    s.status,
+    s.weekdays.join(","),
+    s.ages.join(","),
+    s.page,
+  ].join("|");
+};
+
+const writeList = (params: URLSearchParams, key: string, values?: string[]) => {
+  if (values === undefined) return;
+  if (values.length > 0) params.set(key, values.join(","));
+  else params.delete(key);
+};
+
+const writeScalar = (params: URLSearchParams, key: string, value?: string) => {
+  if (value === undefined) return;
+  if (value) params.set(key, value);
+  else params.delete(key);
 };
 
 /** 부분 변경(patch)만 반영하고 나머지 파라미터(미지 포함)는 보존 */
 const buildParams = (base: URLSearchParams, patch: ParamPatch) => {
   const params = new URLSearchParams(base);
   if (patch.domain !== undefined) params.set("domain", patch.domain);
-  if (patch.genres !== undefined) {
-    if (patch.genres.length > 0) params.set("genres", patch.genres.join(","));
-    else params.delete("genres");
-  }
-  if (patch.platform !== undefined) {
-    if (patch.platform) params.set("platform", patch.platform);
-    else params.delete("platform");
-  }
+  writeList(params, "genres", patch.genres);
+  // platforms를 쓸 때 구 단수 키를 함께 제거해야 해제가 no-op으로 오판되지 않는다
+  if (patch.platforms !== undefined) params.delete("platform");
+  writeList(params, "platforms", patch.platforms);
+  writeScalar(params, "era", patch.era);
+  writeScalar(params, "status", patch.status);
+  writeList(params, "weekdays", patch.weekdays);
+  writeList(params, "ages", patch.ages);
   if (patch.page !== undefined) {
     if (patch.page > 1) params.set("page", String(patch.page));
     else params.delete("page");
@@ -110,16 +238,42 @@ const buildParams = (base: URLSearchParams, patch: ParamPatch) => {
   return params;
 };
 
+/** 필터 옵션 로드 실패 시 그룹 자리에 표시 - 조용히 사라지는 대신 재시도 제공 */
+const FilterLoadError = ({ onRetry }: { onRetry: () => void }) => (
+  <div className="border-t border-line px-0.5 py-4">
+    <p className="flex items-center gap-1.5 text-[13px] text-ink-2">
+      <WarningCircle size={14} />
+      필터를 불러오지 못했어요
+    </p>
+    <button
+      type="button"
+      onClick={onRetry}
+      className="mt-2 text-[13px] font-semibold text-accent-ink transition-opacity hover:opacity-80"
+    >
+      다시 시도
+    </button>
+  </div>
+);
+
 export default function ExplorePage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // URL 쿼리(?domain=&genres=&platform=&page=)가 상태의 단일 출처 -
+  // URL 쿼리가 상태의 단일 출처 -
   // 직접 URL 진입, 새로고침, 뒤로가기 모두 여기서 복원된다.
-  const { domainId, isAll, genres, platform, page } = useMemo(
-    () => parseParams(searchParams),
-    [searchParams],
-  );
+  const {
+    domainId,
+    isAll,
+    isWebtoon,
+    genres,
+    platforms,
+    era,
+    status,
+    weekdays,
+    ages,
+    page,
+  } = useMemo(() => parseParams(searchParams), [searchParams]);
   const domainKey = isAll ? undefined : domainId.toUpperCase();
+  const isOttDomain = domainId === "movie" || domainId === "tv";
 
   // 결과 상태가 현재와 같으면 히스토리를 건드리지 않고 false 반환 (no-op 가드)
   const writeParams = (patch: ParamPatch, opts?: { replace?: boolean }) => {
@@ -133,28 +287,47 @@ export default function ExplorePage() {
     return true;
   };
 
-  // 도메인 전환(push) 시 필터·페이지 전부 리셋 (목업 동작과 동일)
+  // 도메인 전환(push) 시 필터/페이지 전부 리셋 (목업 동작과 동일)
   const handleDomainChange = (id: string) => {
-    if (writeParams({ domain: id, genres: [], platform: "", page: 1 })) {
+    if (writeParams({ domain: id, ...CLEAR_FILTERS })) {
       window.scrollTo({ top: 0 });
     }
   };
   const handleGenresChange = (next: string[]) =>
     writeParams({ genres: next, page: 1 }, { replace: true });
-  const handlePlatformChange = (next: string) =>
-    writeParams({ platform: next, page: 1 }, { replace: true });
-  const handleReset = () =>
-    writeParams({ genres: [], platform: "", page: 1 }, { replace: true });
+  const handlePlatformsChange = (next: string[]) =>
+    writeParams({ platforms: next, page: 1 }, { replace: true });
+  const handleEraChange = (next: string) =>
+    writeParams({ era: next, page: 1 }, { replace: true });
+  // 완결 선택 시 요일 선택 자동 해제 (완결작 weekday null - 조합이 항상 0건)
+  const handleStatusChange = (next: string) =>
+    writeParams(
+      next === "완결"
+        ? { status: next, weekdays: [], page: 1 }
+        : { status: next, page: 1 },
+      { replace: true },
+    );
+  const handleWeekdaysChange = (next: string[]) =>
+    writeParams({ weekdays: next, page: 1 }, { replace: true });
+  const handleAgesChange = (next: string[]) =>
+    writeParams({ ages: next, page: 1 }, { replace: true });
+  const handleReset = () => writeParams(CLEAR_FILTERS, { replace: true });
   const handlePageChange = (next: number) => {
     if (writeParams({ page: next })) {
       window.scrollTo({ top: 0 });
     }
   };
 
+  const eraRange = era ? ERA_RANGE[era] : undefined;
   const { data, isLoading, isError, refetch } = useWorks({
     domain: domainKey,
     genres: genres.length > 0 ? genres : undefined,
-    platforms: platform ? [platform] : undefined,
+    platforms: platforms.length > 0 ? platforms : undefined,
+    releaseFrom: eraRange?.from,
+    releaseTo: eraRange?.to,
+    status: status || undefined,
+    weekdays: weekdays.length > 0 ? weekdays : undefined,
+    ageRatings: ages.length > 0 ? ages : undefined,
     page: page - 1,
     size: PAGE_SIZE,
     // 도메인 경로에서는 서버가 정렬을 무시하지만(release_date DESC 고정),
@@ -163,13 +336,36 @@ export default function ExplorePage() {
     sortDirection: "desc",
   });
 
-  const { data: genreOptions } = useGenres(domainKey, { enabled: !isAll });
-  const { data: platformOptions } = usePlatforms(domainKey, { enabled: !isAll });
+  const {
+    data: genreOptions,
+    isError: genresFailed,
+    refetch: refetchGenres,
+  } = useGenres(domainKey, { enabled: !isAll });
+  const {
+    data: platformOptions,
+    isError: platformsFailed,
+    refetch: refetchPlatforms,
+  } = usePlatforms(domainKey, { enabled: !isAll });
 
   const sortedGenres = useMemo(
     () => [...(genreOptions ?? [])].sort((a, b) => a.localeCompare(b, "ko")),
     [genreOptions],
   );
+
+  // 장르 더 보기/접기 (목업 .more-genres) - 도메인 전환 시 접힘으로 초기화
+  const [genresExpanded, setGenresExpanded] = useState(false);
+  useEffect(() => {
+    setGenresExpanded(false);
+  }, [domainId]);
+
+  // 접힘 상태에서는 상위 N개만 노출하되, 접힌 영역의 체크된 항목은 유지한다
+  // (칩에는 있는데 레일에는 안 보이는 혼란 방지)
+  const visibleGenres = genresExpanded
+    ? sortedGenres
+    : sortedGenres.filter(
+        (g, i) => i < GENRE_COLLAPSE_LIMIT || genres.includes(g),
+      );
+  const hiddenGenreCount = sortedGenres.length - visibleGenres.length;
 
   const items = data?.content ?? [];
   const totalElements = data?.totalElements ?? 0;
@@ -186,8 +382,19 @@ export default function ExplorePage() {
 
   const title = isAll ? "전체" : (DOMAIN_LABEL_MAP[domainKey!] ?? domainId);
   const variant = domainId === "game" ? "landscape" : "portrait";
-  const hasActiveFilters = genres.length > 0 || platform !== "";
+  const hasActiveFilters =
+    genres.length > 0 ||
+    platforms.length > 0 ||
+    era !== "" ||
+    status !== "" ||
+    weekdays.length > 0 ||
+    ages.length > 0;
   const platformLabel = (key: string) => PLATFORM_META[key]?.label ?? key;
+
+  // 영화, 시리즈는 수집 소스(TMDB_*)를 제외한 OTT만 "볼 수 있는 곳"으로 노출
+  const visiblePlatforms = isOttDomain
+    ? (platformOptions ?? []).filter((v) => !COLLECTION_SOURCES.includes(v))
+    : (platformOptions ?? []);
 
   // "준비 중" 항목 - API 목록에 이미 같은 라벨이 있으면 중복 추가하지 않는다
   // (예: WEBNOVEL은 usePlatforms가 KakaoPage를 이미 반환할 수 있음)
@@ -270,42 +477,101 @@ export default function ExplorePage() {
           </div>
 
           {isAll ? (
-            // findWorks는 domain 없이는 장르·플랫폼 필터를 적용하지 않으므로 숨긴다
+            // findWorks는 domain 없이는 필터를 적용하지 않으므로 숨긴다
             <p className="border-t border-line px-0.5 py-4 text-[13px] leading-relaxed text-ink-2">
               전체 탭에서는 필터를 지원하지 않아요. 도메인을 선택하면 장르와
               플랫폼 필터를 쓸 수 있어요.
             </p>
           ) : (
             <>
-              {sortedGenres.length > 0 && (
-                <FilterGroup
-                  title="장르"
-                  type="checkbox"
-                  values={genres}
-                  onChange={handleGenresChange}
-                  options={sortedGenres.map((g) => ({ value: g, label: g }))}
-                />
+              {genresFailed ? (
+                <FilterLoadError onRetry={() => refetchGenres()} />
+              ) : (
+                sortedGenres.length > 0 && (
+                  <FilterGroup
+                    title="장르"
+                    type="checkbox"
+                    values={genres}
+                    onChange={handleGenresChange}
+                    options={visibleGenres.map((g) => ({ value: g, label: g }))}
+                    footer={
+                      (genresExpanded || hiddenGenreCount > 0) && (
+                        <button
+                          type="button"
+                          aria-expanded={genresExpanded}
+                          onClick={() => setGenresExpanded((v) => !v)}
+                          className="mt-1.5 px-1.5 text-[13px] text-ink-3 transition-colors hover:text-ink"
+                        >
+                          {genresExpanded
+                            ? "접기"
+                            : `장르 ${hiddenGenreCount}개 더 보기`}
+                        </button>
+                      )
+                    }
+                  />
+                )
               )}
-              {(platformOptions?.length ?? 0) > 0 && (
-                // 백엔드 platforms 검색이 @>(AND)라 다중 선택 OR 미지원 - 단일 선택 임시 처리
+              {platformsFailed ? (
+                <FilterLoadError onRetry={() => refetchPlatforms()} />
+              ) : (
+                (visiblePlatforms.length > 0 || soonPlatforms.length > 0) && (
+                  <FilterGroup
+                    title={isOttDomain ? "볼 수 있는 곳" : "플랫폼"}
+                    type="checkbox"
+                    values={platforms}
+                    onChange={handlePlatformsChange}
+                    options={[
+                      ...visiblePlatforms.map((v) => ({
+                        value: v,
+                        label: platformLabel(v),
+                      })),
+                      ...soonPlatforms.map((label) => ({
+                        value: `soon-${label}`,
+                        label,
+                        disabled: true,
+                        soonLabel: "준비 중",
+                      })),
+                    ]}
+                  />
+                )
+              )}
+              {isWebtoon ? (
+                <>
+                  <FilterGroup
+                    title="연재 상태"
+                    type="radio"
+                    value={status}
+                    onChange={handleStatusChange}
+                    options={[
+                      { value: "", label: "전체" },
+                      ...STATUS_VALUES.map((v) => ({ value: v, label: v })),
+                    ]}
+                  />
+                  {/* 완결작은 weekday null이라 요일 그룹은 완결 상태에서 숨김 */}
+                  {status !== "완결" && (
+                    <FilterGroup
+                      title="연재 요일"
+                      type="checkbox"
+                      values={weekdays}
+                      onChange={handleWeekdaysChange}
+                      options={WEEKDAY_OPTIONS}
+                    />
+                  )}
+                  <FilterGroup
+                    title="연령 등급"
+                    type="checkbox"
+                    values={ages}
+                    onChange={handleAgesChange}
+                    options={AGE_OPTIONS.map((a) => ({ value: a, label: a }))}
+                  />
+                </>
+              ) : (
                 <FilterGroup
-                  title="플랫폼"
+                  title={isOttDomain ? "개봉 시기" : "출시 시기"}
                   type="radio"
-                  value={platform}
-                  onChange={handlePlatformChange}
-                  options={[
-                    { value: "", label: "전체" },
-                    ...(platformOptions ?? []).map((p) => ({
-                      value: p,
-                      label: platformLabel(p),
-                    })),
-                    ...soonPlatforms.map((label) => ({
-                      value: `soon-${label}`,
-                      label,
-                      disabled: true,
-                      soonLabel: "준비 중",
-                    })),
-                  ]}
+                  value={era}
+                  onChange={handleEraChange}
+                  options={ERA_OPTIONS}
                 />
               )}
             </>
@@ -333,22 +599,47 @@ export default function ExplorePage() {
             </span>
           </div>
 
-          {/* 활성 필터 칩 행 */}
+          {/* 활성 필터 칩 행 - 모든 축의 개별 제거를 지원한다 */}
           {hasActiveFilters && (
             <div className="mt-3.5 flex flex-wrap gap-2">
-              {platform && (
+              {platforms.map((v) => (
                 <Chip
-                  label={platformLabel(platform)}
-                  onRemove={() => handlePlatformChange("")}
+                  key={`platform-${v}`}
+                  label={platformLabel(v)}
+                  onRemove={() =>
+                    handlePlatformsChange(platforms.filter((x) => x !== v))
+                  }
                 />
-              )}
+              ))}
               {genres.map((g) => (
                 <Chip
-                  key={g}
+                  key={`genre-${g}`}
                   label={g}
                   onRemove={() =>
-                    handleGenresChange(genres.filter((v) => v !== g))
+                    handleGenresChange(genres.filter((x) => x !== g))
                   }
+                />
+              ))}
+              {era && (
+                <Chip label={eraLabel(era)} onRemove={() => handleEraChange("")} />
+              )}
+              {status && (
+                <Chip label={status} onRemove={() => handleStatusChange("")} />
+              )}
+              {weekdays.map((w) => (
+                <Chip
+                  key={`weekday-${w}`}
+                  label={weekdayChipLabel(w)}
+                  onRemove={() =>
+                    handleWeekdaysChange(weekdays.filter((x) => x !== w))
+                  }
+                />
+              ))}
+              {ages.map((a) => (
+                <Chip
+                  key={`age-${a}`}
+                  label={a}
+                  onRemove={() => handleAgesChange(ages.filter((x) => x !== a))}
                 />
               ))}
             </div>
@@ -394,7 +685,7 @@ export default function ExplorePage() {
             <>
               <div className={gridClass}>
                 {items.map((work) => {
-                  // "yyyy-MM-dd" 문자열에서 직접 연도 추출 (타임존·NaN 문제 회피)
+                  // "yyyy-MM-dd" 문자열에서 직접 연도 추출 (타임존/NaN 문제 회피)
                   const year = work.releaseDate?.slice(0, 4) || undefined;
                   return (
                     <WorkCard

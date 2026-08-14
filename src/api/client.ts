@@ -75,15 +75,21 @@ const logResponseError = (error: AxiosError) => {
   return Promise.reject(error);
 };
 
+// 배열 파라미터를 platforms=a&platforms=b 반복 형식으로 직렬화.
+// axios 기본값(platforms[]=a 브래킷)은 Spring @RequestParam List 바인딩이 받지 못한다.
+const REPEAT_ARRAY_PARAMS = { indexes: null } as const;
+
 export const publicApi = axios.create({
   baseURL: API_BASE_URL,
   // increase timeout to handle slow upstreams (was 10s)
   timeout: 30000,
+  paramsSerializer: REPEAT_ARRAY_PARAMS,
 });
 
 export const privateApi = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
+  paramsSerializer: REPEAT_ARRAY_PARAMS,
 });
 
 // Retry interceptor for transient failures (network errors, timeouts, 5xx, 429)
