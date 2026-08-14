@@ -3,13 +3,17 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   MagnifyingGlass,
-  Star,
   WarningCircle,
 } from "@phosphor-icons/react";
 import { useSearchWorks } from "../hooks/useWorks";
 import { DOMAIN_LABEL_MAP, DOMAIN_FILTERS } from "../constants/domain";
 import { thumbnailFallbackMap, type Category } from "../constants/thumbnail";
 import WorkCard from "../components/ui/WorkCard";
+import {
+  workCardFooter,
+  workCardMeta,
+  workCardTags,
+} from "../components/ui/workCardInfo";
 import DomainChip from "../components/ui/DomainChip";
 import Pagination from "../components/ui/Pagination";
 import EmptyState from "../components/ui/EmptyState";
@@ -136,29 +140,20 @@ export default function SearchPage() {
       ) : data && data.content.length > 0 ? (
         <>
           <div className={gridClass}>
-            {data.content.map((work) => {
-              const year = work.releaseDate?.slice(0, 4);
-              return (
-                <WorkCard
-                  key={work.id}
-                  variant="portrait"
-                  title={work.title}
-                  meta={year}
-                  imageUrl={work.thumbnail || null}
-                  fallbackIconUrl={thumbnailFallbackMap[categoryOf(work.domain)]}
-                  to={`/work/${work.id}`}
-                  footer={
-                    <>
-                      <span>{DOMAIN_LABEL_MAP[work.domain] ?? work.domain}</span>
-                      <span className="ml-auto inline-flex items-center gap-1 font-bold text-ink">
-                        <Star weight="fill" size={13} className="text-star" />
-                        {(work.score ?? 0).toFixed(1)}
-                      </span>
-                    </>
-                  }
-                />
-              );
-            })}
+            {data.content.map((work) => (
+              // 혼합 도메인 결과라 meta 앞에 도메인 라벨, foot은 도메인별 구성
+              <WorkCard
+                key={work.id}
+                variant="portrait"
+                title={work.title}
+                meta={workCardMeta(work, { withDomain: true })}
+                tags={workCardTags(work)}
+                imageUrl={work.thumbnail || null}
+                fallbackIconUrl={thumbnailFallbackMap[categoryOf(work.domain)]}
+                to={`/work/${work.id}`}
+                footer={workCardFooter(work)}
+              />
+            ))}
           </div>
 
           {data.totalPages > 1 && (

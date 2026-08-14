@@ -10,6 +10,7 @@ import {
 import { useAllRankings } from "../hooks/useRankings";
 import { WorkSummary } from "../types/api";
 import { DOMAIN_LABEL_MAP } from "../constants/domain";
+import { watchPlatformLabels } from "../constants/platforms";
 import { thumbnailFallbackMap, type Category } from "../constants/thumbnail";
 import { daysUntil, dDayOf, parseYmd } from "../utils/releaseDate";
 import SearchBar from "../components/SearchBar";
@@ -30,7 +31,9 @@ import SkeletonCard from "../components/ui/SkeletonCard";
  *
  * 목업 대비 편차 (실데이터, API 기준):
  * - 히어로 sub(한 줄 소개): 시놉시스 필드가 WorkSummary에 없어 연도·평점 메타로 대체.
- * - 신작 릴·리뷰 카드 meta: 플랫폼·장르 필드가 없어 "도메인 · 연도"로 구성.
+ * - 신작 릴 meta: 목업대로 "도메인 · 플랫폼" (플랫폼 미수집 작품은 연도 폴백).
+ * - 리뷰 카드 meta: 목업 .rv에는 메타 줄이 없으나 인용문 생략 보완으로
+ *   "도메인 · 연도" 캡션 유지.
  * - 리뷰 카드: useRecentReviewedWorks가 작품 요약만 반환(리뷰 본문·닉네임 없음)
  *   -> 인용문(.rv q)·닉네임(.who) 생략, 포스터+제목+별점+메타만 렌더.
  *   목업의 "더 보기" 링크도 이동할 리뷰 목록 페이지가 없어 생략.
@@ -74,6 +77,18 @@ const domainLabel = (domain?: string) =>
 const workMeta = (work: WorkSummary) => {
   const year = work.releaseDate?.slice(0, 4);
   return [domainLabel(work.domain), year].filter(Boolean).join(" · ");
+};
+
+/**
+ * 신작 릴 meta - "게임 · 스팀" (목업 .rail-card .m: 도메인 · 플랫폼).
+ * 플랫폼은 수집 소스(TMDB_*) 제외 첫 항목의 한글 라벨, 없으면 연도 폴백.
+ */
+const railMeta = (work: WorkSummary) => {
+  const platform = watchPlatformLabels(work.platforms)[0];
+  const year = work.releaseDate?.slice(0, 4);
+  return [domainLabel(work.domain), platform ?? year]
+    .filter(Boolean)
+    .join(" · ");
 };
 
 /** 히어로 sub - 시놉시스 부재로 연도·평점 메타 (둘 다 없으면 생략) */
@@ -319,7 +334,7 @@ export default function HomePage() {
                   <RailCard
                     key={work.id}
                     title={work.title}
-                    meta={workMeta(work)}
+                    meta={railMeta(work)}
                     imageUrl={work.thumbnail}
                     fallbackIconUrl={
                       thumbnailFallbackMap[categoryOf(work.domain)]

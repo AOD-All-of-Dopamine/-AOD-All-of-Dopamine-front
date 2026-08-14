@@ -2,9 +2,13 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, BookmarkSimple, MagnifyingGlass } from "@phosphor-icons/react";
 import { useMyBookmarks } from "../hooks/useInteractions";
-import { DOMAIN_LABEL_MAP } from "../constants/domain";
 import { thumbnailFallbackMap, type Category } from "../constants/thumbnail";
 import WorkCard from "../components/ui/WorkCard";
+import {
+  workCardFooter,
+  workCardMeta,
+  workCardTags,
+} from "../components/ui/workCardInfo";
 import EmptyState from "../components/ui/EmptyState";
 import SkeletonCard from "../components/ui/SkeletonCard";
 
@@ -69,22 +73,21 @@ export default function MyBookmarksPage() {
       ) : data && data.content.length > 0 ? (
         filteredWorks.length > 0 ? (
           <div className={gridClass}>
-            {filteredWorks.map((work: any) => {
-              const year = work.releaseDate?.slice(0, 4);
-              return (
-                <WorkCard
-                  key={work.id}
-                  variant="portrait"
-                  title={work.title}
-                  meta={[DOMAIN_LABEL_MAP[work.domain] ?? work.domain, year]
-                    .filter(Boolean)
-                    .join(" · ")}
-                  imageUrl={work.thumbnail || null}
-                  fallbackIconUrl={thumbnailFallbackMap[categoryOf(work.domain)]}
-                  to={`/work/${work.id}`}
-                />
-              );
-            })}
+            {filteredWorks.map((work: any) => (
+              // 혼합 도메인 목록 - 도메인 라벨 포함 meta + 도메인별 태그·foot
+              // (상호작용 API가 신규 필드를 아직 안 주면 기존 "도메인 · 연도"와 동일)
+              <WorkCard
+                key={work.id}
+                variant="portrait"
+                title={work.title}
+                meta={workCardMeta(work, { withDomain: true })}
+                tags={workCardTags(work)}
+                imageUrl={work.thumbnail || null}
+                fallbackIconUrl={thumbnailFallbackMap[categoryOf(work.domain)]}
+                to={`/work/${work.id}`}
+                footer={workCardFooter(work)}
+              />
+            ))}
           </div>
         ) : (
           <div className="mt-5">

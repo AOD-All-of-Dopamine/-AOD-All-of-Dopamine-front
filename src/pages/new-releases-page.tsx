@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { WarningCircle } from "@phosphor-icons/react";
 import { useRecentReleases, useUpcomingReleases } from "../hooks/useWorks";
 import { DOMAIN_FILTERS, DOMAIN_LABEL_MAP } from "../constants/domain";
+import { watchPlatformLabels } from "../constants/platforms";
 import { thumbnailFallbackMap, type Category } from "../constants/thumbnail";
 import { WorkSummary } from "../types/api";
 import { dDayOf, parseYmd } from "../utils/releaseDate";
@@ -22,10 +23,10 @@ import EmptyState from "../components/ui/EmptyState";
  * URL 쿼리(?domain=)가 상태의 단일 출처, all(전체)은 파라미터 생략.
  *
  * 백엔드 계약(WorkApiService.getRecent/UpcomingReleases 기준) 편차:
- * - 행 메타(목업 "작가 · 플랫폼"): WorkSummary에 작가·플랫폼 필드가 없어
- *   평점(score>0일 때만)으로 대체. 도메인 태그는 Tag(canvas) 재사용 -
- *   목업 .domain(12px, 패딩 3px 11px)과 수치가 약간 다르나 컴포넌트 재사용
- *   우선 원칙으로 의도적 유지.
+ * - 행 메타는 목업대로 "작가 · 플랫폼"(최근)/"작가 · 날짜"(예정) - creator·
+ *   platforms 필드 미수집 작품은 있는 쪽만 표기. 도메인 태그는 Tag(canvas)
+ *   재사용 - 목업 .domain(12px, 패딩 3px 11px)과 수치가 약간 다르나
+ *   컴포넌트 재사용 우선 원칙으로 의도적 유지.
  * - 출시 예정 "미정(TBA)" 그룹 미렌더: findUpcomingReleases가
  *   releaseDate > 오늘 AND <= +1년 조건이라 날짜 없는 작품이 응답에 없다.
  * - "알림 받기" 버튼 생략: 백엔드에 알림 API가 없고(북마크=관심 등록과 의미가 달라
@@ -61,20 +62,32 @@ const domainLabel = (domain?: string) =>
   DOMAIN_LABEL_MAP[domain ?? ""] ?? domain ?? "";
 
 /**
- * 출시 예정 행 meta - "게임 · 11월 19일" (다른 해면 연도 표기).
- * 날짜 없으면 도메인만 표기 - 월 그룹 라벨이 날짜 맥락을 주는 데다 API가
- * 날짜 없는 작품을 반환하지 않는 방어 분기다. 홈은 그룹 라벨이 없어
- * "발매일 미정"을 명시하므로 문구가 다르다 (페이지별 유지).
+ * 최근 출시 행 meta - "모죠 · 네이버웹툰" (목업 .row .m: 작가 · 플랫폼).
+ * 플랫폼은 수집 소스(TMDB_*) 제외 한글 라벨을 콤마로 연결(목업 "티빙, 쿠팡플레이").
+ * 두 값 모두 없으면 meta 줄 생략.
+ */
+const recentMeta = (work: WorkSummary) => {
+  const creator = work.creator?.trim();
+  const platforms = watchPlatformLabels(work.platforms).join(", ");
+  const parts = [creator, platforms].filter(Boolean);
+  return parts.length > 0 ? parts.join(" · ") : undefined;
+};
+
+/**
+ * 출시 예정 행 meta - "드니 빌뇌브 · 12월 18일" (목업: 제작자 · 날짜,
+ * 다른 해면 연도 표기). 제작자 미수집 작품은 도메인 라벨 폴백.
+ * 날짜 없으면 앞부분만 표기 - 월 그룹 라벨이 날짜 맥락을 주는 데다 API가
+ * 날짜 없는 작품을 반환하지 않는 방어 분기다.
  */
 const upcomingMeta = (work: WorkSummary) => {
-  const domain = domainLabel(work.domain);
+  const head = work.creator?.trim() || domainLabel(work.domain);
   const ymd = parseYmd(work.releaseDate);
-  if (!ymd) return domain;
+  if (!ymd) return head;
   const datePart =
     ymd.y === new Date().getFullYear()
       ? `${ymd.m}월 ${ymd.d}일`
       : `${ymd.y}년 ${ymd.m}월 ${ymd.d}일`;
-  return `${domain} · ${datePart}`;
+  return `${head} · ${datePart}`;
 };
 
 interface ReleaseGroup {
@@ -294,9 +307,7 @@ export default function NewReleasesPage() {
                 <ReleaseRow
                   key={work.id}
                   title={work.title}
-                  meta={
-                    work.score > 0 ? `평점 ${work.score.toFixed(1)}` : undefined
-                  }
+                  meta={recentMeta(work)}
                   imageUrl={work.thumbnail}
                   fallbackIconUrl={thumbnailFallbackMap[categoryOf(work.domain)]}
                   to={`/work/${work.id}`}

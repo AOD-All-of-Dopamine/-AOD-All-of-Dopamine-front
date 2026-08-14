@@ -24,6 +24,7 @@ import {
 } from "../hooks/useInteractions";
 import { DOMAIN_LABEL_MAP } from "../constants/domain";
 import { PLATFORM_META } from "../constants/platforms";
+import { STEAM_REVIEW_DESC_KO } from "../constants/steam";
 import { thumbnailFallbackMap, type Category } from "../constants/thumbnail";
 import {
   formatFieldValue,
@@ -60,19 +61,6 @@ import ConfirmDialog from "../components/ui/ConfirmDialog";
  */
 
 const REVIEW_PAGE_SIZE = 20;
-
-/** Steam review_score_desc 한글화 (스팀 상점 공식 표기 기준) */
-const STEAM_REVIEW_DESC_KO: Record<string, string> = {
-  "Overwhelmingly Positive": "압도적으로 긍정적",
-  "Very Positive": "매우 긍정적",
-  Positive: "긍정적",
-  "Mostly Positive": "대체로 긍정적",
-  Mixed: "복합적",
-  "Mostly Negative": "대체로 부정적",
-  Negative: "부정적",
-  "Very Negative": "매우 부정적",
-  "Overwhelmingly Negative": "압도적으로 부정적",
-};
 
 /** 정보 패널 행 순서 - domainInfo가 서버에서 HashMap이라 순서 고정이 필요 */
 const INFO_KEY_ORDER = [

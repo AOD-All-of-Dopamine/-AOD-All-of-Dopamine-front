@@ -4,14 +4,21 @@ import {
   ArrowCounterClockwise,
   Funnel,
   SortDescending,
-  Star,
   WarningCircle,
 } from "@phosphor-icons/react";
 import { useGenres, usePlatforms, useWorks } from "../hooks/useWorks";
 import { DOMAIN_FILTERS, DOMAIN_LABEL_MAP } from "../constants/domain";
-import { PLATFORM_META } from "../constants/platforms";
+import {
+  COLLECTION_SOURCES,
+  platformLabel,
+} from "../constants/platforms";
 import { thumbnailFallbackMap, type Category } from "../constants/thumbnail";
 import WorkCard from "../components/ui/WorkCard";
+import {
+  workCardFooter,
+  workCardMeta,
+  workCardTags,
+} from "../components/ui/workCardInfo";
 import Chip from "../components/ui/Chip";
 import DomainChip from "../components/ui/DomainChip";
 import FilterGroup from "../components/ui/FilterGroup";
@@ -62,9 +69,6 @@ const SOON_PLATFORMS: Record<string, string[]> = {
   WEBTOON: ["카카오웹툰"],
   WEBNOVEL: ["카카오페이지"],
 };
-
-/** 수집 소스 식별자 - OTT가 아니므로 영화, 시리즈의 "볼 수 있는 곳"에서 제외 */
-const COLLECTION_SOURCES = ["TMDB_MOVIE", "TMDB_TV"];
 
 /** 출시 시기 radio 프리셋 (목업 era 그룹) */
 const ERA_OPTIONS = [
@@ -389,7 +393,6 @@ export default function ExplorePage() {
     status !== "" ||
     weekdays.length > 0 ||
     ages.length > 0;
-  const platformLabel = (key: string) => PLATFORM_META[key]?.label ?? key;
 
   // 영화, 시리즈는 수집 소스(TMDB_*)를 제외한 OTT만 "볼 수 있는 곳"으로 노출
   const visiblePlatforms = isOttDomain
@@ -684,38 +687,23 @@ export default function ExplorePage() {
           ) : (
             <>
               <div className={gridClass}>
-                {items.map((work) => {
-                  // "yyyy-MM-dd" 문자열에서 직접 연도 추출 (타임존/NaN 문제 회피)
-                  const year = work.releaseDate?.slice(0, 4) || undefined;
-                  return (
-                    <WorkCard
-                      key={work.id}
-                      variant={variant}
-                      title={work.title}
-                      meta={year}
-                      imageUrl={work.thumbnail}
-                      fallbackIconUrl={
-                        thumbnailFallbackMap[categoryOf(work.domain)]
-                      }
-                      to={`/work/${work.id}`}
-                      footer={
-                        <>
-                          <span>
-                            {DOMAIN_LABEL_MAP[work.domain] ?? work.domain}
-                          </span>
-                          <span className="ml-auto inline-flex items-center gap-1 font-bold text-ink">
-                            <Star
-                              weight="fill"
-                              size={13}
-                              className="text-star"
-                            />
-                            {(work.score ?? 0).toFixed(1)}
-                          </span>
-                        </>
-                      }
-                    />
-                  );
-                })}
+                {items.map((work) => (
+                  // 목업 카드 구성 그대로 - meta(연도·제작자)/장르 태그/도메인별 foot.
+                  // 전체 탭만 혼합 도메인이라 meta 앞에 도메인 라벨을 붙인다.
+                  <WorkCard
+                    key={work.id}
+                    variant={variant}
+                    title={work.title}
+                    meta={workCardMeta(work, { withDomain: isAll })}
+                    tags={workCardTags(work)}
+                    imageUrl={work.thumbnail}
+                    fallbackIconUrl={
+                      thumbnailFallbackMap[categoryOf(work.domain)]
+                    }
+                    to={`/work/${work.id}`}
+                    footer={workCardFooter(work)}
+                  />
+                ))}
               </div>
               {totalPages > 1 && (
                 <div className="mt-10">
