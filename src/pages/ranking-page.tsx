@@ -14,6 +14,8 @@ import EmptyState from "../components/ui/EmptyState";
  * /ranking - mockups/ranking-mockup.html 이식.
  * 레이아웃: h1 랭킹 + 도메인 칩 / 플랫폼 칩(랭킹 원천) / 출처 캡션 /
  * 톱3 포디움(2·3위 단차) / 4위~ 패널 리스트. 컨테이너 max-w 1080.
+ * <lg(mobile-light-mockup 프레임 4): 포디움 없이 1위부터 컴팩트 순위 행
+ * (RankRow compact, 1~3위 순번 accent-ink). 칩 행은 가로 스크롤.
  *
  * 히스토리 정책: 도메인 칩 전환은 push (탭 성격), 플랫폼은 replace (필터 성격).
  * URL 쿼리(?domain=&platform=)가 상태의 단일 출처, 기본값은 파라미터 생략.
@@ -24,7 +26,8 @@ import EmptyState from "../components/ui/EmptyState";
  *   external_ranking 테이블에 기간·기준·장르 컬럼이 없다. RankingScheduler가
  *   매일 04시 플랫폼당 단일 스냅샷만 upsert하므로 축 자체가 수집되지 않는다.
  * - DeltaBadge(순위 변동) 생략: RankingResponse에 변동 필드가 없다
- *   (이전 스냅샷을 덮어써 비교 원본도 없음).
+ *   (이전 스냅샷을 덮어써 비교 원본도 없음). 모바일 컴팩트 행의 우측
+ *   변동 표시(↑n/-/NEW)도 같은 이유로 생략.
  * - 행 meta(목업 "장르 · 작가") 생략: RankingResponse에 해당 필드가 없다.
  * - 플랫폼 칩은 현재 도메인당 수집 원천이 1개라 사실상 출처 표시 +
  *   로드맵(준비 중 disabled) 역할. 모델은 원천 목록(platforms 배열)이라
@@ -161,8 +164,8 @@ export default function RankingPage() {
         랭킹
       </h1>
 
-      {/* 도메인 칩 */}
-      <div className="mt-4 flex flex-wrap gap-1.5">
+      {/* 도메인 칩 - <lg 가로 스크롤, lg 이상 기존 래핑 유지 */}
+      <div className="mt-4 flex gap-1.5 overflow-x-auto scrollbar-hide lg:flex-wrap lg:overflow-visible">
         {RANKING_DOMAINS.map((id) => (
           <DomainChip
             key={id}
@@ -175,7 +178,7 @@ export default function RankingPage() {
       </div>
 
       {/* 플랫폼 칩 - 도메인별 랭킹 원천, 미수집 플랫폼은 준비 중 disabled */}
-      <div className="mt-3 flex flex-wrap gap-1.5">
+      <div className="mt-3 flex gap-1.5 overflow-x-auto scrollbar-hide lg:flex-wrap lg:overflow-visible">
         {source.platforms.map((key) => (
           <DomainChip
             key={key}
@@ -198,24 +201,39 @@ export default function RankingPage() {
 
       {rankings.isLoading ? (
         <>
-          <div
-            aria-hidden="true"
-            className="mt-5 grid grid-cols-1 items-start gap-[18px] min-[768px]:grid-cols-3"
-          >
-            {[0, 1, 2].map((i) => (
-              <div key={i} className={i > 0 ? "min-[768px]:mt-[30px]" : undefined}>
-                <PodiumSkeleton />
+          {/* <lg 컴팩트 행 골격 */}
+          <div aria-hidden="true" className="mt-3 flex flex-col gap-2 lg:hidden">
+            {Array.from({ length: 8 }, (_, i) => (
+              <div
+                key={i}
+                className="flex animate-pulse items-center gap-3 rounded-panel border border-line bg-surface py-2.5 pl-3 pr-3.5"
+              >
+                <div className="h-6 w-[26px] flex-none rounded-input bg-line" />
+                <div className="h-[62px] w-12 flex-none rounded-md bg-line" />
+                <div className="h-4 w-3/5 rounded-input bg-line" />
               </div>
             ))}
           </div>
-          {/* 실물 패널(py-1 + RankRow panel)과 동일 골격 - 로딩 전환 점프 방지 */}
-          <div
-            aria-hidden="true"
-            className="mt-7 rounded-panel border border-line bg-surface py-1 shadow-card"
-          >
-            {Array.from({ length: 7 }, (_, i) => (
-              <SkeletonCard key={i} variant="panel-row" />
-            ))}
+          <div className="hidden lg:block">
+            <div
+              aria-hidden="true"
+              className="mt-5 grid grid-cols-1 items-start gap-[18px] min-[768px]:grid-cols-3"
+            >
+              {[0, 1, 2].map((i) => (
+                <div key={i} className={i > 0 ? "min-[768px]:mt-[30px]" : undefined}>
+                  <PodiumSkeleton />
+                </div>
+              ))}
+            </div>
+            {/* 실물 패널(py-1 + RankRow panel)과 동일 골격 - 로딩 전환 점프 방지 */}
+            <div
+              aria-hidden="true"
+              className="mt-7 rounded-panel border border-line bg-surface py-1 shadow-card"
+            >
+              {Array.from({ length: 7 }, (_, i) => (
+                <SkeletonCard key={i} variant="panel-row" />
+              ))}
+            </div>
           </div>
         </>
       ) : rankings.isError ? (
@@ -244,41 +262,59 @@ export default function RankingPage() {
         </div>
       ) : (
         <>
-          {/* 톱3 포디움 - 2·3위는 데스크톱에서 30px 단차, 모바일 1열 */}
-          {podium.length > 0 && (
-            <div className="mt-5 grid grid-cols-1 items-start gap-[18px] min-[768px]:grid-cols-3">
-              {podium.map((item, i) => (
-                <div
-                  key={item.id}
-                  className={i > 0 ? "min-[768px]:mt-[30px]" : undefined}
-                >
-                  <PodiumCard
-                    rank={(i + 1) as 1 | 2 | 3}
+          {/* <lg 컴팩트 순위 행 - 1위부터 전체, 1~3위 순번 accent-ink */}
+          <div className="mt-3 flex flex-col gap-2 lg:hidden">
+            {sorted.map((item) => (
+              <RankRow
+                key={item.id}
+                variant="compact"
+                accent={item.ranking <= 3}
+                no={item.ranking}
+                title={item.title}
+                imageUrl={item.thumbnailUrl}
+                to={item.contentId ? `/work/${item.contentId}` : undefined}
+              />
+            ))}
+          </div>
+
+          {/* lg 이상 - 기존 포디움 + 패널 리스트 그대로 */}
+          <div className="hidden lg:block">
+            {/* 톱3 포디움 - 2·3위는 30px 단차 */}
+            {podium.length > 0 && (
+              <div className="mt-5 grid grid-cols-1 items-start gap-[18px] min-[768px]:grid-cols-3">
+                {podium.map((item, i) => (
+                  <div
+                    key={item.id}
+                    className={i > 0 ? "min-[768px]:mt-[30px]" : undefined}
+                  >
+                    <PodiumCard
+                      rank={(i + 1) as 1 | 2 | 3}
+                      title={item.title}
+                      imageUrl={item.thumbnailUrl}
+                      to={
+                        item.contentId ? `/work/${item.contentId}` : undefined
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 4위~ 패널 리스트 */}
+            {rest.length > 0 && (
+              <div className="mt-7 rounded-panel border border-line bg-surface py-1 shadow-card">
+                {rest.map((item) => (
+                  <RankRow
+                    key={item.id}
+                    no={item.ranking}
                     title={item.title}
                     imageUrl={item.thumbnailUrl}
-                    to={
-                      item.contentId ? `/work/${item.contentId}` : undefined
-                    }
+                    to={item.contentId ? `/work/${item.contentId}` : undefined}
                   />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* 4위~ 패널 리스트 */}
-          {rest.length > 0 && (
-            <div className="mt-7 rounded-panel border border-line bg-surface py-1 shadow-card">
-              {rest.map((item) => (
-                <RankRow
-                  key={item.id}
-                  no={item.ranking}
-                  title={item.title}
-                  imageUrl={item.thumbnailUrl}
-                  to={item.contentId ? `/work/${item.contentId}` : undefined}
-                />
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </>
       )}
     </div>

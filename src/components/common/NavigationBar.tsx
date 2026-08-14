@@ -1,21 +1,27 @@
-import React from "react";
-import HomeIcon from "../../assets/home-icon.tsx";
-import RankingIcon from "../../assets/ranking-icon.tsx";
-import SearchIcon from "../../assets/search-icon.tsx";
-import CalendarIcon from "../../assets/calendar-icon.tsx";
-import MyIcon from "../../assets/my-icon.tsx";
+import {
+  CalendarBlank,
+  Compass,
+  House,
+  Trophy,
+  User,
+  type Icon,
+} from "@phosphor-icons/react";
 import { useLocation, useNavigate, matchPath } from "react-router-dom";
 
-/** 모바일 하단 탭 (< lg 전용) - 데스크톱은 SiteHeader가 담당 */
-const TABS = [
-  { path: "/home", label: "홈", Icon: HomeIcon },
-  { path: "/explore", label: "탐색", Icon: SearchIcon },
-  { path: "/ranking", label: "랭킹", Icon: RankingIcon },
-  { path: "/new", label: "신작", Icon: CalendarIcon },
-  { path: "/profile", label: "프로필", Icon: MyIcon },
+/**
+ * 모바일 하단 탭 (< lg 전용) - 데스크톱은 SiteHeader가 담당.
+ * 아이콘은 Phosphor 단일 규칙(목업 .m-tab) - 활성 탭은 accent + fill 변형,
+ * 라벨은 활성 시 ink 600.
+ */
+const TABS: { path: string; label: string; Icon: Icon }[] = [
+  { path: "/home", label: "홈", Icon: House },
+  { path: "/explore", label: "탐색", Icon: Compass },
+  { path: "/ranking", label: "랭킹", Icon: Trophy },
+  { path: "/new", label: "신작", Icon: CalendarBlank },
+  { path: "/profile", label: "프로필", Icon: User },
 ];
 
-const NavigationBar: React.FC = () => {
+const NavigationBar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isActive = (path: string) =>
@@ -27,23 +33,21 @@ const NavigationBar: React.FC = () => {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-16 items-center justify-around border-t border-line bg-surface/95 backdrop-blur-md lg:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-16 items-stretch border-t border-line bg-surface/95 backdrop-blur-md lg:hidden">
       {TABS.map(({ path, label, Icon }) => {
         const active = isActive(path);
         return (
           <button
             key={path}
             onClick={() => handleNavigation(path)}
-            className="flex flex-col items-center gap-1 text-xs"
+            className="flex flex-1 flex-col items-center justify-center gap-[3px] text-[11px]"
           >
             <Icon
-              color={active ? "var(--color-accent)" : "var(--color-ink-3)"}
+              size={23}
+              weight={active ? "fill" : "regular"}
+              className={active ? "text-accent" : "text-ink-3"}
             />
-            <span
-              className={
-                active ? "font-semibold text-ink" : "text-ink-3"
-              }
-            >
+            <span className={active ? "font-semibold text-ink" : "text-ink-3"}>
               {label}
             </span>
           </button>

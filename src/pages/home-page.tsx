@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { CaretRight, WarningCircle } from "@phosphor-icons/react";
 import { ExternalRanking } from "../api/rankingApi";
 import {
@@ -13,7 +13,6 @@ import { DOMAIN_LABEL_MAP } from "../constants/domain";
 import { watchPlatformLabels } from "../constants/platforms";
 import { thumbnailFallbackMap, type Category } from "../constants/thumbnail";
 import { daysUntil, dDayOf, parseYmd } from "../utils/releaseDate";
-import SearchBar from "../components/SearchBar";
 import FeatureCard from "../components/ui/FeatureCard";
 import RailCard from "../components/ui/RailCard";
 import ReviewQuoteCard from "../components/ui/ReviewQuoteCard";
@@ -183,16 +182,10 @@ const reviewGridClass =
   "mt-4 grid grid-cols-1 gap-4 min-[768px]:grid-cols-2 min-[1024px]:grid-cols-3";
 
 export default function HomePage() {
-  const navigate = useNavigate();
-
   const reviewed = useRecentReviewedWorks({ size: 6 });
   const releases = useRecentReleases({ size: 8 });
   const upcoming = useUpcomingReleases({ size: 3 });
   const rankings = useAllRankings();
-
-  const handleSearch = (query: string) => {
-    navigate(`/search?keyword=${encodeURIComponent(query)}`);
-  };
 
   // TODO: 추천 엔진 연동 시 교체 - 현재는 최근 리뷰작 1건(메인) + 신작 상위 2건(서브) 임시 선정
   const heroMain =
@@ -240,9 +233,6 @@ export default function HomePage() {
   return (
     <>
       <h1 className="sr-only">홈</h1>
-
-      {/* 모바일 전용 검색 - 데스크톱(lg~)은 SiteHeader 검색이 담당 */}
-      <SearchBar onSearch={handleSearch} />
 
       <div className="mx-auto max-w-[1280px] px-6 pb-[72px] pt-7">
         {/* 피처드 히어로: 메인 1 + 서브 2 */}

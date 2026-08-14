@@ -1,8 +1,15 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   ArrowCounterClockwise,
-  Funnel,
+  Faders,
   SortDescending,
   WarningCircle,
 } from "@phosphor-icons/react";
@@ -25,11 +32,15 @@ import FilterGroup from "../components/ui/FilterGroup";
 import Pagination from "../components/ui/Pagination";
 import EmptyState from "../components/ui/EmptyState";
 import SkeletonCard from "../components/ui/SkeletonCard";
+import SoonBadge from "../components/ui/SoonBadge";
 
 /**
  * /explore - mockups/explore-light-mockup.html 이식.
- * 레이아웃: 도메인 탭 행 / 좌 256px sticky 필터 레일(모바일 details 서랍) /
+ * 레이아웃: 도메인 탭 행 / 좌 256px sticky 필터 레일(lg 이상 전용) /
  * 툴바(h1+결과수) / 활성 필터 칩 행 / 카드 그리드 / 페이지네이션.
+ * <lg(mobile-light-mockup 프레임 2·3): 레일 대신 [필터 버튼 + 활성 칩 가로
+ * 스크롤] 툴바와 필터 바텀시트. 시트도 즉시 적용(URL replace 단일 출처
+ * 재사용) - 시트 내 스테이징 상태 없음, footer는 현재 결과 수 표시 + 닫기.
  *
  * URL 쿼리(?domain=&genres=&platforms=&era=&status=&weekdays=&ages=&page=)가
  * 상태의 단일 출처. 다중 값은 콤마 직렬화.
@@ -259,6 +270,87 @@ const FilterLoadError = ({ onRetry }: { onRetry: () => void }) => (
   </div>
 );
 
+/** 바텀시트 필터 그룹 래퍼 (목업 .fgroup) */
+const SheetGroup = ({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) => (
+  <div className="border-b border-line py-3.5 last:border-b-0">
+    <h4 className="mb-2.5 text-[13.5px] font-bold text-ink">{title}</h4>
+    {children}
+  </div>
+);
+
+/** 바텀시트 옵션 pill (목업 .opt) - on = accent-tint 배경 + accent-ink 테두리·텍스트 */
+const SheetOptionPill = ({
+  label,
+  on = false,
+  onClick,
+  disabled = false,
+  soonLabel,
+}: {
+  label: string;
+  on?: boolean;
+  onClick?: () => void;
+  disabled?: boolean;
+  soonLabel?: string;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    aria-pressed={on}
+    className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-[13px] py-2 text-[13px] font-semibold transition-colors active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 ${
+      on
+        ? "border-accent-ink bg-accent-tint text-accent-ink"
+        : "border-line bg-surface text-ink-2"
+    }`}
+  >
+    {label}
+    {soonLabel && <SoonBadge>{soonLabel}</SoonBadge>}
+  </button>
+);
+
+/** 바텀시트 라디오 열 (목업 .radio-col) - 단일 선택 축(연재 상태, 출시 시기) */
+const SheetRadioGroup = ({
+  options,
+  value,
+  onChange,
+}: {
+  options: { value: string; label: string }[];
+  value: string;
+  onChange: (value: string) => void;
+}) => {
+  const name = useId();
+  return (
+    <div className="flex flex-col gap-0.5">
+      {options.map((option) => {
+        const on = value === option.value;
+        return (
+          <label
+            key={option.value}
+            className="-mx-1.5 flex cursor-pointer items-center gap-2.5 rounded-input px-1.5 py-[7px] text-sm text-ink-2"
+          >
+            <input
+              type="radio"
+              name={name}
+              checked={on}
+              onChange={() => onChange(option.value)}
+              className="h-[15px] w-[15px] accent-accent"
+            />
+            <span className={on ? "font-semibold text-ink" : ""}>
+              {option.label}
+            </span>
+          </label>
+        );
+      })}
+    </div>
+  );
+};
+
 export default function ExplorePage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -386,13 +478,62 @@ export default function ExplorePage() {
 
   const title = isAll ? "전체" : (DOMAIN_LABEL_MAP[domainKey!] ?? domainId);
   const variant = domainId === "game" ? "landscape" : "portrait";
-  const hasActiveFilters =
-    genres.length > 0 ||
-    platforms.length > 0 ||
-    era !== "" ||
-    status !== "" ||
-    weekdays.length > 0 ||
-    ages.length > 0;
+  const activeFilterCount =
+    genres.length +
+    platforms.length +
+    (era ? 1 : 0) +
+    (status ? 1 : 0) +
+    weekdays.length +
+    ages.length;
+  const hasActiveFilters = activeFilterCount > 0;
+
+  // 활성 필터 칩 - 데스크톱 래핑 행과 모바일 툴바 스크롤 행이 공유
+  const activeFilterChips = [
+    ...platforms.map((v) => ({
+      key: `platform-${v}`,
+      label: platformLabel(v),
+      onRemove: () => handlePlatformsChange(platforms.filter((x) => x !== v)),
+    })),
+    ...genres.map((g) => ({
+      key: `genre-${g}`,
+      label: g,
+      onRemove: () => handleGenresChange(genres.filter((x) => x !== g)),
+    })),
+    ...(era
+      ? [{ key: "era", label: eraLabel(era), onRemove: () => handleEraChange("") }]
+      : []),
+    ...(status
+      ? [{ key: "status", label: status, onRemove: () => handleStatusChange("") }]
+      : []),
+    ...weekdays.map((w) => ({
+      key: `weekday-${w}`,
+      label: weekdayChipLabel(w),
+      onRemove: () => handleWeekdaysChange(weekdays.filter((x) => x !== w)),
+    })),
+    ...ages.map((a) => ({
+      key: `age-${a}`,
+      label: a,
+      onRemove: () => handleAgesChange(ages.filter((x) => x !== a)),
+    })),
+  ];
+
+  // 시트 pill 토글 - 즉시 적용(URL replace), 스테이징 없음
+  const toggleGenre = (g: string) =>
+    handleGenresChange(
+      genres.includes(g) ? genres.filter((x) => x !== g) : [...genres, g],
+    );
+  const togglePlatform = (v: string) =>
+    handlePlatformsChange(
+      platforms.includes(v) ? platforms.filter((x) => x !== v) : [...platforms, v],
+    );
+  const toggleWeekday = (w: string) =>
+    handleWeekdaysChange(
+      weekdays.includes(w) ? weekdays.filter((x) => x !== w) : [...weekdays, w],
+    );
+  const toggleAge = (a: string) =>
+    handleAgesChange(
+      ages.includes(a) ? ages.filter((x) => x !== a) : [...ages, a],
+    );
 
   // 영화, 시리즈는 수집 소스(TMDB_*)를 제외한 OTT만 "볼 수 있는 곳"으로 노출
   const visiblePlatforms = isOttDomain
@@ -406,27 +547,52 @@ export default function ExplorePage() {
     (label) => !apiPlatformLabels.includes(label),
   );
 
-  // 목업 반응형 그대로 - landscape 4/3/2/1열, portrait 5/4/3/2열 (1200/1023/767/479px)
+  // 모바일 2열 기본(목업 프레임 2 .grid2), 이후 목업 반응형 그대로 -
+  // landscape 4/3/2열, portrait 5/4/3/2열 (1200/1023/767px)
   const gridClass =
     variant === "landscape"
-      ? "mt-[22px] grid grid-cols-1 gap-y-3.5 gap-x-3 min-[480px]:grid-cols-2 min-[768px]:grid-cols-3 min-[768px]:gap-y-5 min-[768px]:gap-x-[18px] min-[1201px]:grid-cols-4"
+      ? "mt-[22px] grid grid-cols-2 gap-y-3.5 gap-x-3 min-[768px]:grid-cols-3 min-[768px]:gap-y-5 min-[768px]:gap-x-[18px] min-[1201px]:grid-cols-4"
       : "mt-[22px] grid grid-cols-2 gap-y-3.5 gap-x-3 min-[768px]:grid-cols-3 min-[768px]:gap-y-5 min-[768px]:gap-x-[18px] min-[1024px]:grid-cols-4 min-[1201px]:grid-cols-5";
 
-  // 모바일에서는 서랍을 닫힌 채로, 데스크톱에서는 열린 채로 시작 (목업 동작).
-  // 첫 페인트 전 설정(useLayoutEffect)으로 데스크톱 플래시를 막고,
-  // 모바일에서 데스크톱으로 리사이즈 진입 시에도 change 리스너로 다시 연다.
-  const drawerRef = useRef<HTMLDetailsElement>(null);
-  useLayoutEffect(() => {
-    const mql = window.matchMedia("(min-width: 1024px)");
-    const syncOpen = () => {
-      if (mql.matches && drawerRef.current) {
-        drawerRef.current.open = true;
+  // <lg 필터 바텀시트 - 항상 마운트하고 translate로만 전환 (MOTION 3)
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const filterBtnRef = useRef<HTMLButtonElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+
+  const closeSheet = () => {
+    setSheetOpen(false);
+    // 닫힘 시 트리거 버튼으로 포커스 복귀
+    filterBtnRef.current?.focus();
+  };
+
+  // 열림 중: Escape 닫기 + body 스크롤 잠금 + lg 진입 시 자동 닫기
+  useEffect(() => {
+    if (!sheetOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSheetOpen(false);
+        filterBtnRef.current?.focus();
       }
     };
-    syncOpen();
-    mql.addEventListener("change", syncOpen);
-    return () => mql.removeEventListener("change", syncOpen);
-  }, []);
+    const mql = window.matchMedia("(min-width: 1024px)");
+    const onBreakpoint = () => {
+      if (mql.matches) setSheetOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    mql.addEventListener("change", onBreakpoint);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      mql.removeEventListener("change", onBreakpoint);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [sheetOpen]);
+
+  // 열릴 때 시트로 포커스 이동 (dialog 관례)
+  useEffect(() => {
+    if (sheetOpen) sheetRef.current?.focus();
+  }, [sheetOpen]);
 
   const resetButton = (
     <button
@@ -459,14 +625,8 @@ export default function ExplorePage() {
 
       {/* 좌 필터 레일 + 본문 */}
       <div className="mx-auto grid max-w-[1440px] items-start gap-4 px-6 pb-[72px] pt-5 lg:grid-cols-[256px_1fr] lg:gap-8">
-        <details
-          ref={drawerRef}
-          className="rounded-panel border border-line bg-surface px-4 py-1 lg:sticky lg:top-[84px] lg:max-h-[calc(100vh-100px)] lg:overflow-y-auto lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0"
-        >
-          <summary className="flex cursor-pointer select-none list-none items-center gap-2 py-3 font-bold text-ink [&::-webkit-details-marker]:hidden lg:hidden">
-            <Funnel size={16} />
-            필터
-          </summary>
+        {/* 좌 필터 레일 - lg 이상 전용 (<lg는 필터 바텀시트가 대체) */}
+        <div className="hidden lg:sticky lg:top-[84px] lg:block lg:max-h-[calc(100vh-100px)] lg:overflow-y-auto">
           <div className="flex items-baseline justify-between px-0.5 pb-3.5 pt-1">
             <h2 className="text-[15px] font-bold text-ink">필터</h2>
             <button
@@ -579,9 +739,38 @@ export default function ExplorePage() {
               )}
             </>
           )}
-        </details>
+        </div>
 
         <main>
+          {/* <lg 필터 툴바 - 시트 트리거 + 활성 필터 칩 가로 스크롤 (목업 .toolbar) */}
+          <div className="mb-4 flex items-center gap-1.5 lg:hidden">
+            <button
+              ref={filterBtnRef}
+              type="button"
+              onClick={() => setSheetOpen(true)}
+              aria-haspopup="dialog"
+              aria-expanded={sheetOpen}
+              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-line-strong bg-surface px-3.5 py-2 text-[13.5px] font-semibold text-ink transition-colors hover:border-ink active:scale-[0.98]"
+            >
+              <Faders size={15} />
+              필터
+              {activeFilterCount > 0 && (
+                <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-accent-ink px-[5px] text-[11px] font-bold text-surface">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+            {activeFilterChips.length > 0 && (
+              <div className="flex min-w-0 gap-1.5 overflow-x-auto scrollbar-hide">
+                {activeFilterChips.map((chip) => (
+                  <span key={chip.key} className="flex-none whitespace-nowrap">
+                    <Chip label={chip.label} onRemove={chip.onRemove} />
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* 툴바: 제목 + 결과 수 + 정렬 표시 */}
           <div className="flex flex-wrap items-center gap-3.5">
             <h1 className="text-[26px] font-extrabold tracking-[-0.03em] text-ink">
@@ -602,47 +791,15 @@ export default function ExplorePage() {
             </span>
           </div>
 
-          {/* 활성 필터 칩 행 - 모든 축의 개별 제거를 지원한다 */}
+          {/* 활성 필터 칩 행(lg 이상) - 모든 축의 개별 제거를 지원한다.
+              <lg에서는 위 툴바의 가로 스크롤 칩 행이 같은 목록을 렌더한다 */}
           {hasActiveFilters && (
-            <div className="mt-3.5 flex flex-wrap gap-2">
-              {platforms.map((v) => (
+            <div className="mt-3.5 hidden flex-wrap gap-2 lg:flex">
+              {activeFilterChips.map((chip) => (
                 <Chip
-                  key={`platform-${v}`}
-                  label={platformLabel(v)}
-                  onRemove={() =>
-                    handlePlatformsChange(platforms.filter((x) => x !== v))
-                  }
-                />
-              ))}
-              {genres.map((g) => (
-                <Chip
-                  key={`genre-${g}`}
-                  label={g}
-                  onRemove={() =>
-                    handleGenresChange(genres.filter((x) => x !== g))
-                  }
-                />
-              ))}
-              {era && (
-                <Chip label={eraLabel(era)} onRemove={() => handleEraChange("")} />
-              )}
-              {status && (
-                <Chip label={status} onRemove={() => handleStatusChange("")} />
-              )}
-              {weekdays.map((w) => (
-                <Chip
-                  key={`weekday-${w}`}
-                  label={weekdayChipLabel(w)}
-                  onRemove={() =>
-                    handleWeekdaysChange(weekdays.filter((x) => x !== w))
-                  }
-                />
-              ))}
-              {ages.map((a) => (
-                <Chip
-                  key={`age-${a}`}
-                  label={a}
-                  onRemove={() => handleAgesChange(ages.filter((x) => x !== a))}
+                  key={chip.key}
+                  label={chip.label}
+                  onRemove={chip.onRemove}
                 />
               ))}
             </div>
@@ -717,6 +874,183 @@ export default function ExplorePage() {
             </>
           )}
         </main>
+      </div>
+
+      {/* <lg 필터 바텀시트 (목업 프레임 3) - 항상 마운트, translate로만 전환.
+          visibility는 transition-[visibility]로 닫힘 슬라이드가 끝난 뒤 감춘다 */}
+      <div
+        aria-hidden={!sheetOpen}
+        className={`fixed inset-0 z-50 overflow-hidden transition-[visibility] duration-300 motion-reduce:duration-0 lg:hidden ${
+          sheetOpen ? "visible" : "invisible"
+        }`}
+      >
+        {/* 딤 배경 - 클릭 시 닫기 */}
+        <div
+          className="absolute inset-0 bg-ink/40"
+          onClick={closeSheet}
+          aria-hidden="true"
+        />
+        <div
+          ref={sheetRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="필터"
+          tabIndex={-1}
+          className={`absolute inset-x-0 bottom-0 flex max-h-[82dvh] flex-col rounded-t-2xl bg-surface shadow-lift outline-none transition-transform duration-300 motion-reduce:transition-none ${
+            sheetOpen ? "translate-y-0" : "translate-y-full"
+          }`}
+        >
+          {/* 그립 바 */}
+          <div className="mx-auto mt-2.5 h-1 w-9 flex-none rounded-full bg-line-strong" />
+          {/* 헤더: 필터 | 초기화 */}
+          <div className="flex flex-none items-center justify-between border-b border-line py-3 pl-5 pr-4">
+            <h2 className="text-base font-extrabold text-ink">필터</h2>
+            <button
+              type="button"
+              onClick={handleReset}
+              className="inline-flex items-center gap-1 text-[13px] text-ink-2 transition-colors hover:text-accent-ink"
+            >
+              <ArrowCounterClockwise size={13} />
+              초기화
+            </button>
+          </div>
+
+          {/* 본문 - 축별 그룹, 즉시 적용(레일과 동일 핸들러) */}
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-2 pt-1">
+            {isAll ? (
+              <p className="py-4 text-[13px] leading-relaxed text-ink-2">
+                전체 탭에서는 필터를 지원하지 않아요. 도메인을 선택하면 장르와
+                플랫폼 필터를 쓸 수 있어요.
+              </p>
+            ) : (
+              <>
+                {genresFailed ? (
+                  <FilterLoadError onRetry={() => refetchGenres()} />
+                ) : (
+                  sortedGenres.length > 0 && (
+                    <SheetGroup title="장르">
+                      <div className="flex flex-wrap gap-[7px]">
+                        {visibleGenres.map((g) => (
+                          <SheetOptionPill
+                            key={g}
+                            label={g}
+                            on={genres.includes(g)}
+                            onClick={() => toggleGenre(g)}
+                          />
+                        ))}
+                        {(genresExpanded || hiddenGenreCount > 0) && (
+                          <SheetOptionPill
+                            label={
+                              genresExpanded
+                                ? "접기"
+                                : `더보기 +${hiddenGenreCount}`
+                            }
+                            onClick={() => setGenresExpanded((v) => !v)}
+                          />
+                        )}
+                      </div>
+                    </SheetGroup>
+                  )
+                )}
+                {platformsFailed ? (
+                  <FilterLoadError onRetry={() => refetchPlatforms()} />
+                ) : (
+                  (visiblePlatforms.length > 0 || soonPlatforms.length > 0) && (
+                    <SheetGroup title={isOttDomain ? "볼 수 있는 곳" : "플랫폼"}>
+                      <div className="flex flex-wrap gap-[7px]">
+                        {visiblePlatforms.map((v) => (
+                          <SheetOptionPill
+                            key={v}
+                            label={platformLabel(v)}
+                            on={platforms.includes(v)}
+                            onClick={() => togglePlatform(v)}
+                          />
+                        ))}
+                        {soonPlatforms.map((label) => (
+                          <SheetOptionPill
+                            key={label}
+                            label={label}
+                            disabled
+                            soonLabel="준비 중"
+                          />
+                        ))}
+                      </div>
+                    </SheetGroup>
+                  )
+                )}
+                {isWebtoon ? (
+                  <>
+                    <SheetGroup title="연재 상태">
+                      <SheetRadioGroup
+                        value={status}
+                        onChange={handleStatusChange}
+                        options={[
+                          { value: "", label: "전체" },
+                          ...STATUS_VALUES.map((v) => ({ value: v, label: v })),
+                        ]}
+                      />
+                    </SheetGroup>
+                    {/* 완결작은 weekday null이라 요일 그룹은 완결 상태에서 숨김 */}
+                    {status !== "완결" && (
+                      <SheetGroup title="연재 요일">
+                        <div className="flex flex-wrap gap-[7px]">
+                          {WEEKDAY_OPTIONS.map((option) => (
+                            <SheetOptionPill
+                              key={option.value}
+                              label={option.label}
+                              on={weekdays.includes(option.value)}
+                              onClick={() => toggleWeekday(option.value)}
+                            />
+                          ))}
+                        </div>
+                      </SheetGroup>
+                    )}
+                    <SheetGroup title="연령 등급">
+                      <div className="flex flex-wrap gap-[7px]">
+                        {AGE_OPTIONS.map((age) => (
+                          <SheetOptionPill
+                            key={age}
+                            label={age}
+                            on={ages.includes(age)}
+                            onClick={() => toggleAge(age)}
+                          />
+                        ))}
+                      </div>
+                    </SheetGroup>
+                  </>
+                ) : (
+                  <SheetGroup title={isOttDomain ? "개봉 시기" : "출시 시기"}>
+                    <SheetRadioGroup
+                      value={era}
+                      onChange={handleEraChange}
+                      options={ERA_OPTIONS}
+                    />
+                  </SheetGroup>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* footer: 닫기 | N개 작품 보기 - 둘 다 닫기 (필터는 이미 적용됨) */}
+          <div className="flex flex-none gap-2.5 border-t border-line px-5 pb-[18px] pt-3">
+            <button
+              type="button"
+              onClick={closeSheet}
+              className="flex-1 rounded-full border border-line-strong py-[13px] text-center text-[14.5px] font-bold text-ink transition-colors hover:border-ink active:scale-[0.98]"
+            >
+              닫기
+            </button>
+            <button
+              type="button"
+              onClick={closeSheet}
+              className="flex-[2] rounded-full bg-accent-ink py-[13px] text-center text-[14.5px] font-bold text-surface transition-opacity hover:opacity-90 active:scale-[0.98]"
+            >
+              {isLoading
+                ? "작품 보기"
+                : `${totalElements.toLocaleString()}개 작품 보기`}
+            </button>
+          </div>
+        </div>
       </div>
     </>
   );

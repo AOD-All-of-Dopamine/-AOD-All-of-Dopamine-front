@@ -262,8 +262,8 @@ export default function NewReleasesPage() {
         신작
       </h1>
 
-      {/* 도메인 칩 필터 */}
-      <div className="mt-4 flex flex-wrap gap-1.5">
+      {/* 도메인 칩 필터 - <lg 가로 스크롤, lg 이상 기존 래핑 유지 */}
+      <div className="mt-4 flex gap-1.5 overflow-x-auto scrollbar-hide lg:flex-wrap lg:overflow-visible">
         {DOMAIN_FILTERS.map((d) => {
           const id = d.id.toLowerCase();
           return (
