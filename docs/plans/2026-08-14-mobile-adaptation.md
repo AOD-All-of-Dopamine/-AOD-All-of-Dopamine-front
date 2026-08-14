@@ -36,9 +36,9 @@
 - [x] 신작 <lg 행 구성 목업 정합 확인
 
 ### B. 상세 페이지 (구현 → 스펙·품질 리뷰 → 수정)
-- [ ] 상단 뒤로가기 바 + 하단 고정 액션 바 <lg
-- [ ] 도메인별 헤더 (게임 히어로 / 웹툰·영화 포스터 헤더)
-- [ ] 통계 패널 (Steam/TMDB) + 요일 필
+- [x] 상단 뒤로가기 바 + 하단 고정 액션 바 <lg
+- [x] 도메인별 헤더 (게임 히어로 / 웹툰·영화 포스터 헤더)
+- [x] 통계 패널 (Steam/TMDB) + 요일 필
 
 ### 게이트 (각 태스크 커밋 전)
 - [ ] `npm run build` 통과
@@ -70,3 +70,19 @@
   5종(home/ranking/search/calendar/my-icon) 삭제.
 - A: 컴팩트 행 썸네일·시트 상단 라운드는 목업 수치(6px/16px)를 표준 유틸
   (rounded-md/rounded-t-2xl)로 구현 - 임의값(rounded-[..]) 미사용.
+- B: 상세 <lg에서 SiteHeader 숨김은 public-layout의 라우트 조건
+  (`hidden lg:contents` 래퍼)으로 구현 - SiteHeader 파일은 불변(Task A 보호),
+  lg+는 display:contents라 박스가 생기지 않아 sticky 포함 시각 영향 0.
+- B: 웹툰 상세의 연령 태그(목업 프레임 7 "15세")와 작품 정보 "연령 등급" 행
+  미노출 - 상세 API domainInfo(WEBTOON)에 ageRating 키가 없음 (목록
+  WorkSummary에만 존재, 실응답 /api/works/985·1042로 확인).
+- B: <lg 통계 패널은 목업 d-stat대로 Steam/TMDB만 - AOD 평점 필은 <lg 미노출
+  (리뷰 수는 리뷰 섹션 헤더가 전달). TMDB 평점(platformInfo attr.rating,
+  vote_count)은 <lg 전용 신설이며 lg+ 헤더 필 구성은 기존 그대로(lg 불변 룰).
+- B: 포스터 헤더 라운드는 목업 10px 대신 rounded-panel(12px) - rounded-[ 금지
+  게이트에 따라 패널 토큰 준용.
+- B: <lg 장르 태그 행만 dedupe - 실데이터에 중복 장르 실재(예: 1042 "판타지"
+  2회, key 충돌 방지). lg+ 태그 렌더는 기존 그대로(lg 불변 룰).
+- B: 시놉시스 더보기는 4줄 클램프 실측 overflow일 때만 노출하고 열림 후
+  "접기" 토글 제공 - 목업은 정적 "더보기"만 있으나 짧은 시놉시스에서 무의미한
+  버튼 노출 방지.

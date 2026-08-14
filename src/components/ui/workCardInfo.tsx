@@ -19,8 +19,8 @@ import { steamReviewDescKo } from "../../constants/steam";
 const MAX_TAGS = 3;
 const MAX_OTT_LABELS = 2;
 
-/** 웹툰 연재 요일(mon~sun 소문자) 한글 - "월요웹툰" 조립용 */
-const WEEKDAY_KO: Record<string, string> = {
+/** 웹툰 연재 요일(mon~sun 소문자) 한글 - "월요웹툰" 조립용 (상세 요일 필 공용) */
+export const WEEKDAY_KO: Record<string, string> = {
   mon: "월",
   tue: "화",
   wed: "수",
@@ -57,8 +57,7 @@ export const workCardMeta = (
 ): string | undefined => {
   const year = work.releaseDate?.slice(0, 4);
   const creator = work.creator?.trim() || undefined;
-  const parts =
-    work.domain === "WEBTOON" ? [creator ?? year] : [year, creator];
+  const parts = work.domain === "WEBTOON" ? [creator ?? year] : [year, creator];
   if (opts?.withDomain) {
     parts.unshift(DOMAIN_LABEL_MAP[work.domain] ?? work.domain);
   }

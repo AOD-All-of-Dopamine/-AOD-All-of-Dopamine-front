@@ -1,4 +1,4 @@
-﻿import { ReactNode, useEffect, useState } from "react";
+﻿import { ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { keepPreviousData } from "@tanstack/react-query";
@@ -6,6 +6,9 @@ import {
   ArrowLeft,
   ArrowSquareOut,
   BookmarkSimple,
+  CalendarCheck,
+  CaretDown,
+  CaretUp,
   ChatCircleText,
   CircleNotch,
   PencilSimple,
@@ -33,15 +36,25 @@ import {
 } from "../utils/field-labels";
 import Tag from "../components/ui/Tag";
 import StatPill from "../components/ui/StatPill";
+import { WEEKDAY_KO } from "../components/ui/workCardInfo";
 import ReviewCard from "../components/ui/ReviewCard";
 import EmptyState from "../components/ui/EmptyState";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
 
 /**
  * /work/:id - mockups/work-detail-mockup.html 이식.
- * 레이아웃: 뒤로가기 / 헤더(포스터 + 도메인 칩 + 제목 + 부제 + 장르 태그 +
+ * 레이아웃(lg+): 뒤로가기 / 헤더(포스터 + 도메인 칩 + 제목 + 부제 + 장르 태그 +
  * 통계 필 + 액션 3버튼 + 볼 수 있는 곳) / 본문 2단(1fr+320px: 시놉시스, 리뷰 /
  * 작품 정보 dl 패널). 포스터는 게임=가로(460/215), 그 외=세로(2/3).
+ *
+ * <lg 모바일 적응 - mockups/mobile-light-mockup.html 프레임 6·7·8:
+ * - 상단 56px 뒤로가기+작품명 바(Shell), SiteHeader는 public-layout에서 lg+ 전용
+ * - 헤더: 게임=16:9 풀블리드 히어로, 그 외=포스터(108px, 3:4)+정보 블록.
+ *   부제는 도메인별(게임=연도·개발사, 웹툰/웹소설=작가, 영화=연도·감독, TV=연도)
+ * - 통계 패널(d-stat): 게임=Steam desc+%+리뷰 수, 영화/TV=★TMDB 평점+참여 수
+ * - 섹션 순서: 볼 수 있는 곳 -> 시놉시스(4줄 클램프+더보기) -> 작품 정보 -> 리뷰
+ * - 하단 고정 액션 바: 관심 등록(accent-ink fill) + 좋아요·리뷰(48px 고스트 원형).
+ *   핸들러·옵티미스틱 전이·로그인 게이트는 lg 버튼과 동일 로직 공유.
  *
  * 목업 대비 편차 (실데이터, API 기준):
  * - "비슷한 작품" 섹션 생략 - 추천/유사 작품 API와 훅이 없다 (추가 후 이식).
@@ -50,7 +63,8 @@ import ConfirmDialog from "../components/ui/ConfirmDialog";
  *   OTT 목록은 정보 패널의 "지원 플랫폼" 행으로 표기된다. url이 하나도 없으면
  *   섹션 자체를 숨긴다.
  * - 통계 필은 실데이터가 있는 것만 렌더: AOD 평점(score>0), 게임의 Steam 리뷰
- *   집계(attr.review_summary). TMDB 평점 등 미수집 값은 만들지 않는다.
+ *   집계(attr.review_summary). TMDB 평점(attr.rating)은 <lg 통계 패널 전용 -
+ *   lg+ 헤더 필 구성은 기존 화면 불변 룰로 그대로 둔다.
  * - "리뷰 더 보기"는 useReviews(page=0, size 증가) 방식. 트레이드오프: 매 클릭마다
  *   0페이지부터 누적 재전송된다 - 기존 훅 시그니처(페이지 단위 조회) 유지의 대가.
  *   keepPreviousData로 재조회 중 목록 깜빡임을 막는다.
@@ -100,8 +114,9 @@ const hasInfoValue = (value: unknown): boolean => {
   return true;
 };
 
+/** lg+ 전용 텍스트 뒤로가기 - <lg는 Shell 상단 바의 아이콘 버튼이 담당 */
 const backLinkClass =
-  "-ml-2.5 inline-flex items-center gap-1.5 rounded-input px-2.5 py-1.5 text-sm font-medium text-ink-2 transition-colors hover:bg-ink/5 hover:text-ink";
+  "-ml-2.5 hidden items-center gap-1.5 rounded-input px-2.5 py-1.5 text-sm font-medium text-ink-2 transition-colors hover:bg-ink/5 hover:text-ink lg:inline-flex";
 
 const primaryBtnClass =
   "rounded-full bg-ink px-[22px] py-2.5 text-sm font-semibold text-surface transition-opacity hover:opacity-85 active:scale-[0.98]";
@@ -110,20 +125,39 @@ const primaryBtnClass =
 const actionBtnClass =
   "inline-flex items-center gap-[7px] rounded-full px-5 py-[11px] text-[14.5px] font-semibold transition-colors active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60";
 
-function Shell({ children }: { children: ReactNode }) {
+function Shell({ title, children }: { title?: string; children: ReactNode }) {
   const navigate = useNavigate();
   return (
-    <div className="mx-auto max-w-[1200px] px-6 pb-20 pt-6">
-      <button
-        type="button"
-        onClick={() => navigate(-1)}
-        className={backLinkClass}
-      >
-        <ArrowLeft size={16} />
-        뒤로 가기
-      </button>
-      {children}
-    </div>
+    <>
+      {/* <lg 상단 바 (목업 .d-nav) - 뒤로가기 아이콘 + 작품명 truncate */}
+      <div className="sticky top-0 z-40 flex h-14 items-center gap-0.5 border-b border-line bg-surface/90 px-2 backdrop-blur-md lg:hidden">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          aria-label="뒤로 가기"
+          className="grid h-11 w-11 flex-none place-items-center rounded-full text-ink transition-colors active:bg-ink/5"
+        >
+          <ArrowLeft size={21} />
+        </button>
+        {title && (
+          <span className="min-w-0 truncate pr-3 text-[15px] font-bold text-ink">
+            {title}
+          </span>
+        )}
+      </div>
+      {/* <lg는 하단 고정 액션 바 높이만큼 pb 확보 (pb-28), pt는 헤더 블록이 관리 */}
+      <div className="mx-auto max-w-[1200px] px-4 pb-28 lg:px-6 lg:pb-20 lg:pt-6">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className={backLinkClass}
+        >
+          <ArrowLeft size={16} />
+          뒤로 가기
+        </button>
+        {children}
+      </div>
+    </>
   );
 }
 
@@ -205,6 +239,10 @@ export default function WorkDetailPage() {
 
   const [reviewSize, setReviewSize] = useState(REVIEW_PAGE_SIZE);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  // <lg 시놉시스 4줄 클램프 - 열림 상태 + 실측 overflow(더보기 노출 판정)
+  const [isSynopsisOpen, setIsSynopsisOpen] = useState(false);
+  const [synopsisClamped, setSynopsisClamped] = useState(false);
+  const synopsisRef = useRef<HTMLParagraphElement>(null);
 
   const {
     data: work,
@@ -233,7 +271,15 @@ export default function WorkDetailPage() {
   useEffect(() => {
     window.scrollTo(0, 0);
     setReviewSize(REVIEW_PAGE_SIZE);
+    setIsSynopsisOpen(false);
   }, [contentId]);
+
+  // 클램프 상태(<lg 4줄)에서 실제로 넘치는 경우에만 더보기 버튼을 노출.
+  // lg+는 클램프도 버튼도 없어(lg:line-clamp-none, lg:hidden) 판정값과 무관.
+  useEffect(() => {
+    const el = synopsisRef.current;
+    if (el) setSynopsisClamped(el.scrollHeight > el.clientHeight + 1);
+  }, [work?.synopsis]);
 
   const handleBookmark = () => {
     if (!isAuthenticated) {
@@ -327,6 +373,8 @@ export default function WorkDetailPage() {
         (g): g is string => typeof g === "string",
       )
     : [];
+  // <lg 태그 행 전용 dedupe - 실데이터에 중복 장르가 실재(key 충돌 방지)
+  const mobileTags = [...new Set(genres)];
 
   const reviews = reviewsData?.content ?? [];
   const reviewCount = reviewsData?.totalElements ?? 0;
@@ -349,7 +397,60 @@ export default function WorkDetailPage() {
       typeof desc === "string"
         ? (STEAM_REVIEW_DESC_KO[desc] ?? desc)
         : "긍정적";
-    return { label, percent: Math.round((positive / total) * 100) };
+    return { label, percent: Math.round((positive / total) * 100), total };
+  })();
+
+  // <lg 통계 패널(영화/TV): platformInfo의 TMDB rating이 있을 때만 (목업 d-stat)
+  const tmdbStat = (() => {
+    if (category !== "movie" && category !== "tv") return null;
+    const entry = Object.entries(work.platformInfo ?? {}).find(([key]) =>
+      key.toUpperCase().startsWith("TMDB"),
+    );
+    const rating = Number(entry?.[1]?.rating);
+    if (!Number.isFinite(rating) || rating <= 0) return null;
+    const votes = Number(entry?.[1]?.vote_count);
+    return {
+      rating,
+      votes: Number.isFinite(votes) && votes > 0 ? votes : undefined,
+    };
+  })();
+
+  // <lg 헤더 부제 - 도메인별 (목업: 게임 "2000 · Valve", 웹툰 "WINSTON",
+  // 영화 "2026 · Leila Sy 감독"). TV는 감독 키가 없어 연도만.
+  const asText = (v: unknown) =>
+    typeof v === "string" && v.trim() !== "" ? v.trim() : undefined;
+  const mobileSubtitle = (() => {
+    const info = work.domainInfo ?? {};
+    switch (category) {
+      case "game":
+        return [year, asText(info.developer)].filter(Boolean).join(" · ");
+      case "webtoon":
+      case "webnovel":
+        return asText(info.author) ?? year ?? "";
+      case "movie": {
+        const director = Array.isArray(info.directors)
+          ? info.directors.map(asText).find(Boolean)
+          : undefined;
+        return [year, director && `${director} 감독`]
+          .filter(Boolean)
+          .join(" · ");
+      }
+      default:
+        return year ?? "";
+    }
+  })();
+
+  // <lg 웹툰 요일 필 - "화요웹툰 · 연재중" / 요일 미상(빈 문자열) 연재작은
+  // "연재중", 완결작은 "완결"만 (workCardInfo 웹툰 footer와 동일 규약)
+  const webtoonPill = (() => {
+    if (category !== "webtoon") return null;
+    const status = asText(work.domainInfo?.status);
+    const weekday = asText(work.domainInfo?.weekday);
+    const weekdayKo = weekday ? WEEKDAY_KO[weekday] : undefined;
+    if (status === "연재중")
+      return weekdayKo ? `${weekdayKo}요웹툰 · 연재중` : "연재중";
+    if (status === "완결") return "완결";
+    return null;
   })();
 
   // 볼 수 있는 곳: url을 가진 플랫폼만 외부 링크 버튼으로
@@ -357,7 +458,13 @@ export default function WorkDetailPage() {
     ([key, info]) => {
       const url = info?.url;
       return typeof url === "string" && url.startsWith("http")
-        ? [{ key, url, label: PLATFORM_META[key]?.label ?? getPlatformLabel(key) }]
+        ? [
+            {
+              key,
+              url,
+              label: PLATFORM_META[key]?.label ?? getPlatformLabel(key),
+            },
+          ]
         : [];
     },
   );
@@ -373,7 +480,8 @@ export default function WorkDetailPage() {
           ? value
               .map(
                 (p) =>
-                  PLATFORM_META[String(p)]?.label ?? getPlatformLabel(String(p)),
+                  PLATFORM_META[String(p)]?.label ??
+                  getPlatformLabel(String(p)),
               )
               .join(", ")
           : formatFieldValue(key, value),
@@ -383,11 +491,138 @@ export default function WorkDetailPage() {
   // 옵티미스틱 업데이트도 userLikeType을 직접 전이시키므로 단일 판정으로 충분
   const liked = likeStats?.userLikeType === "LIKE";
 
+  // 헤더 썸네일 내용물 (데스크톱/모바일 컨테이너 공용) - 없으면 도메인 아이콘 폴백
+  const thumbContent = work.thumbnail ? (
+    <img
+      src={work.thumbnail}
+      alt={`${work.title} 대표 이미지`}
+      className="h-full w-full object-cover"
+    />
+  ) : (
+    <div className="grid h-full w-full place-items-center">
+      <img
+        src={thumbnailFallbackMap[category]}
+        alt=""
+        className="w-[clamp(32px,30%,64px)] opacity-80"
+      />
+    </div>
+  );
+
   return (
     <>
-      <Shell>
-        {/* 헤더: 포스터 + 작품 요약 */}
-        <div className="mt-4 grid items-start gap-5 md:grid-cols-[auto_1fr] md:gap-9">
+      <Shell title={work.title}>
+        {/* <lg 헤더 - 게임: 16:9 풀블리드 히어로 (목업 프레임 6) /
+            그 외: 포스터(108px, 3:4) + 정보 블록 (목업 프레임 7·8) */}
+        <div className="lg:hidden">
+          {isLandscape ? (
+            <>
+              <div className="-mx-4 aspect-video overflow-hidden bg-canvas">
+                {thumbContent}
+              </div>
+              <div className="mt-4">
+                <Tag variant="accent">{domainLabel}</Tag>
+                <h1 className="mt-2 text-2xl font-extrabold leading-[1.25] tracking-[-0.02em] text-ink">
+                  {work.title}
+                </h1>
+                {mobileSubtitle && (
+                  <p className="mt-1 text-sm text-ink-2">{mobileSubtitle}</p>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="flex gap-3.5 pt-4">
+              <div className="aspect-[3/4] w-[108px] flex-none overflow-hidden rounded-panel border border-line bg-canvas shadow-card">
+                {thumbContent}
+              </div>
+              <div className="min-w-0">
+                <Tag variant="accent">{domainLabel}</Tag>
+                <h1 className="mt-[7px] text-xl font-extrabold leading-[1.25] tracking-[-0.02em] text-ink">
+                  {work.title}
+                </h1>
+                {mobileSubtitle && (
+                  <p className="mt-1 text-sm text-ink-2">{mobileSubtitle}</p>
+                )}
+                {webtoonPill && (
+                  <span className="mt-2 inline-flex items-center gap-[5px] rounded-full bg-accent-tint px-[11px] py-[5px] text-[12.5px] font-bold text-accent-ink">
+                    <CalendarCheck size={13} aria-hidden="true" />
+                    {webtoonPill}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {mobileTags.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {mobileTags.map((g) => (
+                <Tag key={g} variant="surface">
+                  {g}
+                </Tag>
+              ))}
+            </div>
+          )}
+
+          {/* 통계 패널 (목업 d-stat) - 데이터 있는 도메인만 */}
+          {steamSummary && (
+            <div className="mt-3.5 flex items-center gap-2.5 rounded-panel border border-line bg-surface px-3.5 py-3 text-sm text-ink">
+              <ThumbsUp
+                size={18}
+                weight="fill"
+                className="flex-none text-accent-ink"
+                aria-hidden="true"
+              />
+              <span className="font-extrabold">{steamSummary.label}</span>
+              <span className="tabular-nums">{steamSummary.percent}%</span>
+              <span className="ml-auto text-xs text-ink-3">
+                Steam 리뷰 {steamSummary.total.toLocaleString()}개
+              </span>
+            </div>
+          )}
+          {tmdbStat && (
+            <div className="mt-3.5 flex items-center gap-2.5 rounded-panel border border-line bg-surface px-3.5 py-3 text-sm text-ink">
+              <Star
+                size={18}
+                weight="fill"
+                className="flex-none text-star"
+                aria-hidden="true"
+              />
+              <span className="font-extrabold tabular-nums">
+                {tmdbStat.rating.toFixed(1)}
+              </span>
+              <span className="ml-auto text-xs text-ink-3">
+                TMDB 평점
+                {tmdbStat.votes
+                  ? ` · ${tmdbStat.votes.toLocaleString()}명 참여`
+                  : ""}
+              </span>
+            </div>
+          )}
+
+          {watchLinks.length > 0 && (
+            <section className="mt-6">
+              <h2 className="text-base font-extrabold tracking-[-0.02em] text-ink">
+                볼 수 있는 곳
+              </h2>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {watchLinks.map(({ key, url, label }) => (
+                  <a
+                    key={key}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-surface px-3.5 py-[9px] text-[13.5px] font-semibold text-ink"
+                  >
+                    {label}
+                    <ArrowSquareOut size={14} className="text-ink-3" />
+                  </a>
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
+
+        {/* lg+ 헤더: 포스터 + 작품 요약 (기존 배치 불변) */}
+        <div className="mt-4 hidden items-start gap-5 md:grid-cols-[auto_1fr] md:gap-9 lg:grid">
           <div
             className={`overflow-hidden rounded-panel border border-line bg-canvas shadow-card ${
               isLandscape
@@ -395,21 +630,7 @@ export default function WorkDetailPage() {
                 : "aspect-[2/3] w-[180px] md:w-[232px]"
             }`}
           >
-            {work.thumbnail ? (
-              <img
-                src={work.thumbnail}
-                alt={`${work.title} 대표 이미지`}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="grid h-full w-full place-items-center">
-                <img
-                  src={thumbnailFallbackMap[category]}
-                  alt=""
-                  className="w-[clamp(32px,30%,64px)] opacity-80"
-                />
-              </div>
-            )}
+            {thumbContent}
           </div>
 
           <div>
@@ -441,7 +662,9 @@ export default function WorkDetailPage() {
                 )}
                 {score > 0 && (
                   <StatPill
-                    icon={<Star weight="fill" size={14} className="text-star" />}
+                    icon={
+                      <Star weight="fill" size={14} className="text-star" />
+                    }
                   >
                     {score.toFixed(1)}
                     <small className="font-medium text-ink-2">
@@ -515,21 +738,48 @@ export default function WorkDetailPage() {
           </div>
         </div>
 
-        {/* 본문 2단: 시놉시스, 리뷰 / 작품 정보 패널 */}
+        {/* 본문 2단(lg+): 시놉시스, 리뷰 / 작품 정보 패널.
+            <lg는 단일 컬럼 - 시놉시스 -> 작품 정보(모바일 패널) -> 리뷰 */}
         <div
-          className={`mt-11 grid items-start gap-10 ${
+          className={`mt-6 grid items-start gap-10 lg:mt-11 ${
             infoRows.length > 0 ? "lg:grid-cols-[1fr_320px]" : ""
           }`}
         >
           <div>
             <section>
-              <h2 className="text-[19px] font-extrabold tracking-[-0.02em] text-ink">
+              <h2 className="text-base font-extrabold tracking-[-0.02em] text-ink lg:text-[19px]">
                 시놉시스
               </h2>
               {work.synopsis ? (
-                <p className="mt-3 max-w-[65ch] whitespace-pre-line text-ink-2">
-                  {work.synopsis}
-                </p>
+                <>
+                  <p
+                    ref={synopsisRef}
+                    className={`mt-3 max-w-[65ch] whitespace-pre-line text-sm leading-[1.65] text-ink-2 lg:text-base lg:leading-normal ${
+                      isSynopsisOpen ? "" : "line-clamp-4 lg:line-clamp-none"
+                    }`}
+                  >
+                    {work.synopsis}
+                  </p>
+                  {synopsisClamped && (
+                    <button
+                      type="button"
+                      onClick={() => setIsSynopsisOpen((open) => !open)}
+                      className="mt-1.5 inline-flex items-center gap-0.5 text-[13px] font-semibold text-ink lg:hidden"
+                    >
+                      {isSynopsisOpen ? (
+                        <>
+                          접기
+                          <CaretUp size={13} aria-hidden="true" />
+                        </>
+                      ) : (
+                        <>
+                          더보기
+                          <CaretDown size={13} aria-hidden="true" />
+                        </>
+                      )}
+                    </button>
+                  )}
+                </>
               ) : (
                 <p className="mt-3 text-ink-3">
                   시놉시스가 아직 준비되지 않았어요.
@@ -537,9 +787,33 @@ export default function WorkDetailPage() {
               )}
             </section>
 
-            <section className="mt-10">
+            {/* <lg 작품 정보 (목업 info-panel: 키 좌측 / 값 우측 정렬) */}
+            {infoRows.length > 0 && (
+              <section className="mt-6 lg:hidden">
+                <h2 className="text-base font-extrabold tracking-[-0.02em] text-ink">
+                  작품 정보
+                </h2>
+                <dl className="mt-2.5 rounded-panel border border-line bg-surface px-3.5 py-1">
+                  {infoRows.map(({ key, label, value }) => (
+                    <div
+                      key={key}
+                      className="flex items-start justify-between gap-4 border-b border-line py-2.5 last:border-b-0"
+                    >
+                      <dt className="flex-none text-[13.5px] text-ink-3">
+                        {label}
+                      </dt>
+                      <dd className="min-w-0 break-words text-right text-[13.5px] font-semibold text-ink">
+                        {value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            )}
+
+            <section className="mt-6 lg:mt-10">
               <div className="flex items-center gap-2.5">
-                <h2 className="text-[19px] font-extrabold tracking-[-0.02em] text-ink">
+                <h2 className="text-base font-extrabold tracking-[-0.02em] text-ink lg:text-[19px]">
                   리뷰
                 </h2>
                 <span className="font-bold tabular-nums text-accent-ink">
@@ -548,7 +822,10 @@ export default function WorkDetailPage() {
               </div>
 
               {reviewsData === undefined ? (
-                <div className="mt-3.5 flex flex-col gap-3.5" aria-hidden="true">
+                <div
+                  className="mt-3.5 flex flex-col gap-3.5"
+                  aria-hidden="true"
+                >
                   <ReviewSkeleton />
                   <ReviewSkeleton />
                 </div>
@@ -606,7 +883,7 @@ export default function WorkDetailPage() {
           </div>
 
           {infoRows.length > 0 && (
-            <aside className="rounded-panel border border-line bg-surface px-[22px] py-5">
+            <aside className="hidden rounded-panel border border-line bg-surface px-[22px] py-5 lg:block">
               <h2 className="text-[15px] font-bold tracking-[-0.02em] text-ink">
                 작품 정보
               </h2>
@@ -629,6 +906,41 @@ export default function WorkDetailPage() {
           )}
         </div>
       </Shell>
+
+      {/* <lg 하단 고정 액션 바 (목업 d-actionbar) - lg+ 헤더 버튼과 동일 핸들러 공유 */}
+      <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-2.5 border-t border-line bg-surface/95 px-4 pb-3.5 pt-2.5 backdrop-blur-md lg:hidden">
+        <button
+          type="button"
+          onClick={handleBookmark}
+          disabled={toggleBookmarkMutation.isPending}
+          className="flex h-12 flex-1 items-center justify-center gap-[7px] rounded-full bg-accent-ink text-[14.5px] font-bold text-surface transition-opacity active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <BookmarkSimple size={17} weight={bookmarked ? "fill" : "regular"} />
+          {bookmarked ? "관심 작품" : "관심 등록"}
+        </button>
+        <button
+          type="button"
+          onClick={handleLike}
+          aria-label="좋아요"
+          aria-pressed={liked}
+          disabled={toggleLikeMutation.isPending}
+          className={`grid h-12 w-12 flex-none place-items-center rounded-full border transition-colors active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${
+            liked
+              ? "border-transparent bg-accent-tint text-accent-ink"
+              : "border-line-strong bg-surface text-ink"
+          }`}
+        >
+          <ThumbsUp size={20} weight={liked ? "fill" : "regular"} />
+        </button>
+        <button
+          type="button"
+          onClick={handleWriteReview}
+          aria-label="리뷰 쓰기"
+          className="grid h-12 w-12 flex-none place-items-center rounded-full border border-line-strong bg-surface text-ink active:scale-[0.98]"
+        >
+          <PencilSimple size={20} />
+        </button>
+      </div>
 
       {isLoginOpen && (
         <ConfirmDialog
