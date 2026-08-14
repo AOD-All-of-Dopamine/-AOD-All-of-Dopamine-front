@@ -40,6 +40,7 @@ const NavigationBar = () => {
           <button
             key={path}
             onClick={() => handleNavigation(path)}
+            aria-current={active ? "page" : undefined}
             className="flex flex-1 flex-col items-center justify-center gap-[3px] text-[11px]"
           >
             <Icon

@@ -2,27 +2,27 @@
 
 라이트 리디자인(2026-08-13)의 모바일(<lg) 보존형 적응.
 목업: `mockups/mobile-light-mockup.html` (8프레임, 사용자 승인 완료 "오케이 가보자").
-스펙 원본: `docs/specs/2026-08-13-light-redesign-design.md` — 토큰·칩·라운드 규칙 전부 그대로 상속. 새 색·새 라운드 금지.
+스펙 원본: `docs/specs/2026-08-13-light-redesign-design.md` - 토큰·칩·라운드 규칙 전부 그대로 상속. 새 색·새 라운드 금지.
 
 ## 감사에서 확인된 실결함 (해결 대상)
 
-1. 헤더: 검색 필(300px 고정) + 로그인 버튼이 <lg에서 overflow — 로그인 버튼 화면 밖 잘림
+1. 헤더: 검색 필(300px 고정) + 로그인 버튼이 <lg에서 overflow - 로그인 버튼 화면 밖 잘림
 2. 홈: 헤더 검색 필 + 본문 검색 바 중복
 3. 도메인 칩 세로 래핑: "시리즈"·"웹소설"이 칩 안에서 줄바꿈 (탐색·랭킹·신작·검색 공통)
-4. 랭킹: 전면 포스터 카드 1열 — 한 화면 1.5개
+4. 랭킹: 전면 포스터 카드 1열 - 한 화면 1.5개
 5. 하단 탭 아이콘이 구 커스텀 SVG 에셋 (Phosphor 규칙 위반 잔재)
 
 ## 설계 결정 (목업 확정안)
 
 - **헤더 <lg**: 로고 + 검색 아이콘(→/search) + 로그인/프로필 아이콘. 검색 필·메뉴는 lg 이상 전용 (데스크톱 불변)
-- **하단 탭**: Phosphor로 교체 — House/Compass/Trophy/CalendarBlank/User, 활성 탭 아이콘만 accent + fill 변형, 라벨 활성 시 ink 600
-- **도메인 칩**: whitespace-nowrap + 가로 스크롤(스크롤바 숨김) — 전 페이지 공통
-- **탐색 <lg**: details 아코디언 → 필터 바텀시트. `필터` 버튼 + 활성 개수 뱃지(accent-ink) + 적용 중 필터 accent-tint 칩(개별 해제 X 버튼) 가로 스크롤. 시트: 장르 pill 옵션(on=accent-tint/accent-ink), 상태 라디오, 요일/연령 pill, 하단 [닫기 | N개 작품 보기(accent-ink fill)]. **필터는 즉시 적용(URL replace 단일 출처 유지)** — 시트 내 별도 스테이징 상태 금지, footer 버튼은 현재 결과 수 표시 + 닫기 역할
+- **하단 탭**: Phosphor로 교체 - House/Compass/Trophy/CalendarBlank/User, 활성 탭 아이콘만 accent + fill 변형, 라벨 활성 시 ink 600
+- **도메인 칩**: whitespace-nowrap + 가로 스크롤(스크롤바 숨김) - 전 페이지 공통
+- **탐색 <lg**: details 아코디언 → 필터 바텀시트. `필터` 버튼 + 활성 개수 뱃지(accent-ink) + 적용 중 필터 accent-tint 칩(개별 해제 X 버튼) 가로 스크롤. 시트: 장르 pill 옵션(on=accent-tint/accent-ink), 상태 라디오, 요일/연령 pill, 하단 [닫기 | N개 작품 보기(accent-ink fill)]. **필터는 즉시 적용(URL replace 단일 출처 유지)** - 시트 내 별도 스테이징 상태 금지, footer 버튼은 현재 결과 수 표시 + 닫기 역할
 - **탐색 카드 <lg**: 2열 그리드, 게임 도메인은 가로(16:9) 썸네일 유지
-- **랭킹 <lg**: 컴팩트 순위 행 — 순위 숫자(1~3위 accent-ink) + 48×62 썸네일 + 제목/메타 + 우측 변동(↑n accent-ink / - text-3 / NEW star). 데스크톱 카드 그리드 불변
+- **랭킹 <lg**: 컴팩트 순위 행 - 순위 숫자(1~3위 accent-ink) + 48×62 썸네일 + 제목/메타 + 우측 변동(↑n accent-ink / - text-3 / NEW star). 데스크톱 카드 그리드 불변
 - **홈 <lg**: 본문 검색 바 제거(헤더 아이콘으로 단일화), 히어로 카드 → 가로 릴 → 리뷰 행 스택
 - **상세 <lg**: 상단 뒤로가기+작품명 56px 바, 하단 고정 액션 바(관심 등록 accent-ink fill + 좋아요·리뷰 48px 고스트 원형). 게임=16:9 풀블리드 히어로, 웹툰·영화=포스터(108px 3:4)+정보 블록 헤더. 통계 패널: 게임=Steam desc+%+리뷰 수, 영화/TV=★TMDB+참여 수. 웹툰 요일·연재 상태 accent-tint 필
-- **모션**: MOTION 3 유지 — 바텀시트 열림/닫힘 transition만, 스크롤 애니메이션 없음. prefers-reduced-motion 시 즉시 전환
+- **모션**: MOTION 3 유지 - 바텀시트 열림/닫힘 transition만, 스크롤 애니메이션 없음. prefers-reduced-motion 시 즉시 전환
 
 ## 태스크
 
@@ -41,9 +41,9 @@
 - [x] 통계 패널 (Steam/TMDB) + 요일 필
 
 ### 게이트 (각 태스크 커밋 전)
-- [ ] `npm run build` 통과
-- [ ] grep: 임의 hex 0 / `rounded-[` 0 / em-dash 0 / 비Phosphor 아이콘 0 (변경 파일)
-- [ ] 데스크톱(1440px) 불변 확인 — 이 플랜은 <lg 한정, lg 이상 시각 변화 금지
+- [x] `npm run build` 통과
+- [x] grep: 임의 hex 0 / `rounded-[` 0 / em-dash 0 / 비Phosphor 아이콘 0 (변경 파일)
+- [ ] 데스크톱(1440px) 불변 확인 - 이 플랜은 <lg 한정, lg 이상 시각 변화 금지
 - [ ] 모바일 뷰포트(390px iframe) 실화면 대조
 
 ## 비스코프 (백로그)
@@ -70,6 +70,12 @@
   5종(home/ranking/search/calendar/my-icon) 삭제.
 - A: 컴팩트 행 썸네일·시트 상단 라운드는 목업 수치(6px/16px)를 표준 유틸
   (rounded-md/rounded-t-2xl)로 구현 - 임의값(rounded-[..]) 미사용.
+- A: 마이크로 수치 편차(기록만, 데스크톱 스타일 연속성 우선으로 유지) -
+  랭킹·탐색 h1 모바일 26px(목업 22px), 헤더 로고 21px(목업 20px),
+  헤더 프로필 아이콘 23px(목업 21px).
+- A: 필터 바텀시트는 리뷰 반영으로 네이티브 dialog.showModal() 전환
+  (ConfirmDialog 전례) - 배경 inert·포커스 트랩·top-layer는 브라우저 제공,
+  딤=::backdrop(opacity 300ms 전환, reduced-motion 즉시).
 - B: 상세 <lg에서 SiteHeader 숨김은 public-layout의 라우트 조건
   (`hidden lg:contents` 래퍼)으로 구현 - SiteHeader 파일은 불변(Task A 보호),
   lg+는 display:contents라 박스가 생기지 않아 sticky 포함 시각 영향 0.

@@ -253,9 +253,18 @@ const buildParams = (base: URLSearchParams, patch: ParamPatch) => {
   return params;
 };
 
-/** 필터 옵션 로드 실패 시 그룹 자리에 표시 - 조용히 사라지는 대신 재시도 제공 */
-const FilterLoadError = ({ onRetry }: { onRetry: () => void }) => (
-  <div className="border-t border-line px-0.5 py-4">
+/**
+ * 필터 옵션 로드 실패 시 그룹 자리에 표시 - 조용히 사라지는 대신 재시도 제공.
+ * bordered=false: 시트 안에서는 그룹 border-b와 겹쳐 이중선이 되므로 구분선 생략.
+ */
+const FilterLoadError = ({
+  onRetry,
+  bordered = true,
+}: {
+  onRetry: () => void;
+  bordered?: boolean;
+}) => (
+  <div className={`px-0.5 py-4 ${bordered ? "border-t border-line" : ""}`}>
     <p className="flex items-center gap-1.5 text-[13px] text-ink-2">
       <WarningCircle size={14} />
       필터를 불러오지 못했어요
@@ -554,44 +563,58 @@ export default function ExplorePage() {
       ? "mt-[22px] grid grid-cols-2 gap-y-3.5 gap-x-3 min-[768px]:grid-cols-3 min-[768px]:gap-y-5 min-[768px]:gap-x-[18px] min-[1201px]:grid-cols-4"
       : "mt-[22px] grid grid-cols-2 gap-y-3.5 gap-x-3 min-[768px]:grid-cols-3 min-[768px]:gap-y-5 min-[768px]:gap-x-[18px] min-[1024px]:grid-cols-4 min-[1201px]:grid-cols-5";
 
-  // <lg 필터 바텀시트 - 항상 마운트하고 translate로만 전환 (MOTION 3)
-  const [sheetOpen, setSheetOpen] = useState(false);
+  // <lg 필터 바텀시트 - ConfirmDialog와 같은 네이티브 dialog.showModal() 기반.
+  // top-layer + 배경 inert(포커스 트랩) + Escape(cancel)를 브라우저가 제공하고,
+  // 딤은 ::backdrop. 시각은 하단 고정 패널 + translate 전환 유지.
+  // 닫힘은 슬라이드 다운(300ms)이 끝난 뒤 close(), reduced-motion이면 즉시.
+  const [sheetOpen, setSheetOpen] = useState(false); // 논리 상태 (showModal 대상)
+  const [sheetShown, setSheetShown] = useState(false); // 전환 클래스 (업/다운)
+  const sheetRef = useRef<HTMLDialogElement>(null);
   const filterBtnRef = useRef<HTMLButtonElement>(null);
-  const sheetRef = useRef<HTMLDivElement>(null);
+  // 배경 클릭 판정 - 패널 안에서 드래그를 시작해 딤에서 떼는 오동작 방지
+  // (ConfirmDialog 전례)
+  const pressedBackdropRef = useRef(false);
+  const closeTimerRef = useRef<number | undefined>(undefined);
 
-  const closeSheet = () => {
-    setSheetOpen(false);
-    // 닫힘 시 트리거 버튼으로 포커스 복귀
-    filterBtnRef.current?.focus();
+  const openSheet = () => {
+    // 닫힘 전환 중 재열림 시 예약된 close()가 새 열림을 닫지 않게 취소
+    window.clearTimeout(closeTimerRef.current);
+    setSheetOpen(true);
+    setSheetShown(true);
   };
 
-  // 열림 중: Escape 닫기 + body 스크롤 잠금 + lg 진입 시 자동 닫기
+  // 닫힘 시작 - 슬라이드 다운을 먼저 돌리고 전환이 끝난 뒤 close()
+  const closeSheet = () => {
+    const dialog = sheetRef.current;
+    if (!dialog?.open) return;
+    setSheetShown(false);
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      dialog.close();
+      return;
+    }
+    window.clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = window.setTimeout(() => dialog.close(), 300);
+  };
+
+  // 열림 동안: showModal + body 스크롤 잠금 + lg 진입 시 자동 닫기
   useEffect(() => {
     if (!sheetOpen) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setSheetOpen(false);
-        filterBtnRef.current?.focus();
-      }
-    };
-    const mql = window.matchMedia("(min-width: 1024px)");
-    const onBreakpoint = () => {
-      if (mql.matches) setSheetOpen(false);
-    };
-    document.addEventListener("keydown", onKeyDown);
-    mql.addEventListener("change", onBreakpoint);
+    const dialog = sheetRef.current;
+    if (!dialog) return;
+    if (!dialog.open) dialog.showModal();
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      mql.removeEventListener("change", onBreakpoint);
-      document.body.style.overflow = prevOverflow;
+    const mql = window.matchMedia("(min-width: 1024px)");
+    const onBreakpoint = () => {
+      if (mql.matches) dialog.close();
     };
-  }, [sheetOpen]);
-
-  // 열릴 때 시트로 포커스 이동 (dialog 관례)
-  useEffect(() => {
-    if (sheetOpen) sheetRef.current?.focus();
+    mql.addEventListener("change", onBreakpoint);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      mql.removeEventListener("change", onBreakpoint);
+      window.clearTimeout(closeTimerRef.current);
+      if (dialog.open) dialog.close();
+    };
   }, [sheetOpen]);
 
   const resetButton = (
@@ -747,7 +770,7 @@ export default function ExplorePage() {
             <button
               ref={filterBtnRef}
               type="button"
-              onClick={() => setSheetOpen(true)}
+              onClick={openSheet}
               aria-haspopup="dialog"
               aria-expanded={sheetOpen}
               className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-line-strong bg-surface px-3.5 py-2 text-[13.5px] font-semibold text-ink transition-colors hover:border-ink active:scale-[0.98]"
@@ -756,7 +779,10 @@ export default function ExplorePage() {
               필터
               {activeFilterCount > 0 && (
                 <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-accent-ink px-[5px] text-[11px] font-bold text-surface">
-                  {activeFilterCount}
+                  <span aria-hidden="true">{activeFilterCount}</span>
+                  <span className="sr-only">
+                    적용된 필터 {activeFilterCount}개
+                  </span>
                 </span>
               )}
             </button>
@@ -876,30 +902,44 @@ export default function ExplorePage() {
         </main>
       </div>
 
-      {/* <lg 필터 바텀시트 (목업 프레임 3) - 항상 마운트, translate로만 전환.
-          visibility는 transition-[visibility]로 닫힘 슬라이드가 끝난 뒤 감춘다 */}
-      <div
-        aria-hidden={!sheetOpen}
-        className={`fixed inset-0 z-50 overflow-hidden transition-[visibility] duration-300 motion-reduce:duration-0 lg:hidden ${
-          sheetOpen ? "visible" : "invisible"
+      {/* <lg 필터 바텀시트 (목업 프레임 3) - 네이티브 dialog.showModal().
+          배경 inert + 포커스 트랩 + top-layer는 브라우저가 제공, 딤은 ::backdrop.
+          열림은 @starting-style(starting:)로, 닫힘은 closeSheet의 지연 close()로
+          translate + 딤 opacity 300ms 전환. reduced-motion 시 즉시 */}
+      <dialog
+        ref={sheetRef}
+        aria-label="필터"
+        onClose={() => {
+          // ConfirmDialog 전례: StrictMode 이중 이펙트가 재개방 후 흘려보내는
+          // 유령 close 이벤트는 open=true 상태로 도착하므로 무시한다
+          if (sheetRef.current?.open) return;
+          setSheetOpen(false);
+          setSheetShown(false);
+          // 닫힘 시 트리거 버튼으로 포커스 복귀
+          filterBtnRef.current?.focus();
+        }}
+        onCancel={(e) => {
+          // Escape도 즉시 닫힘 대신 슬라이드 다운을 거쳐 닫는다
+          e.preventDefault();
+          closeSheet();
+        }}
+        onPointerDown={(e) => {
+          pressedBackdropRef.current = e.target === sheetRef.current;
+        }}
+        onClick={(e) => {
+          // 딤 클릭 판정 - ::backdrop 클릭은 dialog 자신이 타깃이 된다
+          if (e.target === sheetRef.current && pressedBackdropRef.current) {
+            closeSheet();
+          }
+        }}
+        className={`m-0 mt-auto w-full max-w-none rounded-t-2xl bg-surface p-0 shadow-lift transition-transform duration-300 backdrop:bg-ink/40 backdrop:transition-opacity backdrop:duration-300 motion-reduce:transition-none motion-reduce:backdrop:transition-none lg:hidden ${
+          sheetShown
+            ? "translate-y-0 backdrop:opacity-100 starting:translate-y-full starting:backdrop:opacity-0"
+            : "translate-y-full backdrop:opacity-0"
         }`}
       >
-        {/* 딤 배경 - 클릭 시 닫기 */}
-        <div
-          className="absolute inset-0 bg-ink/40"
-          onClick={closeSheet}
-          aria-hidden="true"
-        />
-        <div
-          ref={sheetRef}
-          role="dialog"
-          aria-modal="true"
-          aria-label="필터"
-          tabIndex={-1}
-          className={`absolute inset-x-0 bottom-0 flex max-h-[82dvh] flex-col rounded-t-2xl bg-surface shadow-lift outline-none transition-transform duration-300 motion-reduce:transition-none ${
-            sheetOpen ? "translate-y-0" : "translate-y-full"
-          }`}
-        >
+        {/* 패널 전면을 덮는 래퍼 - 내부 클릭이 dialog 자신(딤 판정)으로 새지 않게 */}
+        <div className="flex max-h-[82dvh] flex-col">
           {/* 그립 바 */}
           <div className="mx-auto mt-2.5 h-1 w-9 flex-none rounded-full bg-line-strong" />
           {/* 헤더: 필터 | 초기화 */}
@@ -925,7 +965,7 @@ export default function ExplorePage() {
             ) : (
               <>
                 {genresFailed ? (
-                  <FilterLoadError onRetry={() => refetchGenres()} />
+                  <FilterLoadError bordered={false} onRetry={() => refetchGenres()} />
                 ) : (
                   sortedGenres.length > 0 && (
                     <SheetGroup title="장르">
@@ -953,7 +993,10 @@ export default function ExplorePage() {
                   )
                 )}
                 {platformsFailed ? (
-                  <FilterLoadError onRetry={() => refetchPlatforms()} />
+                  <FilterLoadError
+                    bordered={false}
+                    onRetry={() => refetchPlatforms()}
+                  />
                 ) : (
                   (visiblePlatforms.length > 0 || soonPlatforms.length > 0) && (
                     <SheetGroup title={isOttDomain ? "볼 수 있는 곳" : "플랫폼"}>
@@ -1051,7 +1094,7 @@ export default function ExplorePage() {
             </button>
           </div>
         </div>
-      </div>
+      </dialog>
     </>
   );
 }
