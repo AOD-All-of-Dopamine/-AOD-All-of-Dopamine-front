@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { WarningCircle } from "@phosphor-icons/react";
 import { usePlatformRankings } from "../hooks/useRankings";
 import { DOMAIN_LABEL_MAP } from "../constants/domain";
-import { PLATFORM_META } from "../constants/platforms";
+import { platformLabel } from "../constants/platforms";
 import DomainChip from "../components/ui/DomainChip";
 import PodiumCard from "../components/ui/PodiumCard";
 import RankRow from "../components/ui/RankRow";
@@ -95,8 +95,6 @@ const parseParams = (p: URLSearchParams) => {
       : source.platforms[0];
   return { domainId, platform, source };
 };
-
-const platformLabel = (key: string) => PLATFORM_META[key]?.label ?? key;
 
 /** PodiumCard 형태 스켈레톤 (포스터 + 순위·제목 바) */
 const PodiumSkeleton = () => (

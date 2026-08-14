@@ -30,11 +30,14 @@ const WEEKDAY_KO: Record<string, string> = {
   sun: "일",
 };
 
-/** "12세이용가" -> "12세". 전체이용가는 표기 생략(undefined) */
+/**
+ * "12세이용가" -> "12세". 전체이용가는 표기 생략(undefined).
+ * 웹소설 실데이터는 "15세 이용가"처럼 공백 포함형이라 비교 전에 공백을 흡수한다.
+ */
 const ageLabel = (ageRating?: string | null) => {
-  const trimmed = ageRating?.trim();
-  if (!trimmed || trimmed === "전체이용가") return undefined;
-  return trimmed.replace(/이용가$/, "");
+  const normalized = ageRating?.replace(/\s+/g, "");
+  if (!normalized || normalized === "전체이용가") return undefined;
+  return normalized.replace(/이용가$/, "");
 };
 
 /** 우측 정렬 강조 값 (목업 .review-pct / .star-score) */
@@ -63,9 +66,16 @@ export const workCardMeta = (
   return meta || undefined;
 };
 
-/** 장르 태그 - 마스터 장르 상위 3개 (없으면 태그 행 생략) */
+/**
+ * 장르 태그 - 마스터 장르 상위 3개 (없으면 태그 행 생략).
+ * 실데이터에 중복 장르가 실재(React key 충돌·중복 태그 노출) - slice 전에
+ * dedupe해 상위 슬롯을 고유 장르가 채우도록 한다.
+ */
 export const workCardTags = (work: WorkSummary): string[] | undefined => {
-  const genres = (work.genres ?? []).filter(Boolean).slice(0, MAX_TAGS);
+  const genres = [...new Set((work.genres ?? []).filter(Boolean))].slice(
+    0,
+    MAX_TAGS,
+  );
   return genres.length > 0 ? genres : undefined;
 };
 
@@ -133,7 +143,12 @@ export const workCardFooter = (work: WorkSummary): ReactNode => {
           {ottText && <span className="truncate">{ottText}</span>}
           {rating && (
             <FootEnd>
-              <Star weight="fill" size={13} className="text-star" />
+              <Star
+                weight="fill"
+                size={13}
+                className="text-star"
+                aria-hidden="true"
+              />
               {rating}
             </FootEnd>
           )}

@@ -52,6 +52,7 @@ export const PLATFORM_META: Record<string, { label: string; logo?: string }> = {
   wavve: { label: "웨이브", logo: WAVVE_LOGO },
   "Coupang Play": { label: "쿠팡플레이", logo: COUPANG_LOGO },
   "Apple TV": { label: "애플TV", logo: APPLE_LOGO },
+  "Amazon Prime Video": { label: "프라임 비디오" },
 
   Steam: { label: "스팀", logo: STEAM_LOGO },
 
