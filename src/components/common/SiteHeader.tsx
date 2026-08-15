@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { to: "/explore", label: "탐색" },
   { to: "/ranking", label: "랭킹" },
   { to: "/new", label: "신작" },
+  { to: "/collections", label: "컬렉션" },
 ];
 
 const SiteHeader = () => {

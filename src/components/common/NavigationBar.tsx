@@ -2,6 +2,7 @@ import {
   CalendarBlank,
   Compass,
   House,
+  Stack,
   Trophy,
   User,
   type Icon,
@@ -12,10 +13,12 @@ import { useLocation, useNavigate, matchPath } from "react-router-dom";
  * 모바일 하단 탭 (< lg 전용) - 데스크톱은 SiteHeader가 담당.
  * 아이콘은 Phosphor 단일 규칙(목업 .m-tab) - 활성 탭은 accent + fill 변형,
  * 라벨은 활성 시 ink 600.
+ * 6탭: 컬렉션 목업 5-0 A안 (신작 유지 + 컬렉션 추가, 한글 라벨 2~3자라 성립).
  */
 const TABS: { path: string; label: string; Icon: Icon }[] = [
   { path: "/home", label: "홈", Icon: House },
   { path: "/explore", label: "탐색", Icon: Compass },
+  { path: "/collections", label: "컬렉션", Icon: Stack },
   { path: "/ranking", label: "랭킹", Icon: Trophy },
   { path: "/new", label: "신작", Icon: CalendarBlank },
   { path: "/profile", label: "프로필", Icon: User },

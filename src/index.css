@@ -23,6 +23,16 @@
   --color-star: #d9930d;          /* 별점 전용 */
   --color-danger: #c73e1d;        /* 폼 에러·파괴 액션 전용 (시맨틱 레드 1종) */
 
+  /* 컬렉션 커버 틴트 6종 - 콘텐츠 색(포스터와 같은 지위)으로, 커버 콜라주
+     veil·큐레이터 아바타 전용. UI 색으로 사용 금지 - UI 액센트는 계속 accent 1종.
+     (임의 hex 게이트의 유일한 허용 추가분 - 토큰 정의 파일이므로) */
+  --color-tint-pine: #3f5c52;
+  --color-tint-olive: #5d6b4e;
+  --color-tint-slate: #4e5d6b;
+  --color-tint-terracotta: #a45c48;
+  --color-tint-mocha: #6b5a4e;
+  --color-tint-plum: #5f4e6b;
+
   /* 라운드: 카드·패널 12 / 입력 8 / 칩·버튼은 rounded-full */
   --radius-panel: 12px;
   --radius-input: 8px;
