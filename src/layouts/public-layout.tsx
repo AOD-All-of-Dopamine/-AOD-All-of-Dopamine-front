@@ -18,15 +18,17 @@ function PublicLayout() {
   // 상세는 <lg에서 페이지 자체의 뒤로가기 바(목업 .d-nav)가 상단을 담당 -
   // SiteHeader는 lg+ 전용. lg:contents로 래퍼 박스를 없애 sticky 동작 불변.
   // 푸터도 이 라우트 <lg에서는 고정 액션 바만큼 하단 여백을 받는다(아래 참고).
-  // 컬렉션 상세도 같은 문법 - 단 /collections/new는 숫자 id가 아니므로 제외.
+  // 컬렉션 상세도 같은 문법 - work/:id처럼 id 형식을 따지지 않고 매칭한다
+  // (비숫자 id도 상세 페이지의 Shell 상단 바가 404 화면을 감싸므로, 여기서
+  // 숫자 검증을 하면 <lg에 SiteHeader와 페이지 상단 바가 이중 렌더된다).
+  // 정적 세그먼트 new만 제외 - 생성 화면은 아래 isOwnShellRoute가 담당.
   const collectionDetailMatch = matchPath(
     "/collections/:id",
     location.pathname,
   );
   const isDetailRoute =
     !!matchPath("/work/:id", location.pathname) ||
-    (!!collectionDetailMatch &&
-      /^\d+$/.test(collectionDetailMatch.params.id ?? ""));
+    (!!collectionDetailMatch && collectionDetailMatch.params.id !== "new");
 
   // 컬렉션 생성/편집(C-FE2)도 <lg에서 자체 상단 바(X + 저장)를 쓴다 (목업 5c).
   // 고정 하단 액션 바는 없어 푸터 여백 규칙은 상세만 적용.

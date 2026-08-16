@@ -48,6 +48,8 @@ export const useMyCollections = (page = 0, size = 20, enabled = true) => {
  * 서버가 GET마다 조회수를 +1 하므로(중복 방지 없음 - 플랜 문서화 한계),
  * 전역 기본값(refetchOnWindowFocus: false, staleTime 5분)에 기대어
  * 불필요한 재조회로 조회수가 부풀지 않게 둔다.
+ * retry: 4xx(403 비공개·404 미존재 등)는 재시도해도 결과가 같으므로 즉시
+ * 포기해 에러 화면을 바로 띄운다 - 기본 3회 재시도는 5xx·네트워크 오류만.
  */
 export const useCollectionDetail = (
   id: number | undefined,
@@ -57,6 +59,13 @@ export const useCollectionDetail = (
     queryKey: ["collection", id],
     queryFn: () => collectionApi.getCollectionDetail(id!),
     enabled: !!id && Number.isFinite(id),
+    retry: (failureCount, error) => {
+      const status = axios.isAxiosError(error)
+        ? error.response?.status
+        : undefined;
+      if (status !== undefined && status >= 400 && status < 500) return false;
+      return failureCount < 3;
+    },
     ...options,
   });
 };
@@ -67,6 +76,7 @@ export const useCollectionDetail = (
  * 성공 시 상세는 서버 응답값으로 직접 보정한다 - 상세 쿼리를 invalidate하면
  * 재조회가 조회수를 또 +1 시키므로 의도적으로 invalidate하지 않는다.
  * 목록 캐시(["collections", ...])는 조회수 부작용이 없어 invalidate로 동기화.
+ * 실패 안내(토스트 등)는 호출부의 mutate 콜백 몫 - 훅은 롤백만 담당한다.
  */
 export const useToggleCollectionLike = (collectionId: number) => {
   const queryClient = useQueryClient();

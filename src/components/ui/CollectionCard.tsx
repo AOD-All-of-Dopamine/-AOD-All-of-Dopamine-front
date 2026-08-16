@@ -67,7 +67,8 @@ const CollectionCard = ({ collection }: { collection: CollectionSummary }) => {
             </span>
           )}
         </div>
-        <h3 className="mt-[3px] truncate text-base font-extrabold leading-[1.3] tracking-[-0.01em] text-ink">
+        {/* 목업 .col-title은 클램프 없음 - 다중행 허용, 카드 높이 자연 증가 */}
+        <h3 className="mt-[3px] text-base font-extrabold leading-[1.3] tracking-[-0.01em] text-ink">
           {title}
         </h3>
         {description && (

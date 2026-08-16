@@ -314,7 +314,20 @@ export default function CollectionDetailPage() {
       return;
     }
     if (!data) return;
-    toggleLike.mutate(data.likedByMe);
+    // 실패 시 훅이 옵티미스틱 전이를 롤백한 뒤 여기서 토스트로 안내한다
+    // (만료 토큰 등 401은 로그인 유도 문구)
+    toggleLike.mutate(data.likedByMe, {
+      onError: (error) => {
+        const status = axios.isAxiosError(error)
+          ? error.response?.status
+          : undefined;
+        showToast(
+          status === 401
+            ? "로그인이 만료됐어요. 다시 로그인해 주세요."
+            : "좋아요 처리에 실패했어요. 잠시 후 다시 시도해 주세요.",
+        );
+      },
+    });
   };
 
   const handleShare = async () => {
