@@ -44,8 +44,12 @@ import ConfirmDialog from "../components/ui/ConfirmDialog";
  *
  * 편집은 드래프트 방식 - 화면 조작은 로컬 상태만 바꾸고, 저장 시
  * 제거(DELETE, 404 멱등)·순서(PUT order, 바뀐 경우만)·코멘트(PATCH, 바뀐 것만)·
- * 메타(PATCH, 바뀐 필드만)를 순차 일괄 실행한다. 실패 시 드래프트를 유지한 채
- * 에러 배너 + 재시도 (전 연산이 멱등이라 전체 재실행 안전). 취소는 전부 복원.
+ * 메타(PATCH, 바뀐 필드만)를 순차 일괄 실행한다. 취소는 전부 복원.
+ * 실패 처리 2분기: 5xx/네트워크는 드래프트 유지 + 재시도(전 연산이 멱등이라
+ * 전체 재실행 안전). 4xx(예: 다른 탭의 아이템 추가로 PUT order 집합 불일치
+ * 400)는 재시도해도 영원히 실패하므로 "최신 상태로 새로고침"(재조회 + 드래프트
+ * 재구성, 부모가 key 재마운트) 분기. 어느 쪽이든 부분 성공(제거 DELETE만 반영
+ * 등)으로 캐시가 어긋나지 않게 onError에서 상세를 무효화한다.
  *
  * 목업 대비 편차:
  * - 정렬은 드래그(HTML5 DnD, 핸들 기준)에 위/아래 버튼 병행 - 키보드/터치
@@ -225,8 +229,18 @@ function EditItemRow({
   );
 }
 
-/** 드래프트 편집기 - collection은 마운트 시점 스냅샷 (staleTime 동안 불변) */
-function CollectionEditor({ collection }: { collection: CollectionDetail }) {
+/**
+ * 드래프트 편집기 - collection은 마운트 시점 스냅샷.
+ * onRefresh: 상세 재조회 후 부모가 key를 바꿔 이 컴포넌트를 재마운트한다
+ * (드래프트 폐기 + 최신 서버 상태로 재구성 - 4xx 충돌 복구 경로)
+ */
+function CollectionEditor({
+  collection,
+  onRefresh,
+}: {
+  collection: CollectionDetail;
+  onRefresh: () => Promise<unknown>;
+}) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -252,6 +266,7 @@ function CollectionEditor({ collection }: { collection: CollectionDetail }) {
     null,
   );
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   // 재시도 시 diff 재계산의 기준점 - 저장 성공 전까지 고정
   const baselineRef = useRef({
@@ -260,7 +275,10 @@ function CollectionEditor({ collection }: { collection: CollectionDetail }) {
     tint: collection.tint,
     visibility: collection.visibility,
     order: collection.items.map((i) => i.itemId),
-    comments: new Map(collection.items.map((i) => [i.itemId, i.comment ?? ""])),
+    // 트림해 저장 - 서버 값의 공백 차이만으로 무편집 코멘트가 PATCH로 새지 않게
+    comments: new Map(
+      collection.items.map((i) => [i.itemId, (i.comment ?? "").trim()]),
+    ),
   });
   const baseline = baselineRef.current;
 
@@ -355,7 +373,33 @@ function CollectionEditor({ collection }: { collection: CollectionDetail }) {
       queryClient.invalidateQueries({ queryKey: ["collections"] });
       navigate(`/collections/${collection.id}`);
     },
+    onError: () => {
+      // 부분 성공(예: 제거 DELETE만 반영) 시 상세 캐시에 삭제된 아이템이
+      // 유령으로 남지 않게 무효화 - 활성 쿼리 재조회의 조회수 +1 한 번은
+      // 정합성 비용으로 수용
+      queryClient.invalidateQueries({
+        queryKey: ["collection", collection.id],
+      });
+    },
   });
+
+  // 4xx = 재시도 무의미(서버 상태와 드래프트가 어긋남 - 예: PUT order 집합
+  // 불일치 400, 중복 409). 5xx/네트워크만 재시도 대상.
+  const saveStatus = axios.isAxiosError(saveMutation.error)
+    ? saveMutation.error.response?.status
+    : undefined;
+  const saveConflict =
+    saveStatus !== undefined && saveStatus >= 400 && saveStatus < 500;
+
+  const handleRefresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const deleteMutation = useDeleteCollection();
 
@@ -446,15 +490,39 @@ function CollectionEditor({ collection }: { collection: CollectionDetail }) {
     >
       <WarningCircle size={17} className="flex-none" aria-hidden="true" />
       <span className="min-w-0 flex-1">
-        저장하지 못한 변경이 있어요. 네트워크 확인 후 다시 시도해 주세요.
+        {saveConflict
+          ? "다른 곳에서 컬렉션이 바뀌었어요. 최신 상태로 새로고침한 뒤 다시 편집해 주세요."
+          : "저장하지 못한 변경이 있어요. 네트워크 확인 후 다시 시도해 주세요."}
       </span>
-      <button
-        type="button"
-        onClick={() => saveMutation.mutate()}
-        className="flex-none rounded-full border border-danger px-3.5 py-1.5 text-[13px] font-bold text-danger transition-colors hover:bg-danger/10"
-      >
-        다시 시도
-      </button>
+      {saveConflict ? (
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="flex-none rounded-full border border-danger px-3.5 py-1.5 text-[13px] font-bold text-danger transition-colors hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {refreshing ? (
+            <span className="inline-flex items-center gap-1.5">
+              <CircleNotch
+                size={13}
+                className="animate-spin"
+                aria-hidden="true"
+              />
+              새로고침 중
+            </span>
+          ) : (
+            "최신 상태로 새로고침"
+          )}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => saveMutation.mutate()}
+          className="flex-none rounded-full border border-danger px-3.5 py-1.5 text-[13px] font-bold text-danger transition-colors hover:bg-danger/10"
+        >
+          다시 시도
+        </button>
+      )}
     </div>
   );
 
@@ -743,6 +811,8 @@ export default function CollectionEditPage() {
   const navigate = useNavigate();
   const collectionId = id ? Number(id) : 0;
   const { isAuthenticated } = useAuth();
+  // 4xx 충돌 복구용 - 새로고침 완료 시 +1 해 편집기를 재마운트(드래프트 재구성)
+  const [editorEpoch, setEditorEpoch] = useState(0);
 
   // 비로그인은 조회 자체를 막는다 (게이트 화면 + 불필요한 조회수 증가 방지)
   const { data, isLoading, isError, error, refetch } = useCollectionDetail(
@@ -750,10 +820,19 @@ export default function CollectionEditPage() {
     { enabled: isAuthenticated && !!collectionId },
   );
 
+  const handleRefresh = async () => {
+    // refetch는 staleTime을 우회해 항상 서버를 친다 (조회수 +1 비용 수용) -
+    // 완료 후 epoch를 올려 최신 데이터로 편집기를 새로 구성
+    await refetch();
+    setEditorEpoch((epoch) => epoch + 1);
+  };
+
   const status = axios.isAxiosError(error) ? error.response?.status : undefined;
   const notFound =
     !collectionId || Number.isNaN(collectionId) || status === 404;
-  const notOwner = status === 403 || (data ? !data.owner : false);
+  // 403 = 서버가 열람 자체를 막은 타인 비공개 컬렉션 (상세로 보내도 같은 403)
+  const isForbidden = status === 403;
+  const notOwner = isForbidden || (data ? !data.owner : false);
 
   const guard = (content: ReactNode) => (
     <Shell onClose={() => navigate("/collections")}>
@@ -809,12 +888,22 @@ export default function CollectionEditPage() {
         title="내 컬렉션만 편집할 수 있어요"
         description="이 컬렉션은 다른 큐레이터의 것이에요."
         action={
-          <Link
-            to={`/collections/${collectionId}`}
-            className={`inline-block ${primaryBtnClass}`}
-          >
-            컬렉션 보기
-          </Link>
+          // 403(타인 비공개)은 상세도 같은 403이라 발견 페이지로 보낸다
+          isForbidden ? (
+            <Link
+              to="/collections"
+              className={`inline-block ${primaryBtnClass}`}
+            >
+              컬렉션 둘러보기
+            </Link>
+          ) : (
+            <Link
+              to={`/collections/${collectionId}`}
+              className={`inline-block ${primaryBtnClass}`}
+            >
+              컬렉션 보기
+            </Link>
+          )
         }
       />,
     );
@@ -839,5 +928,11 @@ export default function CollectionEditPage() {
     );
   }
 
-  return <CollectionEditor collection={data} />;
+  return (
+    <CollectionEditor
+      key={editorEpoch}
+      collection={data}
+      onRefresh={handleRefresh}
+    />
+  );
 }

@@ -90,7 +90,8 @@ export default function CollectionNewPage() {
     );
   };
 
-  const handleClose = () => navigate(-1);
+  // 명시 경로로 닫기 - 편집 페이지(상세/발견)와 대칭, 히스토리 상태 무관 동작
+  const handleClose = () => navigate("/collections");
 
   const serverError = createMutation.isError
     ? ((axios.isAxiosError(createMutation.error) &&

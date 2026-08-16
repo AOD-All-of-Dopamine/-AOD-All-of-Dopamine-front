@@ -174,12 +174,16 @@ export const useDeleteCollection = () => {
   });
 };
 
-/** 담기 성공 후 캐시 동기화 공용 - mine-summary는 직접 갱신, 목록은 무효화 */
+/**
+ * 담기 성공 후 캐시 동기화 공용 - mine-summary는 직접 갱신, 목록은 무효화.
+ * countDelta: 실제 추가/삭제가 일어났을 때만 ±1 (이미 빠져 있던 멱등 케이스는 0)
+ */
 const syncContainment = (
   queryClient: ReturnType<typeof useQueryClient>,
   contentId: number,
   collectionId: number,
   contains: boolean,
+  countDelta: number,
 ) => {
   queryClient.setQueryData<MyCollectionSummary[]>(
     ["collections", "mine-summary", contentId],
@@ -189,7 +193,7 @@ const syncContainment = (
           ? {
               ...s,
               containsContent: contains,
-              itemCount: Math.max(0, s.itemCount + (contains ? 1 : -1)),
+              itemCount: Math.max(0, s.itemCount + countDelta),
             }
           : s,
       ),
@@ -226,7 +230,7 @@ export const useAddCollectionItem = (contentId: number) => {
               }
             : old,
       );
-      syncContainment(queryClient, contentId, collectionId, true);
+      syncContainment(queryClient, contentId, collectionId, true, 1);
     },
   });
 };
@@ -258,7 +262,7 @@ export const useRemoveCollectionItem = (contentId: number) => {
         });
         item = fetched.items.find((i) => i.contentId === contentId);
       }
-      if (!item) return; // 이미 빠져 있음
+      if (!item) return false; // 이미 빠져 있음 - 삭제 없음
       try {
         await collectionApi.deleteItem(collectionId, item.itemId);
       } catch (error) {
@@ -266,20 +270,31 @@ export const useRemoveCollectionItem = (contentId: number) => {
           throw error;
         }
       }
+      return true;
     },
-    onSuccess: (_res, { collectionId }) => {
-      queryClient.setQueryData<CollectionDetail>(
-        ["collection", collectionId],
-        (old) =>
-          old
-            ? {
-                ...old,
-                itemCount: Math.max(0, old.itemCount - 1),
-                items: old.items.filter((i) => i.contentId !== contentId),
-              }
-            : old,
+    onSuccess: (deleted, { collectionId }) => {
+      // 실제 삭제된 경우에만 상세 아이템/카운트 보정 - 미발견 멱등 케이스에서
+      // 카운트가 -1로 어긋나지 않게 한다
+      if (deleted) {
+        queryClient.setQueryData<CollectionDetail>(
+          ["collection", collectionId],
+          (old) =>
+            old
+              ? {
+                  ...old,
+                  itemCount: Math.max(0, old.itemCount - 1),
+                  items: old.items.filter((i) => i.contentId !== contentId),
+                }
+              : old,
+        );
+      }
+      syncContainment(
+        queryClient,
+        contentId,
+        collectionId,
+        false,
+        deleted ? -1 : 0,
       );
-      syncContainment(queryClient, contentId, collectionId, false);
     },
   });
 };
