@@ -18,8 +18,7 @@ function PublicLayout() {
   // 상세는 <lg에서 페이지 자체의 뒤로가기 바(목업 .d-nav)가 상단을 담당 -
   // SiteHeader는 lg+ 전용. lg:contents로 래퍼 박스를 없애 sticky 동작 불변.
   // 푸터도 이 라우트 <lg에서는 고정 액션 바만큼 하단 여백을 받는다(아래 참고).
-  // 컬렉션 상세도 같은 문법 - 단 /collections/new(자리 라우트)는 숫자 id가
-  // 아니므로 제외한다.
+  // 컬렉션 상세도 같은 문법 - 단 /collections/new는 숫자 id가 아니므로 제외.
   const collectionDetailMatch = matchPath(
     "/collections/:id",
     location.pathname,
@@ -29,9 +28,20 @@ function PublicLayout() {
     (!!collectionDetailMatch &&
       /^\d+$/.test(collectionDetailMatch.params.id ?? ""));
 
+  // 컬렉션 생성/편집(C-FE2)도 <lg에서 자체 상단 바(X + 저장)를 쓴다 (목업 5c).
+  // 고정 하단 액션 바는 없어 푸터 여백 규칙은 상세만 적용.
+  const collectionEditMatch = matchPath(
+    "/collections/:id/edit",
+    location.pathname,
+  );
+  const isOwnShellRoute =
+    !!matchPath("/collections/new", location.pathname) ||
+    (!!collectionEditMatch &&
+      /^\d+$/.test(collectionEditMatch.params.id ?? ""));
+
   return (
     <div className="flex min-h-screen flex-col">
-      {isDetailRoute ? (
+      {isDetailRoute || isOwnShellRoute ? (
         <div className="hidden lg:contents">
           <SiteHeader />
         </div>

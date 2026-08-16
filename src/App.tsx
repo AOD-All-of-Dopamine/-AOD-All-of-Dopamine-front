@@ -23,7 +23,8 @@ import ReviewPage from "./pages/review-page";
 import SearchPage from "./pages/search-page";
 import CollectionsPage from "./pages/collections-page";
 import CollectionDetailPage from "./pages/collection-detail-page";
-import CollectionWipPage from "./pages/collection-wip-page";
+import CollectionNewPage from "./pages/collection-new-page";
+import CollectionEditPage from "./pages/collection-edit-page";
 
 const publicRoutes: RouteObject[] = [
   {
@@ -44,10 +45,9 @@ const publicRoutes: RouteObject[] = [
       { path: "profile/likes", element: <MyLikesPage /> },
       { path: "work/:id", element: <WorkDetailPage /> },
       { path: "collections", element: <CollectionsPage /> },
-      // new/edit는 C-FE2 몫 - 진입점 404 방지용 자리 라우트 (C-FE2가 교체)
-      { path: "collections/new", element: <CollectionWipPage /> },
+      { path: "collections/new", element: <CollectionNewPage /> },
       { path: "collections/:id", element: <CollectionDetailPage /> },
-      { path: "collections/:id/edit", element: <CollectionWipPage /> },
+      { path: "collections/:id/edit", element: <CollectionEditPage /> },
       { path: "onboarding", element: <OnboardingPage /> },
       { path: "review/:id", element: <ReviewPage /> },
       { path: "search", element: <SearchPage /> },

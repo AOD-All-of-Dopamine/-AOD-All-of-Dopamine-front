@@ -89,6 +89,50 @@ export interface CollectionLikeResponse {
   likeCount: number;
 }
 
+/** 담기 팝오버용 내 컬렉션 요약 - MyCollectionSummaryDTO */
+export interface MyCollectionSummary {
+  id: number;
+  title: string;
+  domain: string;
+  tint: CollectionTint;
+  visibility: CollectionVisibility;
+  itemCount: number;
+  /** 조회한 contentId가 이미 담겨 있는지 */
+  containsContent: boolean;
+}
+
+/** 생성 요청 - CollectionCreateRequest */
+export interface CollectionCreateBody {
+  /** 필수, 60자 이내 */
+  title: string;
+  /** 선택, 300자 이내 */
+  description?: string;
+  /** 필수, Domain enum명 */
+  domain: string;
+  /** 선택, 기본 PINE */
+  tint?: CollectionTint;
+  /** 선택, 기본 PUBLIC */
+  visibility?: CollectionVisibility;
+}
+
+/**
+ * 부분 수정 요청 - CollectionUpdateRequest.
+ * 미포함(undefined) 필드는 미변경. 편차(C-BE): domain은 변경 불가.
+ */
+export interface CollectionUpdateBody {
+  title?: string;
+  description?: string;
+  tint?: CollectionTint;
+  visibility?: CollectionVisibility;
+}
+
+/** 아이템 부분 수정 - null 필드 미변경, comment 빈 문자열은 코멘트 삭제 */
+export interface CollectionItemUpdateBody {
+  comment?: string;
+  /** 편차(C-BE): 직접 설정(주변 시프트 없음) - 재정렬은 reorderItems 사용 */
+  position?: number;
+}
+
 export interface CollectionsQueryParams {
   sort?: "popular" | "latest";
   /** Domain enum명 단수 (MOVIE/TV/GAME/WEBTOON/WEBNOVEL) */
@@ -162,5 +206,92 @@ export const collectionApi = {
       `/api/collections/${id}/like`,
     );
     return data;
+  },
+
+  // ========== 소유 표면 (C-FE2) - 전부 로그인 필수(401), 소유자 아님 403 ==========
+
+  /**
+   * 담기 팝오버용 - 해당 작품 도메인의 내 컬렉션 + 각각의 포함 여부.
+   * 편차(C-BE): 타 도메인 컬렉션은 반환하지 않는다 (담기 불가 - 400).
+   */
+  getMyCollectionSummaries: async (
+    contentId: number,
+  ): Promise<MyCollectionSummary[]> => {
+    const { data } = await privateApi.get<MyCollectionSummary[]>(
+      "/api/collections/mine/summary",
+      { params: { contentId } },
+    );
+    return data;
+  },
+
+  /** 컬렉션 생성 - 검증 실패 400 (제목 필수·60자, 설명 300자, domain enum) */
+  createCollection: async (
+    body: CollectionCreateBody,
+  ): Promise<CollectionSummary> => {
+    const { data } = await privateApi.post<CollectionSummary>(
+      "/api/collections",
+      body,
+    );
+    return data;
+  },
+
+  /** 컬렉션 메타 수정 - 미포함 필드 미변경, domain 변경 불가 */
+  updateCollection: async (
+    id: number,
+    body: CollectionUpdateBody,
+  ): Promise<CollectionSummary> => {
+    const { data } = await privateApi.patch<CollectionSummary>(
+      `/api/collections/${id}`,
+      body,
+    );
+    return data;
+  },
+
+  /** 컬렉션 삭제 (아이템·좋아요 cascade) */
+  deleteCollection: async (id: number): Promise<void> => {
+    await privateApi.delete(`/api/collections/${id}`);
+  },
+
+  /** 아이템 추가 - 말미 position, 도메인 불일치 400, 중복 409 */
+  addItem: async (
+    collectionId: number,
+    body: { contentId: number; comment?: string },
+  ): Promise<CollectionItem> => {
+    const { data } = await privateApi.post<CollectionItem>(
+      `/api/collections/${collectionId}/items`,
+      body,
+    );
+    return data;
+  },
+
+  /** 아이템 수정 (코멘트/위치) */
+  updateItem: async (
+    collectionId: number,
+    itemId: number,
+    body: CollectionItemUpdateBody,
+  ): Promise<CollectionItem> => {
+    const { data } = await privateApi.patch<CollectionItem>(
+      `/api/collections/${collectionId}/items/${itemId}`,
+      body,
+    );
+    return data;
+  },
+
+  /** 아이템 삭제 */
+  deleteItem: async (collectionId: number, itemId: number): Promise<void> => {
+    await privateApi.delete(`/api/collections/${collectionId}/items/${itemId}`);
+  },
+
+  /**
+   * 일괄 재정렬 - itemIds는 컬렉션 전체 아이템과 완전 일치해야 한다
+   * (편차 C-BE: 부분 목록은 400)
+   */
+  reorderItems: async (
+    collectionId: number,
+    itemIds: number[],
+  ): Promise<void> => {
+    await privateApi.put(`/api/collections/${collectionId}/items/order`, {
+      itemIds,
+    });
   },
 };

@@ -4,11 +4,14 @@ import {
   useQueryClient,
   UseQueryOptions,
 } from "@tanstack/react-query";
+import axios from "axios";
 import {
   collectionApi,
+  CollectionCreateBody,
   CollectionDetail,
   CollectionSummary,
   CollectionsQueryParams,
+  MyCollectionSummary,
 } from "../api/collectionApi";
 import { PageResponse } from "../types/api";
 
@@ -118,6 +121,155 @@ export const useToggleCollectionLike = (collectionId: number) => {
           old ? { ...old, likedByMe: res.liked, likeCount: res.likeCount } : old,
       );
       queryClient.invalidateQueries({ queryKey: ["collections"] });
+    },
+  });
+};
+
+// ========== 소유 표면 (C-FE2) ==========
+
+/**
+ * 담기 팝오버용 - 해당 작품 도메인의 내 컬렉션 + 포함 여부.
+ * enabled로 발사 제어 (메뉴 열림 + 로그인 시에만).
+ */
+export const useMyCollectionSummaries = (contentId: number, enabled = true) => {
+  return useQuery<MyCollectionSummary[]>({
+    queryKey: ["collections", "mine-summary", contentId],
+    queryFn: () => collectionApi.getMyCollectionSummaries(contentId),
+    enabled: enabled && !!contentId,
+  });
+};
+
+/** 컬렉션 생성 - 성공 시 목록·요약 캐시 무효화 (["collections"] 전체) */
+export const useCreateCollection = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CollectionCreateBody) =>
+      collectionApi.createCollection(body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["collections"] });
+    },
+  });
+};
+
+/** 컬렉션 삭제 - 상세 캐시 제거 + 목록·요약 캐시 무효화 */
+export const useDeleteCollection = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (collectionId: number) =>
+      collectionApi.deleteCollection(collectionId),
+    onSuccess: (_res, collectionId) => {
+      queryClient.removeQueries({ queryKey: ["collection", collectionId] });
+      queryClient.invalidateQueries({ queryKey: ["collections"] });
+    },
+  });
+};
+
+/** 담기 성공 후 캐시 동기화 공용 - mine-summary는 직접 갱신, 목록은 무효화 */
+const syncContainment = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  contentId: number,
+  collectionId: number,
+  contains: boolean,
+) => {
+  queryClient.setQueryData<MyCollectionSummary[]>(
+    ["collections", "mine-summary", contentId],
+    (old) =>
+      old?.map((s) =>
+        s.id === collectionId
+          ? {
+              ...s,
+              containsContent: contains,
+              itemCount: Math.max(0, s.itemCount + (contains ? 1 : -1)),
+            }
+          : s,
+      ),
+  );
+  // 목록 카드(itemCount·커버)만 무효화 - mine-summary는 위에서 이미 동기화됨
+  queryClient.invalidateQueries({ queryKey: ["collections", "public"] });
+  queryClient.invalidateQueries({ queryKey: ["collections", "mine"] });
+};
+
+/**
+ * 담기 (작품 -> 컬렉션). 성공 시 상세 캐시에 아이템을 말미 추가하고
+ * mine-summary의 포함 여부를 직접 전이한다. 409(이미 담김)는 호출부에서
+ * isAlreadyInCollectionError로 판별해 포함 상태 동기화에 쓴다.
+ */
+export const useAddCollectionItem = (contentId: number) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      collectionId,
+      comment,
+    }: {
+      collectionId: number;
+      comment?: string;
+    }) => collectionApi.addItem(collectionId, { contentId, comment }),
+    onSuccess: (item, { collectionId }) => {
+      queryClient.setQueryData<CollectionDetail>(
+        ["collection", collectionId],
+        (old) =>
+          old
+            ? {
+                ...old,
+                itemCount: old.itemCount + 1,
+                items: [...old.items, item],
+              }
+            : old,
+      );
+      syncContainment(queryClient, contentId, collectionId, true);
+    },
+  });
+};
+
+/** 409(이미 컬렉션에 담긴 작품) 판별 */
+export const isAlreadyInCollectionError = (error: unknown): boolean =>
+  axios.isAxiosError(error) && error.response?.status === 409;
+
+/**
+ * 빼기 (컬렉션에서 작품 제거).
+ * 편차: mine/summary 계약에 itemId가 없어 상세를 조회해 itemId를 해석한다 -
+ * 캐시된 상세가 있으면 재사용, 없으면 1회 조회(조회수 +1 부작용, 백로그 기록).
+ * 이미 빠져 있으면(미발견·404) 멱등 성공 처리.
+ */
+export const useRemoveCollectionItem = (contentId: number) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ collectionId }: { collectionId: number }) => {
+      const cached = queryClient.getQueryData<CollectionDetail>([
+        "collection",
+        collectionId,
+      ]);
+      let item = cached?.items.find((i) => i.contentId === contentId);
+      if (!item) {
+        const fetched = await queryClient.fetchQuery<CollectionDetail>({
+          queryKey: ["collection", collectionId],
+          queryFn: () => collectionApi.getCollectionDetail(collectionId),
+          staleTime: 0,
+        });
+        item = fetched.items.find((i) => i.contentId === contentId);
+      }
+      if (!item) return; // 이미 빠져 있음
+      try {
+        await collectionApi.deleteItem(collectionId, item.itemId);
+      } catch (error) {
+        if (!(axios.isAxiosError(error) && error.response?.status === 404)) {
+          throw error;
+        }
+      }
+    },
+    onSuccess: (_res, { collectionId }) => {
+      queryClient.setQueryData<CollectionDetail>(
+        ["collection", collectionId],
+        (old) =>
+          old
+            ? {
+                ...old,
+                itemCount: Math.max(0, old.itemCount - 1),
+                items: old.items.filter((i) => i.contentId !== contentId),
+              }
+            : old,
+      );
+      syncContainment(queryClient, contentId, collectionId, false);
     },
   });
 };

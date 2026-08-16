@@ -12,6 +12,7 @@ import {
   ChatCircleText,
   CircleNotch,
   PencilSimple,
+  StackPlus,
   Star,
   ThumbsUp,
   WarningCircle,
@@ -40,6 +41,10 @@ import { WEEKDAY_KO } from "../components/ui/workCardInfo";
 import ReviewCard from "../components/ui/ReviewCard";
 import EmptyState from "../components/ui/EmptyState";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
+import {
+  AddToCollectionPopover,
+  AddToCollectionSheet,
+} from "../components/ui/AddToCollectionMenu";
 
 /**
  * /work/:id - mockups/work-detail-mockup.html 이식.
@@ -267,6 +272,8 @@ export default function WorkDetailPage() {
 
   const [reviewSize, setReviewSize] = useState(REVIEW_PAGE_SIZE);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  // <lg 담기 바텀시트 (C-FE2) - lg+ 팝오버는 AddToCollectionPopover가 자체 관리
+  const [isCollectSheetOpen, setIsCollectSheetOpen] = useState(false);
   // <lg 시놉시스 4줄 클램프 - 열림 상태 + 실측 overflow(더보기 노출 판정)
   const [isSynopsisOpen, setIsSynopsisOpen] = useState(false);
   const [synopsisClamped, setSynopsisClamped] = useState(false);
@@ -350,6 +357,15 @@ export default function WorkDetailPage() {
       return;
     }
     navigate(`/review/${contentId}`);
+  };
+
+  // <lg 담기 진입 - 비로그인은 기존 관례(ConfirmDialog)로 로그인 유도
+  const handleCollectSheet = () => {
+    if (!isAuthenticated) {
+      setIsLoginOpen(true);
+      return;
+    }
+    setIsCollectSheetOpen(true);
   };
 
   const notFound =
@@ -757,6 +773,13 @@ export default function WorkDetailPage() {
                 <PencilSimple size={17} />
                 리뷰 쓰기
               </button>
+              {/* 컬렉션 담기 (C-FE2) - 트리거+팝오버 세트, 기존 버튼 로직 불변 */}
+              <AddToCollectionPopover
+                contentId={contentId}
+                domain={work.domain}
+                isAuthenticated={isAuthenticated}
+                onRequireLogin={() => setIsLoginOpen(true)}
+              />
             </div>
 
             {watchLinks.length > 0 && (
@@ -990,7 +1013,26 @@ export default function WorkDetailPage() {
         >
           <PencilSimple size={20} />
         </button>
+        <button
+          type="button"
+          onClick={handleCollectSheet}
+          aria-label="컬렉션에 담기"
+          aria-haspopup="dialog"
+          aria-expanded={isCollectSheetOpen}
+          className="grid h-12 w-12 flex-none place-items-center rounded-full border border-line-strong bg-surface text-ink active:scale-[0.98]"
+        >
+          <StackPlus size={20} />
+        </button>
       </div>
+
+      {/* <lg 담기 바텀시트 - display:none 조상 밖(페이지 루트)에 마운트해야
+          top-layer가 그려진다 (컴포넌트 주석 참고) */}
+      <AddToCollectionSheet
+        contentId={contentId}
+        domain={work.domain}
+        open={isCollectSheetOpen}
+        onClose={() => setIsCollectSheetOpen(false)}
+      />
 
       {isLoginOpen && (
         <ConfirmDialog

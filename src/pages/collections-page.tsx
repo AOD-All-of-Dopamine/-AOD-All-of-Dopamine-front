@@ -23,8 +23,6 @@ import Pagination from "../components/ui/Pagination";
  *   같은 페이지 번호로 병합한다. 페이지 내 정렬은 클라이언트에서 재정렬하지만
  *   페이지 경계를 넘는 전역 정렬은 근사치 (컬렉션 수가 적은 초기에 수용).
  * - 도메인 탭의 정렬은 인기순 고정 (탭이 단일 선택이라 정렬 축과 조합 불가).
- * - "새 컬렉션" 버튼은 /collections/new로 push - 페이지는 C-FE2 몫이라
- *   404 방지용 자리 라우트(collection-wip-page)가 임시로 받는다.
  */
 
 const PAGE_SIZE = 20;

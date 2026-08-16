@@ -46,8 +46,8 @@ import ConfirmDialog from "../components/ui/ConfirmDialog";
  *   전례와 동일).
  * - 모바일 액션 바의 "담긴 작품 전부 관심 등록" 고스트 버튼 생략 - 일괄 북마크
  *   API가 없어 좋아요 버튼만 배치.
- * - owner면 편집 진입점(lg+ 고스트 필, <lg 상단 바 아이콘) - 페이지는 C-FE2
- *   몫이라 자리 라우트(collection-wip-page)로 연결.
+ * - owner면 편집 진입점(lg+ 고스트 필, <lg 상단 바 아이콘) -
+ *   /collections/:id/edit (collection-edit-page).
  */
 
 const categoryOf = (domain: string): Category => {
