@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AOD 홈 목업 (라이트 테마 예시안)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>
+/* AOD 홈 라이트 테마 예시안 — 탐색·상세 목업과 동일 토큰 */
+:root {
+  --bg: #f7f6f4; --surface: #fdfdfc;
+  --border: #e7e5e1; --border-strong: #d8d5cf;
+  --text: #1c1b19; --text-2: #716f6a; --text-3: #9c9993;
+  --accent: #e2542c; --accent-ink: #b23d1c; --accent-tint: #faeee9;
+  --star: #d9930d;
+  --shadow: 0 1px 2px rgb(58 48 40 / .05), 0 4px 14px rgb(58 48 40 / .06);
+  --shadow-lift: 0 2px 4px rgb(58 48 40 / .06), 0 10px 28px rgb(58 48 40 / .10);
+  --r-panel: 12px; --r-input: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { color-scheme: light; }
+body {
+  font-family: "Pretendard Variable", Pretendard, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.5; font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: none; }
+button:active { transform: scale(.98); }
+::selection { background: var(--accent-tint); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+img { display: block; }
+
+/* 내비게이션 */
+.nav { position: sticky; top: 0; z-index: 20; height: 64px; background: rgb(253 253 252 / .88); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+.nav-inner { max-width: 1280px; margin: 0 auto; height: 100%; padding: 0 24px; display: flex; align-items: center; gap: 28px; }
+.logo { font-weight: 800; font-size: 21px; letter-spacing: -.04em; text-decoration: none; color: var(--text); }
+.logo em { font-style: normal; color: var(--accent); }
+.nav-menu { display: flex; gap: 4px; list-style: none; }
+.nav-menu a { display: block; padding: 8px 12px; border-radius: var(--r-input); color: var(--text-2); text-decoration: none; font-weight: 500; }
+.nav-menu a:hover { color: var(--text); background: rgb(28 27 25 / .04); }
+.nav-menu a[aria-current] { color: var(--text); font-weight: 700; }
+.nav-search { margin-left: auto; display: flex; align-items: center; gap: 8px; width: 280px; height: 38px; padding: 0 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; color: var(--text-3); }
+.nav-search input { flex: 1; border: none; outline: none; background: none; color: var(--text); }
+.nav-search input::placeholder { color: var(--text-3); }
+.btn-login { padding: 9px 18px; border-radius: 999px; background: var(--text); color: var(--surface); font-weight: 600; font-size: 14px; }
+
+.wrap { max-width: 1280px; margin: 0 auto; padding: 28px 24px 0; }
+
+/* ---------- 피처드 히어로 (오늘의 추천) ---------- */
+.hero { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+.feature {
+  position: relative; display: block; border-radius: var(--r-panel); overflow: hidden;
+  border: 1px solid var(--border); box-shadow: var(--shadow); text-decoration: none; color: #fff;
+  transition: transform .18s cubic-bezier(.16,1,.3,1), box-shadow .18s;
+}
+.feature:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift); }
+.feature img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+.feature .scrim {
+  position: relative; z-index: 1; height: 100%;
+  display: flex; flex-direction: column; justify-content: flex-end; gap: 8px;
+  padding: 26px 28px;
+  background: linear-gradient(180deg, rgb(12 10 8 / 0) 30%, rgb(12 10 8 / .78) 100%);
+}
+.feature-main { min-height: 400px; }
+.feature .kicker { font-size: 12.5px; font-weight: 700; letter-spacing: .02em; color: rgb(255 255 255 / .85); }
+.feature h2 { font-size: 30px; font-weight: 800; letter-spacing: -.03em; line-height: 1.15; }
+.feature .sub { font-size: 14.5px; color: rgb(255 255 255 / .82); }
+.feature-side { display: grid; grid-template-rows: 1fr 1fr; gap: 16px; }
+.feature-side .feature h2 { font-size: 19px; }
+.feature-side .scrim { padding: 18px 20px; }
+
+/* ---------- 공통 섹션 ---------- */
+section { margin-top: 56px; }
+.sec-head { display: flex; align-items: baseline; gap: 12px; }
+.sec-head h2 { font-size: 21px; font-weight: 800; letter-spacing: -.02em; }
+.sec-head .more {
+  margin-left: auto; font-size: 14px; font-weight: 600; color: var(--text-2);
+  text-decoration: none; display: inline-flex; align-items: center; gap: 3px;
+}
+.sec-head .more:hover { color: var(--accent-ink); }
+
+/* ---------- 신작 포스터 릴 ---------- */
+.rail {
+  margin-top: 16px; display: flex; gap: 14px; overflow-x: auto;
+  scroll-snap-type: x mandatory; padding-bottom: 6px;
+}
+.rail::-webkit-scrollbar { height: 8px; }
+.rail::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; }
+.rail-card {
+  flex: 0 0 168px; scroll-snap-align: start; text-decoration: none; color: inherit;
+}
+.rail-card .thumb {
+  aspect-ratio: 2 / 3; border-radius: var(--r-panel); overflow: hidden;
+  border: 1px solid var(--border); background: #ece9e4; box-shadow: var(--shadow);
+  transition: transform .18s cubic-bezier(.16,1,.3,1);
+}
+.rail-card:hover .thumb { transform: translateY(-3px); }
+.rail-card .thumb img { width: 100%; height: 100%; object-fit: cover; }
+.rail-card .t { margin-top: 9px; font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rail-card .m { margin-top: 2px; font-size: 12.5px; color: var(--text-2); }
+
+/* ---------- 최근 리뷰 인용 카드 ---------- */
+.review-grid { margin-top: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.rv {
+  display: flex; gap: 14px; padding: 16px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-panel);
+  box-shadow: var(--shadow); text-decoration: none; color: inherit;
+  transition: transform .18s cubic-bezier(.16,1,.3,1);
+}
+.rv:hover { transform: translateY(-3px); }
+.rv .thumb { flex: 0 0 64px; aspect-ratio: 2 / 3; border-radius: var(--r-input); overflow: hidden; background: #ece9e4; }
+.rv .thumb img { width: 100%; height: 100%; object-fit: cover; }
+.rv .t { font-size: 14.5px; font-weight: 700; }
+.rv .score { display: inline-flex; align-items: center; gap: 3px; font-size: 13px; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.rv .score i { color: var(--star); }
+.rv q {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  margin-top: 7px; font-size: 13.5px; color: var(--text-2); quotes: "\201C" "\201D";
+}
+.rv .who { margin-top: 6px; font-size: 12.5px; color: var(--text-3); }
+
+/* ---------- 주간 랭킹 ---------- */
+.rank-list { margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 0 40px; }
+.rank {
+  display: flex; align-items: center; gap: 16px; padding: 13px 4px;
+  text-decoration: none; color: inherit; border-bottom: 1px solid var(--border);
+}
+.rank:hover .t { color: var(--accent-ink); }
+.rank .no { flex: 0 0 34px; font-size: 24px; font-weight: 800; letter-spacing: -.03em; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.rank:first-child .no, .rank:nth-child(2) .no { color: var(--accent); }
+.rank .thumb { flex: 0 0 44px; aspect-ratio: 2 / 3; border-radius: 6px; overflow: hidden; background: #ece9e4; }
+.rank .thumb img { width: 100%; height: 100%; object-fit: cover; }
+.rank .t { font-size: 15px; font-weight: 700; }
+.rank .m { font-size: 13px; color: var(--text-2); margin-top: 1px; }
+.rank .delta { margin-left: auto; font-size: 12.5px; font-weight: 700; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.rank .delta.up { color: var(--accent-ink); }
+
+/* ---------- 출시 예정 ---------- */
+.upcoming { margin-top: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.up-card {
+  display: flex; gap: 14px; align-items: center; padding: 16px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-panel);
+  box-shadow: var(--shadow); text-decoration: none; color: inherit;
+}
+.up-card .thumb { flex: 0 0 56px; aspect-ratio: 2 / 3; border-radius: var(--r-input); overflow: hidden; background: #ece9e4; }
+.up-card .thumb img { width: 100%; height: 100%; object-fit: cover; }
+.up-card .t { font-size: 14.5px; font-weight: 700; }
+.up-card .m { font-size: 13px; color: var(--text-2); margin-top: 2px; }
+.dday {
+  margin-left: auto; flex: 0 0 auto;
+  font-size: 12.5px; font-weight: 800; color: var(--accent-ink);
+  background: var(--accent-tint); border-radius: 999px; padding: 5px 11px;
+  font-variant-numeric: tabular-nums;
+}
+.dday.tba { color: var(--text-2); background: var(--bg); border: 1px solid var(--border); }
+
+/* ---------- 푸터 ---------- */
+footer { margin-top: 72px; border-top: 1px solid var(--border); }
+.foot-inner { max-width: 1280px; margin: 0 auto; padding: 28px 24px 40px; display: flex; align-items: center; gap: 20px; color: var(--text-3); font-size: 13.5px; }
+.foot-inner .logo { font-size: 17px; }
+.foot-inner a { color: var(--text-3); text-decoration: none; }
+.foot-inner a:hover { color: var(--text-2); }
+.foot-inner .right { margin-left: auto; }
+
+/* ---------- 반응형 ---------- */
+@media (max-width: 1023px) {
+  .nav-menu { display: none; }
+  .nav-search { width: auto; flex: 1; }
+  .hero { grid-template-columns: 1fr; }
+  .feature-main { min-height: 300px; }
+  .feature-side { grid-template-rows: none; grid-template-columns: 1fr 1fr; }
+  .feature-side .feature { min-height: 160px; }
+  .review-grid, .upcoming { grid-template-columns: 1fr 1fr; }
+  .rank-list { grid-template-columns: 1fr; }
+}
+@media (max-width: 767px) {
+  .review-grid, .upcoming { grid-template-columns: 1fr; }
+  .feature-side { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .feature, .rail-card .thumb, .rv, button { transition: none; }
+  .feature:hover, .rail-card:hover .thumb, .rv:hover { transform: none; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="logo" href="home-light-mockup.html">AOD<em>.</em></a>
+    <ul class="nav-menu">
+      <li><a href="home-light-mockup.html" aria-current="page">홈</a></li>
+      <li><a href="explore-light-mockup.html">탐색</a></li>
+      <li><a href="ranking-mockup.html">랭킹</a></li>
+      <li><a href="new-releases-mockup.html">신작</a></li>
+    </ul>
+    <div class="nav-search">
+      <i class="ph ph-magnifying-glass"></i>
+      <input type="search" placeholder="작품, 개발사, 작가 검색">
+    </div>
+    <button class="btn-login">로그인</button>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <!-- 오늘의 추천: 피처드 1 + 서브 2 -->
+  <div class="hero">
+    <a class="feature feature-main" href="work-detail-mockup.html?d=game">
+      <img src="https://cdn.akamai.steamstatic.com/steam/apps/2358720/header.jpg" alt="검은 신화: 오공">
+      <div class="scrim">
+        <span class="kicker">오늘의 추천 · 게임</span>
+        <h2>검은 신화: 오공</h2>
+        <p class="sub">서유기를 다시 쓴 액션 대작. 지금 가장 뜨거운 소울라이크.</p>
+      </div>
+    </a>
+    <div class="feature-side">
+      <a class="feature" href="work-detail-mockup.html?d=webtoon">
+        <img src="https://picsum.photos/seed/aod-webtoon-hwasan/600/400" alt="화산귀환">
+        <div class="scrim">
+          <span class="kicker">웹툰</span>
+          <h2>화산귀환</h2>
+        </div>
+      </a>
+      <a class="feature" href="work-detail-mockup.html?d=movie">
+        <img src="https://picsum.photos/seed/aod-movie-dune2/600/400" alt="듄: 파트 2">
+        <div class="scrim">
+          <span class="kicker">영화</span>
+          <h2>듄: 파트 2</h2>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- 신작 릴 -->
+  <section>
+    <div class="sec-head">
+      <h2>새로 나온 작품</h2>
+      <a class="more" href="new-releases-mockup.html">전체 보기 <i class="ph ph-caret-right"></i></a>
+    </div>
+    <div class="rail">
+      <a class="rail-card" href="work-detail-mockup.html?d=game">
+        <div class="thumb"><img loading="lazy" src="https://cdn.akamai.steamstatic.com/steam/apps/2358720/library_600x900.jpg" alt="검은 신화: 오공"></div>
+        <div class="t">검은 신화: 오공</div><div class="m">게임 · Steam</div>
+      </a>
+      <a class="rail-card" href="work-detail-mockup.html?d=movie">
+        <div class="thumb"><img loading="lazy" src="https://picsum.photos/seed/aod-movie-roundup4/400/600" alt="범죄도시 4"></div>
+        <div class="t">범죄도시 4</div><div class="m">영화 · 티빙</div>
+      </a>
+      <a class="rail-card" href="work-detail-mockup.html?d=game">
+        <div class="thumb"><img loading="lazy" src="https://cdn.akamai.steamstatic.com/steam/apps/2379780/library_600x900.jpg" alt="Balatro"></div>
+        <div class="t">Balatro</div><div class="m">게임 · Steam</div>
+      </a>
+      <a class="rail-card" href="work-detail-mockup.html?d=movie">
+        <div class="thumb"><img loading="lazy" src="https://picsum.photos/seed/aod-movie-dune2/400/600" alt="듄: 파트 2"></div>
+        <div class="t">듄: 파트 2</div><div class="m">영화 · 쿠팡플레이</div>
+      </a>
+      <a class="rail-card" href="work-detail-mockup.html?d=webtoon">
+        <div class="thumb"><img loading="lazy" src="https://picsum.photos/seed/aod-webtoon-maru/400/600" alt="마루는 강쥐"></div>
+        <div class="t">마루는 강쥐</div><div class="m">웹툰 · 네이버웹툰</div>
+      </a>
+      <a class="rail-card" href="work-detail-mockup.html?d=movie">
+        <div class="thumb"><img loading="lazy" src="https://picsum.photos/seed/aod-movie-seoul/400/600" alt="서울의 봄"></div>
+        <div class="t">서울의 봄</div><div class="m">영화 · 넷플릭스</div>
+      </a>
+      <a class="rail-card" href="work-detail-mockup.html?d=game">
+        <div class="thumb"><img loading="lazy" src="https://cdn.akamai.steamstatic.com/steam/apps/1966720/library_600x900.jpg" alt="리썰 컴퍼니"></div>
+        <div class="t">리썰 컴퍼니</div><div class="m">게임 · Steam</div>
+      </a>
+      <a class="rail-card" href="work-detail-mockup.html?d=webtoon">
+        <div class="thumb"><img loading="lazy" src="https://picsum.photos/seed/aod-webtoon-orv/400/600" alt="전지적 독자 시점"></div>
+        <div class="t">전지적 독자 시점</div><div class="m">웹툰 · 네이버웹툰</div>
+      </a>
+    </div>
+  </section>
+
+  <!-- 최근 리뷰 -->
+  <section>
+    <div class="sec-head">
+      <h2>방금 올라온 리뷰</h2>
+      <a class="more" href="#">더 보기 <i class="ph ph-caret-right"></i></a>
+    </div>
+    <div class="review-grid">
+      <a class="rv" href="work-detail-mockup.html?d=game">
+        <div class="thumb"><img loading="lazy" src="https://cdn.akamai.steamstatic.com/steam/apps/1627720/library_600x900.jpg" alt="P의 거짓"></div>
+        <div>
+          <div class="t">P의 거짓</div>
+          <span class="score"><i class="ph-fill ph-star"></i>4.5</span>
+          <q>패링 타이밍이 빡빡하지만 손에 익는 순간 예술이 된다.</q>
+          <div class="who">패링수련생</div>
+        </div>
+      </a>
+      <a class="rv" href="work-detail-mockup.html?d=webtoon">
+        <div class="thumb"><img loading="lazy" src="https://picsum.photos/seed/aod-webtoon-hwasan/400/600" alt="화산귀환"></div>
+        <div>
+          <div class="t">화산귀환</div>
+          <span class="score"><i class="ph-fill ph-star"></i>5.0</span>
+          <q>청명이 궁시렁대는 것만 봐도 일주일 피로가 풀린다.</q>
+          <div class="who">매화검존1호팬</div>
+        </div>
+      </a>
+      <a class="rv" href="work-detail-mockup.html?d=movie">
+        <div class="thumb"><img loading="lazy" src="https://picsum.photos/seed/aod-movie-parasite/400/600" alt="기생충"></div>
+        <div>
+          <div class="t">기생충</div>
+          <span class="score"><i class="ph-fill ph-star"></i>4.5</span>
+          <q>계단 하나로 계급을 그려낸다. 두 번째 볼 때 더 무서운 영화.</q>
+          <div class="who">밤샘시네필</div>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- 주간 랭킹 -->
+  <section>
+    <div class="sec-head">
+      <h2>이번 주 인기</h2>
+      <a class="more" href="ranking-mockup.html">랭킹 전체 <i class="ph ph-caret-right"></i></a>
+    </div>
+    <div class="rank-list">
+      <a class="rank" href="work-detail-mockup.html?d=webtoon">
+        <span class="no">1</span>
+        <div class="thumb"><img loading="lazy" src="https://picsum.photos/seed/aod-webtoon-hwasan/200/300" alt=""></div>
+        <div><div class="t">화산귀환</div><div class="m">웹툰 · 무협</div></div>
+        <span class="delta up">▲ 2</span>
+      </a>
+      <a class="rank" href="work-detail-mockup.html?d=game">
+        <span class="no">2</span>
+        <div class="thumb"><img loading="lazy" src="https://cdn.akamai.steamstatic.com/steam/apps/2358720/library_600x900.jpg" alt=""></div>
+        <div><div class="t">검은 신화: 오공</div><div class="m">게임 · 액션 RPG</div></div>
+        <span class="delta up">▲ 5</span>
+      </a>
+      <a class="rank" href="work-detail-mockup.html?d=movie">
+        <span class="no">3</span>
+        <div class="thumb"><img loading="lazy" src="https://picsum.photos/seed/aod-movie-seoul/200/300" alt=""></div>
+        <div><div class="t">서울의 봄</div><div class="m">영화 · 드라마</div></div>
+        <span class="delta">-</span>
+      </a>
+      <a class="rank" href="work-detail-mockup.html?d=webtoon">
+        <span class="no">4</span>
+        <div class="thumb"><img loading="lazy" src="https://picsum.photos/seed/aod-webtoon-orv/200/300" alt=""></div>
+        <div><div class="t">전지적 독자 시점</div><div class="m">웹툰 · 판타지</div></div>
+        <span class="delta">▼ 1</span>
+      </a>
+      <a class="rank" href="work-detail-mockup.html?d=game">
+        <span class="no">5</span>
+        <div class="thumb"><img loading="lazy" src="https://cdn.akamai.steamstatic.com/steam/apps/2379780/library_600x900.jpg" alt=""></div>
+        <div><div class="t">Balatro</div><div class="m">게임 · 로그라이크</div></div>
+        <span class="delta up">▲ 3</span>
+      </a>
+      <a class="rank" href="work-detail-mockup.html?d=movie">
+        <span class="no">6</span>
+        <div class="thumb"><img loading="lazy" src="https://picsum.photos/seed/aod-movie-dune2/200/300" alt=""></div>
+        <div><div class="t">듄: 파트 2</div><div class="m">영화 · SF</div></div>
+        <span class="delta">-</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- 출시 예정 -->
+  <section>
+    <div class="sec-head">
+      <h2>출시 예정</h2>
+      <a class="more" href="new-releases-mockup.html">전체 보기 <i class="ph ph-caret-right"></i></a>
+    </div>
+    <div class="upcoming">
+      <a class="up-card" href="#">
+        <div class="thumb"><img loading="lazy" src="https://picsum.photos/seed/aod-up-gta6/200/300" alt=""></div>
+        <div><div class="t">GTA VI</div><div class="m">게임 · 11월 19일</div></div>
+        <span class="dday">D-99</span>
+      </a>
+      <a class="up-card" href="#">
+        <div class="thumb"><img loading="lazy" src="https://picsum.photos/seed/aod-up-dune3/200/300" alt=""></div>
+        <div><div class="t">듄: 파트 3</div><div class="m">영화 · 12월 18일</div></div>
+        <span class="dday">D-128</span>
+      </a>
+      <a class="up-card" href="#">
+        <div class="thumb"><img loading="lazy" src="https://picsum.photos/seed/aod-up-witcher4/200/300" alt=""></div>
+        <div><div class="t">더 위쳐 4</div><div class="m">게임 · 발매일 미정</div></div>
+        <span class="dday tba">미정</span>
+      </a>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div class="foot-inner">
+    <span class="logo">AOD<em style="font-style:normal;color:var(--accent)">.</em></span>
+    <a href="#">이용약관</a>
+    <a href="#">개인정보 처리방침</a>
+    <span class="right">© 2026 AOD</span>
+  </div>
+</footer>
+
+</body>
+</html>

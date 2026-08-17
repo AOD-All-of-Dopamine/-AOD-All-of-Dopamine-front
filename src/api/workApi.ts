@@ -4,8 +4,17 @@ import { PageResponse, WorkSummary, WorkDetail } from "../types/api";
 export interface WorksQueryParams {
   domain?: string;
   keyword?: string;
+  /** contents.platforms && 겹침 매칭 (다중 OR) */
   platforms?: string[];
+  /** contents.genres @> 포함 매칭 (다중 AND) */
   genres?: string[];
+  /** contents.release_date 범위 (yyyy-MM-dd) */
+  releaseFrom?: string;
+  releaseTo?: string;
+  /** 웹툰 도메인 컬럼 축 - 웹툰 외 도메인에 보내면 결과가 0건이 되므로 웹툰에서만 사용 */
+  status?: string;
+  weekdays?: string[];
+  ageRatings?: string[];
   page?: number;
   size?: number;
   sortBy?: string;
@@ -34,6 +43,11 @@ export const workApi = {
           keyword: params.keyword,
           platforms: params.platforms,
           genres: params.genres,
+          releaseFrom: params.releaseFrom,
+          releaseTo: params.releaseTo,
+          status: params.status,
+          weekdays: params.weekdays,
+          ageRatings: params.ageRatings,
           page: params.page ?? 0,
           size: params.size ?? 20,
           sortBy: params.sortBy ?? "masterTitle",

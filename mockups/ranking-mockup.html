@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AOD 랭킹 목업 (라이트 테마 예시안)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<style>
+/* AOD 랭킹 라이트 테마 예시안 — 다른 목업과 동일 토큰
+   라운드 규칙: 카드/패널 12px, 입력 8px, 칩/버튼 pill
+   칩 위계: 도메인(활성=다크) > 장르(활성=액센트 틴트) */
+:root {
+  --bg: #f7f6f4; --surface: #fdfdfc;
+  --border: #e7e5e1; --border-strong: #d8d5cf;
+  --text: #1c1b19; --text-2: #716f6a; --text-3: #9c9993;
+  --accent: #e2542c; --accent-ink: #b23d1c; --accent-tint: #faeee9;
+  --shadow: 0 1px 2px rgb(58 48 40 / .05), 0 4px 14px rgb(58 48 40 / .06);
+  --shadow-lift: 0 2px 4px rgb(58 48 40 / .06), 0 10px 28px rgb(58 48 40 / .10);
+  --r-panel: 12px; --r-input: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { color-scheme: light; }
+body {
+  font-family: "Pretendard Variable", Pretendard, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.5; font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: none; }
+button:active { transform: scale(.98); }
+::selection { background: var(--accent-tint); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+img { display: block; }
+
+/* 내비게이션 */
+.nav { position: sticky; top: 0; z-index: 20; height: 64px; background: rgb(253 253 252 / .88); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+.nav-inner { max-width: 1080px; margin: 0 auto; height: 100%; padding: 0 24px; display: flex; align-items: center; gap: 28px; }
+.logo { font-weight: 800; font-size: 21px; letter-spacing: -.04em; text-decoration: none; color: var(--text); }
+.logo em { font-style: normal; color: var(--accent); }
+.nav-menu { display: flex; gap: 4px; list-style: none; }
+.nav-menu a { display: block; padding: 8px 12px; border-radius: var(--r-input); color: var(--text-2); text-decoration: none; font-weight: 500; }
+.nav-menu a:hover { color: var(--text); background: rgb(28 27 25 / .04); }
+.nav-menu a[aria-current] { color: var(--text); font-weight: 700; }
+.btn-login { margin-left: auto; padding: 9px 18px; border-radius: 999px; background: var(--text); color: var(--surface); font-weight: 600; font-size: 14px; }
+
+.wrap { max-width: 1080px; margin: 0 auto; padding: 28px 24px 80px; }
+
+/* 헤더 컨트롤 */
+.page-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.page-head h1 { font-size: 26px; font-weight: 800; letter-spacing: -.03em; }
+.segmented {
+  display: inline-flex; padding: 4px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
+}
+.seg-btn {
+  padding: 7px 16px; border-radius: 999px; font-size: 14px; font-weight: 600; color: var(--text-2);
+  transition: background .15s, color .15s;
+}
+.seg-btn[aria-pressed="true"] { background: var(--text); color: var(--surface); }
+.segmented.small .seg-btn { padding: 5px 13px; font-size: 13px; }
+
+/* 도메인 칩 + 보조 컨트롤 행 */
+.control-row { margin-top: 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dchip {
+  padding: 8px 16px; border-radius: 999px; font-weight: 600; font-size: 14px;
+  color: var(--text-2); border: 1px solid var(--border); background: var(--surface);
+  transition: background .15s, color .15s;
+}
+.dchip:hover { border-color: var(--border-strong); color: var(--text); }
+.dchip[aria-pressed="true"] { background: var(--text); border-color: var(--text); color: var(--surface); }
+.control-right { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.crit-select {
+  appearance: none; -webkit-appearance: none;
+  padding: 8px 32px 8px 14px; border: 1px solid var(--border); border-radius: var(--r-input);
+  background: var(--surface) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 256 256" fill="%23716f6a"><path d="M213.7 101.7l-80 80a8 8 0 0 1-11.4 0l-80-80A8 8 0 0 1 53.7 90.3L128 164.7l74.3-74.4a8 8 0 0 1 11.4 11.4Z"/></svg>') no-repeat right 12px center;
+  font-size: 13.5px; font-weight: 500; cursor: pointer;
+}
+.crit-select:hover { border-color: var(--border-strong); }
+
+/* 플랫폼 칩 (도메인 하위의 랭킹 원천 선택 — 활성 = 다크) */
+.plat-row { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+.pchip {
+  padding: 6px 14px; border-radius: 999px; font-weight: 600; font-size: 13px;
+  color: var(--text-2); border: 1px solid var(--border); background: var(--surface);
+  transition: background .15s, color .15s;
+}
+.pchip[aria-pressed="true"] { background: var(--text); border-color: var(--text); color: var(--surface); }
+.pchip:disabled { opacity: .45; cursor: not-allowed; }
+
+/* 장르 칩 (보조 위계: 활성 = 액센트 틴트) */
+.genre-row { margin-top: 12px; display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+.gchip {
+  padding: 6px 14px; border-radius: 999px; font-weight: 600; font-size: 13px; white-space: nowrap;
+  color: var(--text-2); border: 1px solid var(--border); background: var(--surface);
+  transition: background .15s, color .15s;
+}
+.gchip:hover { border-color: var(--border-strong); color: var(--text); }
+.gchip[aria-pressed="true"] { background: var(--accent-tint); border-color: transparent; color: var(--accent-ink); }
+
+.source { margin-top: 14px; font-size: 13.5px; color: var(--text-3); }
+
+/* 톱3 포디움 */
+.podium { margin-top: 20px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-items: start; }
+.podium .p2, .podium .p3 { margin-top: 30px; }
+.pod-card {
+  display: block; text-decoration: none; color: inherit;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-panel);
+  overflow: hidden; box-shadow: var(--shadow);
+  transition: transform .18s cubic-bezier(.16,1,.3,1), box-shadow .18s;
+}
+.pod-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift); }
+.pod-card .thumb { aspect-ratio: 2 / 3; background: #ece9e4; overflow: hidden; }
+.pod-card .thumb img { width: 100%; height: 100%; object-fit: cover; }
+.pod-body { display: flex; align-items: center; gap: 12px; padding: 13px 16px; }
+.pod-body .no { font-size: 30px; font-weight: 800; letter-spacing: -.04em; color: var(--text-3); font-variant-numeric: tabular-nums; line-height: 1; }
+.p1 .pod-body .no { color: var(--accent); }
+.pod-body .t { font-size: 15.5px; font-weight: 700; }
+.pod-body .m { font-size: 13px; color: var(--text-2); margin-top: 1px; }
+.pod-body .delta { margin-left: auto; }
+
+/* 리스트 */
+.rank-rows { margin-top: 28px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-panel); box-shadow: var(--shadow); padding: 4px 0; }
+.rank-rows:empty { display: none; }
+.rrow { display: flex; align-items: center; gap: 16px; padding: 12px 20px; text-decoration: none; color: inherit; }
+.rrow + .rrow { border-top: 1px solid var(--border); }
+.rrow:hover .t { color: var(--accent-ink); }
+.rrow .no { flex: 0 0 30px; font-size: 18px; font-weight: 800; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.rrow .thumb { flex: 0 0 42px; aspect-ratio: 2 / 3; border-radius: 6px; overflow: hidden; background: #ece9e4; }
+.rrow .thumb img { width: 100%; height: 100%; object-fit: cover; }
+.rrow .t { font-size: 15px; font-weight: 700; }
+.rrow .m { font-size: 13px; color: var(--text-2); margin-top: 1px; }
+.rrow .delta { margin-left: auto; }
+
+/* 순위 변동 */
+.delta { font-size: 12.5px; font-weight: 700; color: var(--text-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.delta.up { color: var(--accent-ink); }
+.delta.new { color: var(--accent-ink); background: var(--accent-tint); border-radius: 999px; padding: 3px 9px; }
+
+@media (max-width: 767px) {
+  .nav-menu { display: none; }
+  .control-right { margin-left: 0; }
+  .podium { grid-template-columns: 1fr; }
+  .podium .p2, .podium .p3 { margin-top: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .pod-card, button { transition: none; } .pod-card:hover { transform: none; } }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="logo" href="home-light-mockup.html">AOD<em>.</em></a>
+    <ul class="nav-menu">
+      <li><a href="home-light-mockup.html">홈</a></li>
+      <li><a href="explore-light-mockup.html">탐색</a></li>
+      <li><a href="ranking-mockup.html" aria-current="page">랭킹</a></li>
+      <li><a href="new-releases-mockup.html">신작</a></li>
+    </ul>
+    <button class="btn-login">로그인</button>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="page-head">
+    <h1>랭킹</h1>
+  </div>
+
+  <div class="control-row">
+    <span id="domainChips">
+      <button class="dchip" data-d="webtoon" aria-pressed="true">웹툰</button>
+      <button class="dchip" data-d="game" aria-pressed="false">게임</button>
+      <button class="dchip" data-d="movie" aria-pressed="false">영화</button>
+      <button class="dchip" data-d="webnovel" aria-pressed="false">웹소설</button>
+    </span>
+    <span class="control-right">
+      <div class="segmented small" role="group" aria-label="집계 기간" id="periodSeg">
+        <button class="seg-btn" data-p="일간" aria-pressed="true">일간</button>
+        <button class="seg-btn" data-p="주간" aria-pressed="false">주간</button>
+        <button class="seg-btn" data-p="월간" aria-pressed="false">월간</button>
+      </div>
+      <select class="crit-select" id="critSelect" aria-label="집계 기준"></select>
+    </span>
+  </div>
+
+  <div class="plat-row" id="platRow"><!-- JS 렌더: 도메인별 랭킹 원천 플랫폼 --></div>
+
+  <div class="genre-row" id="genreRow"><!-- JS 렌더 --></div>
+
+  <p class="source" id="source"></p>
+
+  <div class="podium" id="podium"><!-- JS 렌더 (샘플 데이터) --></div>
+  <div class="rank-rows" id="rows"></div>
+</div>
+
+<script>
+/* ==================== 샘플 데이터 ====================
+   플랫폼 랭킹 = 크롤링한 각 플랫폼의 집계 (AOD 내부 랭킹은 유저 데이터 축적 후 후속)
+   entry: { t: 제목, g: 장르, a: 부가정보, d: 변동("+n"/"-n"/"0"/"new") } */
+const IMG = {
+  "화산귀환": "https://picsum.photos/seed/aod-webtoon-hwasan/400/600",
+  "참교육": "https://picsum.photos/seed/aod-webtoon-chamgyoyuk/400/600",
+  "마루는 강쥐": "https://picsum.photos/seed/aod-webtoon-maru/400/600",
+  "외모지상주의": "https://picsum.photos/seed/aod-webtoon-lookism/400/600",
+  "신의 탑": "https://picsum.photos/seed/aod-webtoon-tower/400/600",
+  "전지적 독자 시점": "https://picsum.photos/seed/aod-webtoon-orv/400/600",
+  "김부장": "https://picsum.photos/seed/aod-webtoon-kimbujang/400/600",
+  "나노마신": "https://picsum.photos/seed/aod-webtoon-nano/400/600",
+  "여신강림": "https://picsum.photos/seed/aod-webtoon-beauty/400/600",
+  "유미의 세포들": "https://picsum.photos/seed/aod-webtoon-yumi/400/600",
+  "스위트홈": "https://picsum.photos/seed/aod-webtoon-sweethome/400/600",
+  "카운터 스트라이크 2": "https://cdn.akamai.steamstatic.com/steam/apps/730/library_600x900.jpg",
+  "도타 2": "https://cdn.akamai.steamstatic.com/steam/apps/570/library_600x900.jpg",
+  "그랜드 테프트 오토 V": "https://cdn.akamai.steamstatic.com/steam/apps/271590/library_600x900.jpg",
+  "발헤임": "https://cdn.akamai.steamstatic.com/steam/apps/892970/library_600x900.jpg",
+  "엘든 링": "https://cdn.akamai.steamstatic.com/steam/apps/1245620/library_600x900.jpg",
+  "검은 신화: 오공": "https://cdn.akamai.steamstatic.com/steam/apps/2358720/library_600x900.jpg",
+  "Balatro": "https://cdn.akamai.steamstatic.com/steam/apps/2379780/library_600x900.jpg",
+  "스타듀 밸리": "https://cdn.akamai.steamstatic.com/steam/apps/413150/library_600x900.jpg",
+  "테라리아": "https://cdn.akamai.steamstatic.com/steam/apps/105600/library_600x900.jpg",
+  "하데스": "https://cdn.akamai.steamstatic.com/steam/apps/1145360/library_600x900.jpg",
+  "P의 거짓": "https://cdn.akamai.steamstatic.com/steam/apps/1627720/library_600x900.jpg",
+  "데이브 더 다이버": "https://cdn.akamai.steamstatic.com/steam/apps/1868140/library_600x900.jpg",
+  "슬레이 더 스파이어": "https://cdn.akamai.steamstatic.com/steam/apps/646570/library_600x900.jpg",
+  "듄: 파트 2": "https://picsum.photos/seed/aod-movie-dune2/400/600",
+  "범죄도시 4": "https://picsum.photos/seed/aod-movie-roundup4/400/600",
+  "서울의 봄": "https://picsum.photos/seed/aod-movie-seoul/400/600",
+  "인터스텔라": "https://picsum.photos/seed/aod-movie-interstellar/400/600",
+  "기생충": "https://picsum.photos/seed/aod-movie-parasite/400/600",
+  "스파이더맨: 뉴 유니버스": "https://picsum.photos/seed/aod-movie-spiderverse/400/600",
+  "매드맥스: 분노의 도로": "https://picsum.photos/seed/aod-movie-madmax/400/600",
+  "어벤져스: 엔드게임": "https://picsum.photos/seed/aod-movie-endgame/400/600",
+  "부산행": "https://picsum.photos/seed/aod-movie-busan/400/600",
+  "헤어질 결심": "https://picsum.photos/seed/aod-movie-decision/400/600",
+  "라라랜드": "https://picsum.photos/seed/aod-movie-lalaland/400/600",
+  "올드보이": "https://picsum.photos/seed/aod-movie-oldboy/400/600",
+  "나 혼자만 레벨업": "https://picsum.photos/seed/aod-webnovel-sololeveling/400/600",
+  "재벌집 막내아들": "https://picsum.photos/seed/aod-webnovel-chaebol/400/600",
+  "광마회귀": "https://picsum.photos/seed/aod-webnovel-gwangma/400/600",
+  "검술명가 막내아들": "https://picsum.photos/seed/aod-webnovel-swordfamily/400/600",
+  "데뷔 못 하면 죽는 병 걸림": "https://picsum.photos/seed/aod-webnovel-debut/400/600",
+  "템빨": "https://picsum.photos/seed/aod-webnovel-overgeared/400/600",
+  "SSS급 자살헌터": "https://picsum.photos/seed/aod-webnovel-ssshunter/400/600",
+  "두 번 사는 랭커": "https://picsum.photos/seed/aod-webnovel-secondranker/400/600",
+};
+
+const RANKINGS = {
+  webtoon: {
+    href: "work-detail-mockup.html?d=webtoon",
+    platforms: [["네이버웹툰", false], ["카카오웹툰", true]],
+    critsExt: ["네이버웹툰 인기 순위"],
+    ext: [
+      { t: "화산귀환", g: "무협", a: "비가", d: "0" }, { t: "참교육", g: "액션", a: "채용택", d: "+1" },
+      { t: "마루는 강쥐", g: "일상", a: "모죠", d: "-1" }, { t: "외모지상주의", g: "드라마", a: "박태준", d: "0" },
+      { t: "신의 탑", g: "판타지", a: "SIU", d: "+2" }, { t: "전지적 독자 시점", g: "판타지", a: "슬리피-C", d: "0" },
+      { t: "김부장", g: "액션", a: "박만사", d: "-2" }, { t: "나노마신", g: "무협", a: "한중월야", d: "+1" },
+      { t: "여신강림", g: "로맨스", a: "야옹이", d: "-1" }, { t: "유미의 세포들", g: "로맨스", a: "이동건", d: "0" },
+    ],
+  },
+  game: {
+    href: "work-detail-mockup.html?d=game",
+    platforms: [["Steam", false], ["Epic Games", true]],
+    critsExt: ["Steam 최다 플레이", "Steam 최고 판매"],
+    ext: [
+      { t: "카운터 스트라이크 2", g: "FPS", a: "Valve", d: "0" }, { t: "도타 2", g: "전략", a: "Valve", d: "0" },
+      { t: "그랜드 테프트 오토 V", g: "액션", a: "Rockstar", d: "+1" }, { t: "발헤임", g: "서바이벌", a: "Iron Gate", d: "-1" },
+      { t: "엘든 링", g: "RPG", a: "FromSoftware", d: "+2" }, { t: "검은 신화: 오공", g: "액션", a: "Game Science", d: "-1" },
+      { t: "Balatro", g: "로그라이크", a: "LocalThunk", d: "+1" }, { t: "스타듀 밸리", g: "시뮬레이션", a: "ConcernedApe", d: "-2" },
+      { t: "테라리아", g: "샌드박스", a: "Re-Logic", d: "0" }, { t: "하데스", g: "로그라이크", a: "Supergiant", d: "0" },
+    ],
+  },
+  movie: {
+    href: "work-detail-mockup.html?d=movie",
+    platforms: [["TMDB", false]],
+    critsExt: ["TMDB 인기 점수", "TMDB 평점"],
+    ext: [
+      { t: "듄: 파트 2", g: "SF", a: "드니 빌뇌브", d: "0" }, { t: "범죄도시 4", g: "액션", a: "허명행", d: "+2" },
+      { t: "서울의 봄", g: "드라마", a: "김성수", d: "-1" }, { t: "인터스텔라", g: "SF", a: "크리스토퍼 놀란", d: "0" },
+      { t: "기생충", g: "드라마", a: "봉준호", d: "+1" }, { t: "스파이더맨: 뉴 유니버스", g: "애니메이션", a: "밥 퍼시케티", d: "-2" },
+      { t: "매드맥스: 분노의 도로", g: "액션", a: "조지 밀러", d: "0" }, { t: "어벤져스: 엔드게임", g: "액션", a: "루소 형제", d: "-1" },
+      { t: "부산행", g: "스릴러", a: "연상호", d: "new" }, { t: "헤어질 결심", g: "로맨스", a: "박찬욱", d: "0" },
+    ],
+  },
+  webnovel: {
+    href: "#",
+    platforms: [["네이버시리즈", false], ["카카오페이지", true]],
+    critsExt: ["네이버시리즈 Top 100"],
+    ext: [
+      { t: "나 혼자만 레벨업", g: "판타지", a: "추공", d: "0" }, { t: "전지적 독자 시점", g: "판타지", a: "싱숑", d: "0" },
+      { t: "화산귀환", g: "무협", a: "비가", d: "+1" }, { t: "재벌집 막내아들", g: "현대판타지", a: "산경", d: "-1" },
+      { t: "광마회귀", g: "무협", a: "유진성", d: "+2" }, { t: "검술명가 막내아들", g: "판타지", a: "황제펭귄", d: "0" },
+      { t: "데뷔 못 하면 죽는 병 걸림", g: "현대판타지", a: "백덕수", d: "+1" }, { t: "템빨", g: "게임판타지", a: "박새날", d: "-3" },
+      { t: "SSS급 자살헌터", g: "판타지", a: "신노아", d: "0" }, { t: "두 번 사는 랭커", g: "게임판타지", a: "사도연", d: "-1" },
+    ],
+  },
+};
+
+/* ==================== 상태 · 렌더 ==================== */
+let domain = "webtoon", period = "일간", critIdx = 0, genre = "전체";
+const $ = id => document.getElementById(id);
+
+function deltaHTML(d) {
+  if (d === "new") return `<span class="delta new">NEW</span>`;
+  if (d === "0") return `<span class="delta">-</span>`;
+  const up = d.startsWith("+");
+  return `<span class="delta${up ? " up" : ""}">${up ? "▲" : "▼"} ${d.slice(1)}</span>`;
+}
+
+/* 기간·기준 변경 시 순서를 회전시켜 응답을 시연 (실서비스: 축별 별도 집계 조회) */
+function currentList() {
+  const base = RANKINGS[domain].ext;
+  const pIdx = ["일간", "주간", "월간"].indexOf(period);
+  const r = (pIdx * 3 + critIdx * 2) % base.length;
+  const rotated = base.slice(r).concat(base.slice(0, r));
+  return genre === "전체" ? rotated : rotated.filter(e => e.g === genre);
+}
+
+function renderControls() {
+  /* 플랫폼 칩: 도메인별 랭킹 원천 — 수집 중인 플랫폼만 활성 ([이름, 준비중 여부]) */
+  $("platRow").innerHTML = RANKINGS[domain].platforms.map(([name, soon]) =>
+    `<button class="pchip" ${soon ? "disabled" : `aria-pressed="true"`}>${name}${soon ? " (준비 중)" : ""}</button>`).join("");
+
+  /* 집계 기준: 기준이 2개 이상인 도메인에서만 노출 */
+  const crits = RANKINGS[domain].critsExt;
+  const show = crits.length > 1;
+  $("critSelect").style.display = show ? "" : "none";
+  if (show) $("critSelect").innerHTML = crits.map((c, i) =>
+    `<option value="${i}" ${i === critIdx ? "selected" : ""}>${c}</option>`).join("");
+
+  /* 장르 칩: 도메인의 장르 집합에서 생성 */
+  const genres = ["전체", ...new Set(RANKINGS[domain].ext.map(e => e.g))];
+  if (!genres.includes(genre)) genre = "전체";
+  $("genreRow").innerHTML = genres.map(g =>
+    `<button class="gchip" data-g="${g}" aria-pressed="${g === genre}">${g}</button>`).join("");
+  $("genreRow").querySelectorAll(".gchip").forEach(chip =>
+    chip.addEventListener("click", () => { genre = chip.dataset.g; renderControls(); renderList(); }));
+}
+
+function renderList() {
+  const list = currentList(), href = RANKINGS[domain].href;
+  const critLabel = RANKINGS[domain].critsExt[Math.min(critIdx, RANKINGS[domain].critsExt.length - 1)];
+  const genreLabel = genre === "전체" ? "" : ` ${genre} 부문,`;
+  $("source").textContent = `${critLabel} 기준,${genreLabel} ${period} 집계`;
+
+  const podium = list.length >= 3 ? list.slice(0, 3) : [];
+  const rest = list.length >= 3 ? list.slice(3) : list;
+  const offset = podium.length;
+
+  $("podium").innerHTML = podium.map((e, i) => `
+    <a class="pod-card p${i + 1}" href="${href}">
+      <div class="thumb"><img loading="lazy" src="${IMG[e.t]}" alt="${e.t}"></div>
+      <div class="pod-body">
+        <span class="no">${i + 1}</span>
+        <span><span class="t">${e.t}</span><div class="m">${e.g} · ${e.a}</div></span>
+        ${deltaHTML(e.d)}
+      </div>
+    </a>`).join("");
+
+  $("rows").innerHTML = rest.map((e, i) => `
+    <a class="rrow" href="${href}">
+      <span class="no">${i + 1 + offset}</span>
+      <div class="thumb"><img loading="lazy" src="${IMG[e.t]}" alt="${e.t}"></div>
+      <span><span class="t">${e.t}</span><div class="m">${e.g} · ${e.a}</div></span>
+      ${deltaHTML(e.d)}
+    </a>`).join("");
+}
+
+function rerender() { renderControls(); renderList(); }
+
+$("periodSeg").querySelectorAll(".seg-btn").forEach(btn =>
+  btn.addEventListener("click", () => {
+    $("periodSeg").querySelectorAll(".seg-btn").forEach(b => b.setAttribute("aria-pressed", "false"));
+    btn.setAttribute("aria-pressed", "true");
+    period = btn.dataset.p;
+    renderList();
+  }));
+document.querySelectorAll(".dchip").forEach(chip =>
+  chip.addEventListener("click", () => {
+    document.querySelectorAll(".dchip").forEach(c => c.setAttribute("aria-pressed", "false"));
+    chip.setAttribute("aria-pressed", "true");
+    domain = chip.dataset.d;
+    critIdx = 0; genre = "전체";
+    rerender();
+  }));
+$("critSelect").addEventListener("change", e => { critIdx = +e.target.value; renderList(); });
+
+rerender();
+</script>
+</body>
+</html>

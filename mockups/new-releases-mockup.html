@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AOD 신작 목업 (라이트 테마 예시안)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<style>
+/* AOD 신작 라이트 테마 예시안 — 다른 목업과 동일 토큰 */
+:root {
+  --bg: #f7f6f4; --surface: #fdfdfc;
+  --border: #e7e5e1; --border-strong: #d8d5cf;
+  --text: #1c1b19; --text-2: #716f6a; --text-3: #9c9993;
+  --accent: #e2542c; --accent-ink: #b23d1c; --accent-tint: #faeee9;
+  --shadow: 0 1px 2px rgb(58 48 40 / .05), 0 4px 14px rgb(58 48 40 / .06);
+  --r-panel: 12px; --r-input: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { color-scheme: light; }
+body {
+  font-family: "Pretendard Variable", Pretendard, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.5; font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: none; }
+button:active { transform: scale(.98); }
+::selection { background: var(--accent-tint); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+img { display: block; }
+
+/* 내비게이션 */
+.nav { position: sticky; top: 0; z-index: 20; height: 64px; background: rgb(253 253 252 / .88); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+.nav-inner { max-width: 1080px; margin: 0 auto; height: 100%; padding: 0 24px; display: flex; align-items: center; gap: 28px; }
+.logo { font-weight: 800; font-size: 21px; letter-spacing: -.04em; text-decoration: none; color: var(--text); }
+.logo em { font-style: normal; color: var(--accent); }
+.nav-menu { display: flex; gap: 4px; list-style: none; }
+.nav-menu a { display: block; padding: 8px 12px; border-radius: var(--r-input); color: var(--text-2); text-decoration: none; font-weight: 500; }
+.nav-menu a:hover { color: var(--text); background: rgb(28 27 25 / .04); }
+.nav-menu a[aria-current] { color: var(--text); font-weight: 700; }
+.btn-login { margin-left: auto; padding: 9px 18px; border-radius: 999px; background: var(--text); color: var(--surface); font-weight: 600; font-size: 14px; }
+
+.wrap { max-width: 1080px; margin: 0 auto; padding: 28px 24px 80px; }
+.wrap > h1 { font-size: 26px; font-weight: 800; letter-spacing: -.03em; }
+
+/* 도메인 칩 필터 */
+.domain-chips { margin-top: 16px; display: flex; gap: 6px; flex-wrap: wrap; }
+.dchip {
+  padding: 8px 16px; border-radius: 999px; font-weight: 600; font-size: 14px;
+  color: var(--text-2); border: 1px solid var(--border); background: var(--surface);
+  transition: background .15s, color .15s;
+}
+.dchip:hover { border-color: var(--border-strong); color: var(--text); }
+.dchip[aria-pressed="true"] { background: var(--text); border-color: var(--text); color: var(--surface); }
+
+/* 섹션 */
+section { margin-top: 40px; }
+section > h2 { font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
+
+/* 날짜 그룹 */
+.date-group { margin-top: 26px; display: grid; grid-template-columns: 148px 1fr; gap: 24px; }
+.date-label { position: sticky; top: 88px; align-self: start; }
+.date-label .d { font-size: 16px; font-weight: 800; }
+.date-label .w { margin-top: 2px; font-size: 13px; color: var(--text-3); }
+.rows { display: flex; flex-direction: column; gap: 10px; }
+
+/* 작품 행 */
+.row {
+  display: flex; align-items: center; gap: 16px; padding: 12px 16px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-panel);
+  box-shadow: var(--shadow); text-decoration: none; color: inherit;
+  transition: transform .18s cubic-bezier(.16,1,.3,1);
+}
+.row:hover { transform: translateX(3px); }
+.row .thumb { flex: 0 0 52px; aspect-ratio: 2 / 3; border-radius: var(--r-input); overflow: hidden; background: #ece9e4; }
+.row .thumb img { width: 100%; height: 100%; object-fit: cover; }
+.row .t { font-size: 15px; font-weight: 700; }
+.row .m { font-size: 13px; color: var(--text-2); margin-top: 2px; }
+.row .domain {
+  margin-left: auto; flex: 0 0 auto;
+  font-size: 12px; font-weight: 700; color: var(--text-2);
+  background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 3px 11px;
+}
+.row .bell {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 600; color: var(--text-2);
+  border: 1px solid var(--border); border-radius: 999px; padding: 7px 14px;
+  background: var(--surface);
+}
+.row .bell:hover { border-color: var(--border-strong); color: var(--text); }
+.dday {
+  flex: 0 0 auto; font-size: 12.5px; font-weight: 800; color: var(--accent-ink);
+  background: var(--accent-tint); border-radius: 999px; padding: 5px 11px;
+  font-variant-numeric: tabular-nums;
+}
+.dday.tba { color: var(--text-2); background: var(--bg); border: 1px solid var(--border); }
+
+.empty-note { margin-top: 26px; padding: 48px; text-align: center; color: var(--text-2); background: var(--surface); border: 1px dashed var(--border-strong); border-radius: var(--r-panel); display: none; }
+.empty-note.show { display: block; }
+
+@media (max-width: 767px) {
+  .nav-menu { display: none; }
+  .date-group { grid-template-columns: 1fr; gap: 10px; }
+  .date-label { position: static; display: flex; gap: 8px; align-items: baseline; }
+  .row .domain { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .row, button { transition: none; } .row:hover { transform: none; } }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="logo" href="home-light-mockup.html">AOD<em>.</em></a>
+    <ul class="nav-menu">
+      <li><a href="home-light-mockup.html">홈</a></li>
+      <li><a href="explore-light-mockup.html">탐색</a></li>
+      <li><a href="ranking-mockup.html">랭킹</a></li>
+      <li><a href="new-releases-mockup.html" aria-current="page">신작</a></li>
+    </ul>
+    <button class="btn-login">로그인</button>
+  </div>
+</nav>
+
+<div class="wrap">
+  <h1>신작</h1>
+
+  <div class="domain-chips" id="domainChips">
+    <button class="dchip" data-d="all" aria-pressed="true">전체</button>
+    <button class="dchip" data-d="영화">영화</button>
+    <button class="dchip" data-d="게임">게임</button>
+    <button class="dchip" data-d="웹툰">웹툰</button>
+  </div>
+
+  <section>
+    <h2>최근 출시</h2>
+    <div id="recentList"><!-- JS 렌더 (샘플 데이터) --></div>
+    <div class="empty-note" id="recentEmpty">이 도메인의 최근 출시작이 없어요.</div>
+  </section>
+
+  <section>
+    <h2>출시 예정</h2>
+    <div id="upcomingList"><!-- JS 렌더 (샘플 데이터) --></div>
+    <div class="empty-note" id="upcomingEmpty">이 도메인의 출시 예정작이 없어요.</div>
+  </section>
+</div>
+
+<script>
+/* ==================== 샘플 데이터 (날짜는 시연용) ==================== */
+const RECENT = [
+  { date: "8월 12일", week: "오늘", items: [
+    { d: "웹툰", t: "마루는 강쥐", m: "모죠 · 네이버웹툰", img: "https://picsum.photos/seed/aod-webtoon-maru/200/300", href: "work-detail-mockup.html?d=webtoon" },
+    { d: "게임", t: "리썰 컴퍼니", m: "Zeekerss · Steam", img: "https://cdn.akamai.steamstatic.com/steam/apps/1966720/library_600x900.jpg", href: "work-detail-mockup.html?d=game" },
+  ]},
+  { date: "8월 9일", week: "토요일", items: [
+    { d: "게임", t: "검은 신화: 오공", m: "Game Science · Steam", img: "https://cdn.akamai.steamstatic.com/steam/apps/2358720/library_600x900.jpg", href: "work-detail-mockup.html?d=game" },
+    { d: "영화", t: "범죄도시 4", m: "허명행 · 티빙, 쿠팡플레이", img: "https://picsum.photos/seed/aod-movie-roundup4/200/300", href: "work-detail-mockup.html?d=movie" },
+    { d: "웹툰", t: "나노마신", m: "한중월야 · 네이버웹툰", img: "https://picsum.photos/seed/aod-webtoon-nano/200/300", href: "work-detail-mockup.html?d=webtoon" },
+  ]},
+  { date: "8월 5일", week: "지난주", items: [
+    { d: "영화", t: "듄: 파트 2", m: "드니 빌뇌브 · 쿠팡플레이", img: "https://picsum.photos/seed/aod-movie-dune2/200/300", href: "work-detail-mockup.html?d=movie" },
+    { d: "게임", t: "Balatro", m: "LocalThunk · Steam", img: "https://cdn.akamai.steamstatic.com/steam/apps/2379780/library_600x900.jpg", href: "work-detail-mockup.html?d=game" },
+  ]},
+  { date: "7월 31일", week: "지난주", items: [
+    { d: "영화", t: "서울의 봄", m: "김성수 · 넷플릭스, 티빙", img: "https://picsum.photos/seed/aod-movie-seoul/200/300", href: "work-detail-mockup.html?d=movie" },
+    { d: "웹툰", t: "전지적 독자 시점", m: "슬리피-C · 네이버웹툰", img: "https://picsum.photos/seed/aod-webtoon-orv/200/300", href: "work-detail-mockup.html?d=webtoon" },
+  ]},
+];
+
+const UPCOMING = [
+  { date: "11월", week: "2026", items: [
+    { d: "게임", t: "GTA VI", m: "Rockstar Games · 11월 19일", img: "https://picsum.photos/seed/aod-up-gta6/200/300", dday: "D-99" },
+  ]},
+  { date: "12월", week: "2026", items: [
+    { d: "영화", t: "듄: 파트 3", m: "드니 빌뇌브 · 12월 18일", img: "https://picsum.photos/seed/aod-up-dune3/200/300", dday: "D-128" },
+  ]},
+  { date: "미정", week: "", items: [
+    { d: "게임", t: "더 위쳐 4", m: "CD PROJEKT RED · 발매일 미정", img: "https://picsum.photos/seed/aod-up-witcher4/200/300", dday: "미정" },
+    { d: "웹툰", t: "스위트홈 외전", m: "김칸비 · 연재 시기 미정", img: "https://picsum.photos/seed/aod-webtoon-sweethome/200/300", dday: "미정" },
+  ]},
+];
+
+/* ==================== 렌더 ==================== */
+let domain = "all";
+const $ = id => document.getElementById(id);
+
+function rowHTML(it, upcoming) {
+  const tail = upcoming
+    ? `<span class="dday${it.dday === "미정" ? " tba" : ""}">${it.dday}</span>
+       <button class="bell" onclick="event.preventDefault()"><i class="ph ph-bell"></i> 알림 받기</button>`
+    : `<span class="domain">${it.d}</span>`;
+  return `<a class="row" href="${it.href || "#"}">
+    <div class="thumb"><img loading="lazy" src="${it.img}" alt="${it.t}"></div>
+    <div><div class="t">${it.t}</div><div class="m">${it.m}</div></div>
+    ${tail}
+  </a>`;
+}
+
+function renderList(groups, mountId, emptyId, upcoming) {
+  const html = groups.map(g => {
+    const items = g.items.filter(it => domain === "all" || it.d === domain);
+    if (items.length === 0) return "";
+    return `<div class="date-group">
+      <div class="date-label"><div class="d">${g.date}</div><div class="w">${g.week}</div></div>
+      <div class="rows">${items.map(it => rowHTML(it, upcoming)).join("")}</div>
+    </div>`;
+  }).join("");
+  $(mountId).innerHTML = html;
+  $(emptyId).classList.toggle("show", html === "");
+}
+
+function render() {
+  renderList(RECENT, "recentList", "recentEmpty", false);
+  renderList(UPCOMING, "upcomingList", "upcomingEmpty", true);
+}
+
+document.querySelectorAll(".dchip").forEach(chip => {
+  chip.addEventListener("click", () => {
+    document.querySelectorAll(".dchip").forEach(c => c.setAttribute("aria-pressed", "false"));
+    chip.setAttribute("aria-pressed", "true");
+    domain = chip.dataset.d;
+    render();
+  });
+});
+
+render();
+</script>
+</body>
+</html>

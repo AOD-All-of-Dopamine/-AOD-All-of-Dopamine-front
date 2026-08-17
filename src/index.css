@@ -1,20 +1,47 @@
 @import "tailwindcss";
 
-:root {
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
-    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+/* ============================================================
+   AOD 라이트 디자인 토큰 - 단일 진실: docs/specs/2026-08-13-light-redesign-design.md
+   컴포넌트에서 임의 hex, rounded-[...], 팔레트 컬러 유틸 사용 금지 (스펙 §6 게이트)
+   ============================================================ */
+@theme {
+  /* 표면 */
+  --color-canvas: #f7f6f4;        /* 페이지 배경 (웜 뉴트럴) */
+  --color-surface: #fdfdfc;       /* 카드·패널·내비 표면 */
+  --color-line: #e7e5e1;          /* 기본 테두리 */
+  --color-line-strong: #d8d5cf;   /* 호버 테두리 */
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  /* 텍스트 */
+  --color-ink: #1c1b19;
+  --color-ink-2: #716f6a;
+  --color-ink-3: #9c9993;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* 액센트 (유일) + 시맨틱 예외 */
+  --color-accent: #e2542c;
+  --color-accent-ink: #b23d1c;
+  --color-accent-tint: #faeee9;
+  --color-star: #d9930d;          /* 별점 전용 */
+  --color-danger: #c73e1d;        /* 폼 에러·파괴 액션 전용 (시맨틱 레드 1종) */
+
+  /* 컬렉션 커버 틴트 6종 - 콘텐츠 색(포스터와 같은 지위)으로, 커버 콜라주
+     veil·큐레이터 아바타 전용. UI 색으로 사용 금지 - UI 액센트는 계속 accent 1종.
+     (임의 hex 게이트의 유일한 허용 추가분 - 토큰 정의 파일이므로) */
+  --color-tint-pine: #3f5c52;
+  --color-tint-olive: #5d6b4e;
+  --color-tint-slate: #4e5d6b;
+  --color-tint-terracotta: #a45c48;
+  --color-tint-mocha: #6b5a4e;
+  --color-tint-plum: #5f4e6b;
+
+  /* 라운드: 카드·패널 12 / 입력 8 / 칩·버튼은 rounded-full */
+  --radius-panel: 12px;
+  --radius-input: 8px;
+
+  /* 그림자: 배경 색조 틴트 (순흑 금지) */
+  --shadow-card: 0 1px 2px rgb(58 48 40 / 0.05), 0 4px 14px rgb(58 48 40 / 0.06);
+  --shadow-lift: 0 2px 4px rgb(58 48 40 / 0.06), 0 10px 28px rgb(58 48 40 / 0.1);
+
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 @font-face {
@@ -25,23 +52,44 @@
   font-display: swap;
 }
 
+:root {
+  color-scheme: light;
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: var(--color-accent-tint);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* 홈 신작 릴 전용 - 목업 .rail 스크롤바의 표준 속성 강등판.
+   Chromium 121+는 scrollbar-width/color 지정 시 ::-webkit-scrollbar를 무시하므로
+   webkit 블록 없이 표준 속성(thin + line-strong 썸)으로 전 브라우저 통일 */
+.scrollbar-rail {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+
+/* 가로 릴 등 개별 컨테이너용 (전역 스크롤바 숨김은 제거 - 웹 표준 스크롤 유지) */
 .scrollbar-hide {
   -ms-overflow-style: none; /* IE, Edge */
   scrollbar-width: none; /* Firefox */
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  display: none; /* Chrome, Safari */
-}
-
-html,
-body {
-  overflow-y: scroll;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* old Edge */
-}
-
-html::-webkit-scrollbar,
-body::-webkit-scrollbar {
   display: none; /* Chrome, Safari */
 }
