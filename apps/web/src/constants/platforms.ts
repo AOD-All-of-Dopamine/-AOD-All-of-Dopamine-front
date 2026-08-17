@@ -12,7 +12,12 @@ import NAVER_WEBNOVEL_LOGO from "../assets/platform-icon/nnovel-logo.webp";
 import KAKAO_WEBNOVEL_LOGO from "../assets/platform-icon/kakaopage-logo.png";
 import { PLATFORM_LABELS } from "@aod/shared/constants";
 
-export { DOMAIN_PLATFORMS } from "@aod/shared/constants";
+export {
+  DOMAIN_PLATFORMS,
+  COLLECTION_SOURCES,
+  platformLabel,
+  watchPlatformLabels,
+} from "@aod/shared/constants";
 
 // 로고는 웹 번들 에셋이라 shared에 둘 수 없다 — 라벨(공유)과 여기서 합성한다.
 const PLATFORM_LOGOS: Record<string, string> = {

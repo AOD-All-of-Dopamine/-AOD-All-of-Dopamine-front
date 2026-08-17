@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AOD 작품 상세 목업 (라이트 테마 예시안)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>
+/* AOD 작품 상세 라이트 테마 예시안 — 탐색 목업과 동일 토큰
+   라운드 규칙: 카드/패널 12px, 입력 8px, 칩/태그/버튼 pill */
+:root {
+  --bg: #f7f6f4; --surface: #fdfdfc;
+  --border: #e7e5e1; --border-strong: #d8d5cf;
+  --text: #1c1b19; --text-2: #716f6a; --text-3: #9c9993;
+  --accent: #e2542c; --accent-ink: #b23d1c; --accent-tint: #faeee9;
+  --star: #d9930d;
+  --shadow: 0 1px 2px rgb(58 48 40 / .05), 0 4px 14px rgb(58 48 40 / .06);
+  --r-panel: 12px; --r-input: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { color-scheme: light; }
+body {
+  font-family: "Pretendard Variable", Pretendard, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.55; font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: none; }
+button:active { transform: scale(.98); }
+::selection { background: var(--accent-tint); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+/* 내비게이션 (탐색 목업과 동일) */
+.nav { position: sticky; top: 0; z-index: 20; height: 64px; background: rgb(253 253 252 / .88); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+.nav-inner { max-width: 1200px; margin: 0 auto; height: 100%; padding: 0 24px; display: flex; align-items: center; gap: 28px; }
+.logo { font-weight: 800; font-size: 21px; letter-spacing: -.04em; text-decoration: none; color: var(--text); }
+.logo em { font-style: normal; color: var(--accent); }
+.nav-menu { display: flex; gap: 4px; list-style: none; }
+.nav-menu a { display: block; padding: 8px 12px; border-radius: var(--r-input); color: var(--text-2); text-decoration: none; font-weight: 500; }
+.nav-menu a:hover { color: var(--text); background: rgb(28 27 25 / .04); }
+.nav-menu a[aria-current] { color: var(--text); font-weight: 700; }
+.btn-login { margin-left: auto; padding: 9px 18px; border-radius: 999px; background: var(--text); color: var(--surface); font-weight: 600; font-size: 14px; }
+
+.wrap { max-width: 1200px; margin: 0 auto; padding: 24px 24px 80px; }
+.back {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--text-2); text-decoration: none; font-size: 14px; font-weight: 500;
+  padding: 6px 10px; margin-left: -10px; border-radius: var(--r-input);
+}
+.back:hover { color: var(--text); background: rgb(28 27 25 / .04); }
+
+/* ---------- 헤더 ---------- */
+.head { margin-top: 16px; display: grid; grid-template-columns: auto 1fr; gap: 36px; align-items: start; }
+.poster {
+  border-radius: var(--r-panel); overflow: hidden;
+  border: 1px solid var(--border); box-shadow: var(--shadow); background: #ece9e4;
+}
+.poster.portrait { width: 232px; aspect-ratio: 2 / 3; }
+.poster.landscape { width: 360px; aspect-ratio: 460 / 215; }
+.poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.domain-chip {
+  display: inline-block; font-size: 12.5px; font-weight: 700; color: var(--accent-ink);
+  background: var(--accent-tint); border-radius: 999px; padding: 3px 12px;
+}
+.head h1 { margin-top: 10px; font-size: 34px; font-weight: 800; letter-spacing: -.03em; line-height: 1.2; }
+.subtitle { margin-top: 6px; color: var(--text-2); font-size: 15px; }
+.genre-row { margin-top: 14px; display: flex; gap: 6px; flex-wrap: wrap; }
+.tag { font-size: 12px; font-weight: 600; color: var(--text-2); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 3.5px 11px; }
+.stats { margin-top: 18px; display: flex; gap: 10px; flex-wrap: wrap; }
+.stat {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-input);
+  padding: 9px 14px; font-size: 14px; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.stat i { color: var(--star); }
+.stat small { font-weight: 500; color: var(--text-2); }
+.actions { margin-top: 22px; display: flex; gap: 10px; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 11px 20px; border-radius: 999px; font-weight: 600; font-size: 14.5px;
+  transition: background .15s, border-color .15s;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-ink); }
+.btn-ghost { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
+.btn-ghost:hover { border-color: var(--border-strong); }
+.watch { margin-top: 22px; }
+.watch h3 { font-size: 13.5px; font-weight: 700; color: var(--text-2); margin-bottom: 9px; }
+.watch-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.watch-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 16px; border-radius: var(--r-input);
+  background: var(--surface); border: 1px solid var(--border);
+  font-size: 14px; font-weight: 600; text-decoration: none; color: var(--text);
+}
+.watch-btn:hover { border-color: var(--border-strong); }
+.watch-btn i { color: var(--text-3); font-size: 15px; }
+
+/* ---------- 본문 2단 ---------- */
+.body-grid { margin-top: 44px; display: grid; grid-template-columns: 1fr 320px; gap: 40px; align-items: start; }
+section h2 { font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
+.synopsis p { margin-top: 12px; color: var(--text-2); max-width: 65ch; }
+
+/* 리뷰 */
+.reviews { margin-top: 40px; }
+.reviews-head { display: flex; align-items: center; gap: 10px; }
+.reviews-head .count { color: var(--accent-ink); font-weight: 700; }
+.review-card { margin-top: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-panel); padding: 18px 20px; }
+.review-top { display: flex; align-items: center; gap: 10px; }
+.avatar {
+  width: 34px; height: 34px; border-radius: 999px; display: grid; place-items: center;
+  background: var(--bg); border: 1px solid var(--border);
+  font-size: 14px; font-weight: 700; color: var(--text-2);
+}
+.review-top .name { font-weight: 700; font-size: 14px; }
+.review-top .date { color: var(--text-3); font-size: 13px; }
+.review-top .score { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.review-top .score i { color: var(--star); }
+.review-card p { margin-top: 10px; color: var(--text-2); font-size: 14.5px; }
+.more-reviews { margin-top: 16px; width: 100%; padding: 12px; border-radius: var(--r-input); border: 1px solid var(--border); background: var(--surface); font-weight: 600; font-size: 14px; color: var(--text-2); }
+.more-reviews:hover { border-color: var(--border-strong); color: var(--text); }
+
+/* 정보 패널 */
+.info-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-panel); padding: 20px 22px; }
+.info-panel h2 { font-size: 15px; }
+.info-panel dl { margin-top: 6px; }
+.info-panel .row { display: flex; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.info-panel .row:last-child { border-bottom: none; }
+.info-panel dt { flex: 0 0 84px; color: var(--text-3); font-size: 13.5px; }
+.info-panel dd { font-size: 14px; font-weight: 500; }
+
+/* 비슷한 작품 */
+.similar { margin-top: 44px; }
+.similar-row { margin-top: 14px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.mini {
+  text-decoration: none; color: inherit; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--r-panel); overflow: hidden; box-shadow: var(--shadow);
+  transition: transform .18s cubic-bezier(.16,1,.3,1);
+}
+.mini:hover { transform: translateY(-3px); }
+.mini .thumb { aspect-ratio: 2 / 3; background: #ece9e4; }
+.mini.wide .thumb { aspect-ratio: 460 / 215; }
+.mini .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mini .label { padding: 10px 12px; font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 반응형 */
+@media (max-width: 1023px) {
+  .body-grid { grid-template-columns: 1fr; }
+  .nav-menu { display: none; }
+}
+@media (max-width: 767px) {
+  .head { grid-template-columns: 1fr; gap: 20px; }
+  .poster.portrait { width: 180px; }
+  .poster.landscape { width: 100%; }
+  .head h1 { font-size: 27px; }
+  .similar-row { grid-template-columns: repeat(2, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { .mini, button { transition: none; } .mini:hover { transform: none; } }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="logo" href="home-light-mockup.html">AOD<em>.</em></a>
+    <ul class="nav-menu">
+      <li><a href="home-light-mockup.html">홈</a></li>
+      <li><a href="explore-light-mockup.html" aria-current="page">탐색</a></li>
+      <li><a href="ranking-mockup.html">랭킹</a></li>
+      <li><a href="new-releases-mockup.html">신작</a></li>
+    </ul>
+    <button class="btn-login">로그인</button>
+  </div>
+</nav>
+
+<div class="wrap">
+  <a class="back" href="explore-light-mockup.html"><i class="ph ph-arrow-left"></i> 탐색으로</a>
+
+  <div class="head">
+    <div class="poster" id="poster"></div>
+    <div>
+      <span class="domain-chip" id="domainChip"></span>
+      <h1 id="title"></h1>
+      <p class="subtitle" id="subtitle"></p>
+      <div class="genre-row" id="genres"></div>
+      <div class="stats" id="stats"></div>
+      <div class="actions">
+        <button class="btn btn-primary"><i class="ph ph-bookmark-simple"></i> 관심 등록</button>
+        <button class="btn btn-ghost"><i class="ph ph-thumbs-up"></i> 좋아요</button>
+        <button class="btn btn-ghost"><i class="ph ph-pencil-simple"></i> 리뷰 쓰기</button>
+      </div>
+      <div class="watch">
+        <h3>볼 수 있는 곳</h3>
+        <div class="watch-row" id="watch"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="body-grid">
+    <div>
+      <section class="synopsis">
+        <h2>시놉시스</h2>
+        <p id="synopsis"></p>
+      </section>
+
+      <section class="reviews">
+        <div class="reviews-head">
+          <h2>리뷰</h2><span class="count" id="reviewCount"></span>
+        </div>
+        <div id="reviewList"></div>
+        <button class="more-reviews">리뷰 더 보기</button>
+      </section>
+
+      <section class="similar">
+        <h2>비슷한 작품</h2>
+        <div class="similar-row" id="similar"></div>
+      </section>
+    </div>
+
+    <aside class="info-panel">
+      <h2>작품 정보</h2>
+      <dl id="infoRows"></dl>
+    </aside>
+  </div>
+</div>
+
+<script>
+/* ==================== 도메인별 샘플 상세 데이터 ==================== */
+const DETAILS = {
+  movie: {
+    domain: "영화", title: "기생충", subtitle: "Parasite · 2019",
+    posterType: "portrait",
+    posterSrc: "https://picsum.photos/seed/aod-movie-parasite/464/696",
+    genres: ["드라마", "스릴러"],
+    stats: [
+      { icon: "ph-fill ph-star", text: "8.5 <small>TMDB</small>" },
+      { icon: "ph-fill ph-star", text: "4.5 <small>AOD 리뷰 3</small>" },
+    ],
+    watch: [["넷플릭스"], ["왓챠"]],
+    synopsis: "전원 백수인 기택네 가족. 장남 기우는 명문대생 친구가 소개해 준 고액 과외 자리를 얻으며 박 사장네 저택에 발을 들인다. 두 가족의 만남은 아무도 예상하지 못한 사건으로 번져 간다.",
+    info: [["감독", "봉준호"], ["출연", "송강호, 이선균, 조여정"], ["개봉일", "2019-05-30"], ["러닝타임", "132분"], ["관람등급", "15세 이상"], ["원제", "Parasite"]],
+    reviews: [
+      { name: "밤샘시네필", score: "4.5", date: "2026-07-30", text: "계단 하나로 계급을 그려낸다. 두 번째 볼 때 더 무서운 영화." },
+      { name: "팝콘두통", score: "5.0", date: "2026-07-18", text: "웃다가 소름 돋는 경험은 처음이었다. 짜파구리는 덤." },
+      { name: "서촌골목대장", score: "4.0", date: "2026-06-02", text: "후반부 전개는 호불호가 갈리겠지만 배우들의 합이 압도적이다." },
+    ],
+    similar: [
+      ["올드보이", "https://picsum.photos/seed/aod-movie-oldboy/400/600"],
+      ["헤어질 결심", "https://picsum.photos/seed/aod-movie-decision/400/600"],
+      ["서울의 봄", "https://picsum.photos/seed/aod-movie-seoul/400/600"],
+      ["부산행", "https://picsum.photos/seed/aod-movie-busan/400/600"],
+    ],
+  },
+
+  webtoon: {
+    domain: "웹툰", title: "화산귀환", subtitle: "수요웹툰 · 연재중",
+    posterType: "portrait",
+    posterSrc: "https://picsum.photos/seed/aod-webtoon-hwasan/464/696",
+    genres: ["무협", "회귀", "판타지"],
+    stats: [
+      { icon: "ph-fill ph-star", text: "4.7 <small>AOD 리뷰 3</small>" },
+    ],
+    watch: [["네이버웹툰"]],
+    synopsis: "대화산파 13대 제자, 매화검존 청명. 천하를 휩쓴 마두를 상대로 목숨을 걸고 싸운 끝에 눈을 감았으나, 백 년의 시간을 뛰어넘어 몰락한 화산파의 말단 제자로 다시 눈을 뜬다.",
+    info: [["글", "비가"], ["그림", "LICO"], ["연재 요일", "수요일"], ["상태", "연재중"], ["연령 등급", "15세 이용가"], ["첫 화", "2021-03-23"]],
+    reviews: [
+      { name: "매화검존1호팬", score: "5.0", date: "2026-08-06", text: "청명이 궁시렁대는 것만 봐도 일주일 피로가 풀린다." },
+      { name: "주말정주행러", score: "4.5", date: "2026-07-27", text: "무협을 하나도 몰라도 재밌다. 입문작으로 최고." },
+      { name: "장문인의한숨", score: "4.5", date: "2026-07-11", text: "개그와 성장 서사의 밸런스가 훌륭하다. 정주행 각." },
+    ],
+    similar: [
+      ["나노마신", "https://picsum.photos/seed/aod-webtoon-nano/400/600"],
+      ["전지적 독자 시점", "https://picsum.photos/seed/aod-webtoon-orv/400/600"],
+      ["신의 탑", "https://picsum.photos/seed/aod-webtoon-tower/400/600"],
+      ["참교육", "https://picsum.photos/seed/aod-webtoon-chamgyoyuk/400/600"],
+    ],
+  },
+
+  game: {
+    domain: "게임", title: "P의 거짓", subtitle: "Lies of P · 2023",
+    posterType: "landscape",
+    posterSrc: "https://cdn.akamai.steamstatic.com/steam/apps/1627720/header.jpg",
+    genres: ["소울라이크", "액션", "RPG"],
+    stats: [
+      { icon: "ph ph-thumbs-up", text: "매우 긍정적 91% <small>Steam</small>" },
+      { icon: "ph-fill ph-star", text: "4.5 <small>AOD 리뷰 3</small>" },
+    ],
+    watch: [["Steam 상점 페이지"]],
+    synopsis: "벨 에포크 시대에서 영감을 받은 도시 크라트. 거짓말을 할수록 인간에 가까워지는 인형 피노키오가 되어, 광기에 잠식된 인형들의 도시에서 자신을 만든 제페토와 진실을 찾아 나선다.",
+    info: [["개발", "라운드8 스튜디오"], ["배급", "네오위즈"], ["출시일", "2023-09-19"], ["가격", "64,800원"], ["메타크리틱", "80"]],
+    reviews: [
+      { name: "패링수련생", score: "4.5", date: "2026-08-02", text: "패링 타이밍이 빡빡하지만 손에 익는 순간 예술이 된다." },
+      { name: "소울본졸업생", score: "4.0", date: "2026-07-21", text: "프롬 바깥에서 나온 소울라이크 중 최고 완성도." },
+      { name: "크라트시민", score: "5.0", date: "2026-07-05", text: "무기 조합 시스템이 백미. 엔딩 분기도 알차다." },
+    ],
+    similarWide: true,
+    similar: [
+      ["엘든 링", "https://cdn.akamai.steamstatic.com/steam/apps/1245620/header.jpg"],
+      ["검은 신화: 오공", "https://cdn.akamai.steamstatic.com/steam/apps/2358720/header.jpg"],
+      ["하데스", "https://cdn.akamai.steamstatic.com/steam/apps/1145360/header.jpg"],
+      ["발헤임", "https://cdn.akamai.steamstatic.com/steam/apps/892970/header.jpg"],
+    ],
+  },
+};
+
+/* ==================== 렌더 ==================== */
+const d = DETAILS[new URLSearchParams(location.search).get("d")] || DETAILS.movie;
+const $ = id => document.getElementById(id);
+
+document.title = `${d.title} | AOD 상세 목업`;
+$("domainChip").textContent = d.domain;
+$("title").textContent = d.title;
+$("subtitle").textContent = d.subtitle;
+$("poster").className = "poster " + d.posterType;
+$("poster").innerHTML = `<img src="${d.posterSrc}" alt="${d.title} 대표 이미지" width="464" height="696">`;
+$("genres").innerHTML = d.genres.map(g => `<span class="tag">${g}</span>`).join("");
+$("stats").innerHTML = d.stats.map(s => `<span class="stat"><i class="${s.icon}"></i>${s.text}</span>`).join("");
+$("watch").innerHTML = d.watch.map(([label]) =>
+  `<a class="watch-btn" href="#">${label} <i class="ph ph-arrow-square-out"></i></a>`).join("");
+$("synopsis").textContent = d.synopsis;
+$("infoRows").innerHTML = d.info.map(([k, v]) =>
+  `<div class="row"><dt>${k}</dt><dd>${v}</dd></div>`).join("");
+$("reviewCount").textContent = d.reviews.length;
+$("reviewList").innerHTML = d.reviews.map(r => `
+  <article class="review-card">
+    <div class="review-top">
+      <span class="avatar">${r.name[0]}</span>
+      <span class="name">${r.name}</span>
+      <span class="date">${r.date}</span>
+      <span class="score"><i class="ph-fill ph-star"></i>${r.score}</span>
+    </div>
+    <p>${r.text}</p>
+  </article>`).join("");
+$("similar").innerHTML = d.similar.map(([title, src]) => `
+  <a class="mini${d.similarWide ? " wide" : ""}" href="#">
+    <div class="thumb"><img loading="lazy" src="${src}" alt="${title}"></div>
+    <div class="label">${title}</div>
+  </a>`).join("");
+</script>
+</body>
+</html>

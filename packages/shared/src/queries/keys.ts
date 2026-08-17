@@ -1,4 +1,5 @@
 import type { WorksQueryParams, ReleasesQueryParams } from "../api/workApi";
+import type { CollectionsQueryParams } from "../api/collectionApi";
 
 // 기존 웹 훅의 인라인 키와 요소·순서·타입·중첩 구조가 동일해야 한다.
 // 파라미터 정규화(기본값 주입) 금지 — 기본값은 API 함수 내부에서만 적용된다.
@@ -33,6 +34,25 @@ export const reviewKeys = {
 export const interactionKeys = {
   likeStats: (contentId: number) => ["likeStats", contentId] as const,
   bookmarkStatus: (contentId: number) => ["bookmarkStatus", contentId] as const,
+};
+
+export const collectionKeys = {
+  /** 목록·요약 전체 무효화 접두 (["collections", ...] 전부) */
+  root: () => ["collections"] as const,
+  publicRoot: () => ["collections", "public"] as const,
+  publicList: (params: CollectionsQueryParams) =>
+    ["collections", "public", params] as const,
+  mineRoot: () => ["collections", "mine"] as const,
+  mine: (page: number, size: number) =>
+    ["collections", "mine", page, size] as const,
+  mineSummary: (contentId: number) =>
+    ["collections", "mine-summary", contentId] as const,
+  detail: (id: number | undefined) => ["collection", id] as const,
+};
+
+export const rankingKeys = {
+  all: () => ["rankings", "all"] as const,
+  platform: (platform: string) => ["rankings", "platform", platform] as const,
 };
 
 export const myKeys = {

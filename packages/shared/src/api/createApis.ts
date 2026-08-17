@@ -8,6 +8,7 @@ import {
   type InteractionApi,
 } from "./interactionApi";
 import { createRankingApi, type RankingApi } from "./rankingApi";
+import { createCollectionApi, type CollectionApi } from "./collectionApi";
 
 export interface Apis {
   authApi: AuthApi;
@@ -15,6 +16,7 @@ export interface Apis {
   reviewApi: ReviewApi;
   interactionApi: InteractionApi;
   rankingApi: RankingApi;
+  collectionApi: CollectionApi;
 }
 
 export function createApis(clients: ApiClients): Apis {
@@ -25,5 +27,6 @@ export function createApis(clients: ApiClients): Apis {
     reviewApi: createReviewApi(publicApi, privateApi),
     interactionApi: createInteractionApi(publicApi, privateApi),
     rankingApi: createRankingApi(publicApi),
+    collectionApi: createCollectionApi(privateApi),
   };
 }

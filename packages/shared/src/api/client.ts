@@ -134,8 +134,20 @@ export function createApiClients(options: ApiClientOptions): ApiClients {
     });
   };
 
-  const publicApi = axios.create({ baseURL, timeout: 30000 });
-  const privateApi = axios.create({ baseURL, timeout: 30000 });
+  // 배열 파라미터를 platforms=a&platforms=b 반복 형식으로 직렬화.
+  // axios 기본값(platforms[]=a 브래킷)은 Spring @RequestParam List 바인딩이 받지 못한다.
+  const REPEAT_ARRAY_PARAMS = { indexes: null } as const;
+
+  const publicApi = axios.create({
+    baseURL,
+    timeout: 30000,
+    paramsSerializer: REPEAT_ARRAY_PARAMS,
+  });
+  const privateApi = axios.create({
+    baseURL,
+    timeout: 30000,
+    paramsSerializer: REPEAT_ARRAY_PARAMS,
+  });
 
   publicApi.interceptors.request.use(logRequest, logRequestError);
   addRetryInterceptor(publicApi);

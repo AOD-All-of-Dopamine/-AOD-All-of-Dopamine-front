@@ -11,6 +11,10 @@ import { workKeys, releaseKeys, metaKeys } from "../queries/keys";
 
 /**
  * 작품 목록 조회 hook
+ *
+ * queryKey는 params 객체 전체를 그대로 포함하므로 releaseFrom/To, status,
+ * weekdays, ageRatings 등 WorksQueryParams의 모든 필터 축이 캐시 키에 반영된다.
+ * (undefined 값은 react-query 해시에서 일관되게 탈락하므로 키 안정성 유지)
  */
 export const useWorks = (
   params: WorksQueryParams = {},

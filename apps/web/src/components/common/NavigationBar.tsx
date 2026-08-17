@@ -1,16 +1,34 @@
-import React from "react";
-import HomeIcon from "../../assets/home-icon.tsx";
-import RankingIcon from "../../assets/ranking-icon.tsx";
-import SearchIcon from "../../assets/search-icon.tsx";
-import CalendarIcon from "../../assets/calendar-icon.tsx";
-import MyIcon from "../../assets/my-icon.tsx";
+import {
+  CalendarBlank,
+  Compass,
+  House,
+  Stack,
+  Trophy,
+  User,
+  type Icon,
+} from "@phosphor-icons/react";
 import { useLocation, useNavigate, matchPath } from "react-router-dom";
 
-const NavigationBar: React.FC = () => {
+/**
+ * 모바일 하단 탭 (< lg 전용) - 데스크톱은 SiteHeader가 담당.
+ * 아이콘은 Phosphor 단일 규칙(목업 .m-tab) - 활성 탭은 accent + fill 변형,
+ * 라벨은 활성 시 ink 600.
+ * 6탭: 컬렉션 목업 5-0 A안 (신작 유지 + 컬렉션 추가, 한글 라벨 2~3자라 성립).
+ */
+const TABS: { path: string; label: string; Icon: Icon }[] = [
+  { path: "/home", label: "홈", Icon: House },
+  { path: "/explore", label: "탐색", Icon: Compass },
+  { path: "/collections", label: "컬렉션", Icon: Stack },
+  { path: "/ranking", label: "랭킹", Icon: Trophy },
+  { path: "/new", label: "신작", Icon: CalendarBlank },
+  { path: "/profile", label: "프로필", Icon: User },
+];
+
+const NavigationBar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const isActive = (pattern: string) =>
-    !!matchPath({ path: pattern, end: false }, location.pathname);
+  const isActive = (path: string) =>
+    !!matchPath({ path: `${path}/*`, end: false }, location.pathname);
 
   const handleNavigation = (path: string) => {
     navigate(path);
@@ -18,58 +36,27 @@ const NavigationBar: React.FC = () => {
   };
 
   return (
-    <nav className="fixed max-w-2xl bottom-0 left-0 w-full mx-auto right-0 bg-[#242424] flex justify-around items-center h-18 z-[1000]">
-      <button
-        onClick={() => handleNavigation("/home")}
-        className="flex flex-col items-center gap-1 text-xs"
-      >
-        <HomeIcon color={isActive("/home/*") ? "white" : "gray"} />
-        <span className={isActive("/home/*") ? "text-white" : "text-gray-400"}>
-          홈
-        </span>
-      </button>
-      <button
-        onClick={() => handleNavigation("/explore")}
-        className="flex flex-col items-center gap-1 text-xs"
-      >
-        <SearchIcon color={isActive("/explore/*") ? "white" : "gray"} />
-        <span
-          className={isActive("/explore/*") ? "text-white" : "text-gray-400"}
-        >
-          탐색
-        </span>
-      </button>
-      <button
-        onClick={() => handleNavigation("/ranking")}
-        className="flex flex-col items-center gap-1 text-xs"
-      >
-        <RankingIcon color={isActive("/ranking/*") ? "white" : "gray"} />
-        <span
-          className={isActive("/ranking/*") ? "text-white" : "text-gray-400"}
-        >
-          랭킹
-        </span>
-      </button>
-      <button
-        onClick={() => handleNavigation("/new")}
-        className="flex flex-col items-center gap-1 text-xs"
-      >
-        <CalendarIcon color={isActive("/new/*") ? "white" : "gray"} />
-        <span className={isActive("/new/*") ? "text-white" : "text-gray-400"}>
-          신작
-        </span>
-      </button>
-      <button
-        onClick={() => handleNavigation("/profile")}
-        className="flex flex-col items-center gap-1 text-xs"
-      >
-        <MyIcon color={isActive("/profile/*") ? "white" : "gray"} />
-        <span
-          className={isActive("/profile/*") ? "text-white" : "text-gray-400"}
-        >
-          프로필
-        </span>
-      </button>
+    <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-16 items-stretch border-t border-line bg-surface/95 backdrop-blur-md lg:hidden">
+      {TABS.map(({ path, label, Icon }) => {
+        const active = isActive(path);
+        return (
+          <button
+            key={path}
+            onClick={() => handleNavigation(path)}
+            aria-current={active ? "page" : undefined}
+            className="flex flex-1 flex-col items-center justify-center gap-[3px] text-[11px]"
+          >
+            <Icon
+              size={23}
+              weight={active ? "fill" : "regular"}
+              className={active ? "text-accent" : "text-ink-3"}
+            />
+            <span className={active ? "font-semibold text-ink" : "text-ink-3"}>
+              {label}
+            </span>
+          </button>
+        );
+      })}
     </nav>
   );
 };
