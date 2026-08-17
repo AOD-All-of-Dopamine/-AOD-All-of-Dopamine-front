@@ -20,7 +20,12 @@ import { IconButton } from '@/components/ui/IconButton';
 import { SkeletonBlock, SkeletonPulse } from '@/components/ui/Skeleton';
 import { ToastPill, useToast } from '@/components/ui/Toast';
 import { domainFallbackIcon } from '@/components/ui/WorkCard';
-import { workCardMeta, workCardTags } from '@/components/ui/workCardInfo';
+import {
+  ageLabel,
+  webtoonStatusLabel,
+  workCardMeta,
+  workCardTags,
+} from '@/components/ui/workCardInfo';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/auth/AuthContext';
 import { useCollectionDetail, useToggleCollectionLike } from '@aod/shared/hooks';
@@ -73,7 +78,9 @@ const itemMetaLine = (work: WorkSummary): string | undefined => {
 
 /**
  * 목업 .item-inline-stat - 도메인별 대표 스탯을 "강조값 + 보조값" 한 줄로.
- * workCardFooter의 파생 규칙과 동일 원천이나 배치(인접)가 달라 로컬 조립.
+ * workCardFooter의 파생 규칙(workCardInfo 헬퍼)과 동일 원천이나 배치(인접)가
+ * 달라 로컬 조립. foot 규칙 전 도메인 커버: 게임=Steam desc+%, 영화/TV=★평점,
+ * 웹툰=연재 상태+연령, 웹소설=연령.
  */
 const itemInlineStat = (
   work: WorkSummary,
@@ -96,6 +103,15 @@ const itemInlineStat = (
           ? work.externalRating.toFixed(1)
           : undefined;
       return rating ? { star: true, sub: rating } : null;
+    }
+    case 'WEBTOON': {
+      const main = webtoonStatusLabel(work);
+      const sub = ageLabel(work.ageRating);
+      return main || sub ? { main, sub } : null;
+    }
+    case 'WEBNOVEL': {
+      const main = ageLabel(work.ageRating);
+      return main ? { main } : null;
     }
     default:
       return null;

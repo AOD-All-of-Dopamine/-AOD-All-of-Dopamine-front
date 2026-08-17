@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -234,8 +234,16 @@ function GroupSkeleton() {
 }
 
 export default function NewReleasesScreen() {
+  const scrollRef = useRef<ScrollView>(null);
   const [domainId, setDomainId] = useState('all');
   const domainKey = domainId === 'all' ? undefined : domainId.toUpperCase();
+
+  const selectDomain = (id: string) => {
+    if (id === domainId) return;
+    setDomainId(id);
+    // 도메인 전환 시 목록 최상단 (탐색 관례와 일관)
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  };
 
   const recent = useRecentReleases({ domain: domainKey, size: RECENT_SIZE });
   const upcoming = useUpcomingReleases({
@@ -263,6 +271,7 @@ export default function NewReleasesScreen() {
       </SafeAreaView>
 
       <ScrollView
+        ref={scrollRef}
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}>
@@ -281,7 +290,7 @@ export default function NewReleasesScreen() {
                 key={d.id}
                 label={d.label}
                 active={domainId === id}
-                onPress={() => setDomainId(id)}
+                onPress={() => selectDomain(id)}
               />
             );
           })}

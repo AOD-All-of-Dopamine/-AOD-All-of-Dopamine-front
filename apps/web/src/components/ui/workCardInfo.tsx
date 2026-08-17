@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Star } from "@phosphor-icons/react";
 import { WorkSummary } from "@aod/shared/types";
-import { DOMAIN_LABEL_MAP } from "@aod/shared/constants";
+import { DOMAIN_LABEL_MAP, WEEKDAY_KO } from "@aod/shared/constants";
 import { watchPlatformLabels } from "../../constants/platforms";
 import { steamReviewDescKo } from "@aod/shared/constants";
 
@@ -19,16 +19,8 @@ import { steamReviewDescKo } from "@aod/shared/constants";
 const MAX_TAGS = 3;
 const MAX_OTT_LABELS = 2;
 
-/** 웹툰 연재 요일(mon~sun 소문자) 한글 - "월요웹툰" 조립용 (상세 요일 필 공용) */
-export const WEEKDAY_KO: Record<string, string> = {
-  mon: "월",
-  tue: "화",
-  wed: "수",
-  thu: "목",
-  fri: "금",
-  sat: "토",
-  sun: "일",
-};
+// WEEKDAY_KO는 shared로 승격 - 기존 소비처(work-detail-page) 호환용 재수출
+export { WEEKDAY_KO };
 
 /**
  * "12세이용가" -> "12세". 전체이용가는 표기 생략(undefined).

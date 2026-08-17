@@ -15,6 +15,7 @@ import { ArrowLeft, MagnifyingGlass, WarningCircle } from 'phosphor-react-native
 import { DomainChip } from '@/components/ui/DomainChip';
 import { EmptyState, EmptyStateAction } from '@/components/ui/EmptyState';
 import { IconButton } from '@/components/ui/IconButton';
+import { SectionError } from '@/components/ui/SectionError';
 import { SkeletonPulse, WorkCardSkeleton } from '@/components/ui/Skeleton';
 import { WorkCard } from '@/components/ui/WorkCard';
 import {
@@ -183,7 +184,14 @@ export default function SearchScreen() {
               />
             )}
             ListFooterComponent={
-              hasMore ? (
+              isError ? (
+                // 2페이지 이후 로드 실패 - 누적 목록은 유지하고 인라인 재시도만
+                <SectionError
+                  style={styles.footerError}
+                  message="검색 결과를 더 불러오지 못했어요."
+                  onRetry={() => refetch()}
+                />
+              ) : hasMore ? (
                 <Pressable
                   accessibilityRole="button"
                   style={({ pressed }) => [
@@ -280,6 +288,10 @@ const styles = StyleSheet.create({
   gridCell: {
     flex: 1,
     maxWidth: '50%',
+  },
+  footerError: {
+    marginTop: 4,
+    marginHorizontal: 16,
   },
   moreButton: {
     marginTop: 4,

@@ -4,6 +4,7 @@ import { Star } from 'phosphor-react-native';
 import { WorkSummary } from '@aod/shared/types';
 import {
   DOMAIN_LABEL_MAP,
+  WEEKDAY_KO,
   steamReviewDescKo,
   watchPlatformLabels,
 } from '@aod/shared/constants';
@@ -25,28 +26,30 @@ import { Palette } from '@/constants/theme';
 const MAX_TAGS = 3;
 const MAX_OTT_LABELS = 2;
 
-/**
- * 웹툰 연재 요일(mon~sun 소문자) 한글 - "월요웹툰" 조립용 (상세 요일 필 공용).
- * shared에 없는 상수라 웹 workCardInfo 정의를 모바일 로컬로 미러링한다 (편차 기록 참조).
- */
-export const WEEKDAY_KO: Record<string, string> = {
-  mon: '월',
-  tue: '화',
-  wed: '수',
-  thu: '목',
-  fri: '금',
-  sat: '토',
-  sun: '일',
-};
+// WEEKDAY_KO는 shared로 승격 - 기존 소비처(work/[id] 요일 필) 호환용 재수출
+export { WEEKDAY_KO };
 
 /**
  * "12세이용가" -> "12세". 전체이용가는 표기 생략(undefined).
  * 웹소설 실데이터는 "15세 이용가"처럼 공백 포함형이라 비교 전에 공백을 흡수한다.
+ * (컬렉션 아이템 인라인 스탯 공용 - export)
  */
-const ageLabel = (ageRating?: string | null) => {
+export const ageLabel = (ageRating?: string | null) => {
   const normalized = ageRating?.replace(/\s+/g, '');
   if (!normalized || normalized === '전체이용가') return undefined;
   return normalized.replace(/이용가$/, '');
+};
+
+/**
+ * 웹툰 연재 상태 라벨 - "화요웹툰" | "연재중" | "완결".
+ * weekday는 완결작에서 빈 문자열("")일 수 있음 - 요일 미상 연재작은 "연재중" 폴백.
+ * (카드 foot·컬렉션 아이템 인라인 스탯 공용)
+ */
+export const webtoonStatusLabel = (work: WorkSummary): string | undefined => {
+  const weekday = work.weekday ? WEEKDAY_KO[work.weekday] : undefined;
+  if (work.status === '연재중') return weekday ? `${weekday}요웹툰` : '연재중';
+  if (work.status === '완결') return '완결';
+  return undefined;
 };
 
 /** foot 좌측 일반 텍스트 (truncate) */
@@ -128,16 +131,7 @@ export const workCardFooter = (work: WorkSummary): ReactNode => {
       );
     }
     case 'WEBTOON': {
-      // weekday는 완결작에서 빈 문자열("")일 수 있음 - 요일 미상 연재작은 "연재중" 폴백
-      const weekday = work.weekday ? WEEKDAY_KO[work.weekday] : undefined;
-      const status =
-        work.status === '연재중'
-          ? weekday
-            ? `${weekday}요웹툰`
-            : '연재중'
-          : work.status === '완결'
-            ? '완결'
-            : undefined;
+      const status = webtoonStatusLabel(work);
       const age = ageLabel(work.ageRating);
       if (!status && !age) return undefined;
       return (

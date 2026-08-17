@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -114,8 +114,22 @@ const hasInfoValue = (value: unknown): boolean => {
 const asText = (v: unknown) =>
   typeof v === 'string' && v.trim() !== '' ? v.trim() : undefined;
 
+/**
+ * 태그 제거 + 기본 HTML 엔티티 디코드 (게임 수집 원문에 실재).
+ * &lt;/&gt;는 태그 제거 후에 풀어야 본문 꺾쇠가 태그로 오인되지 않고,
+ * &amp;는 마지막에 풀어야 "&amp;lt;" 이중 디코드가 안 생긴다.
+ */
 const stripHtml = (s: string) =>
-  s.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  s
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0?39;/g, "'")
+    .replace(/&amp;/gi, '&')
+    .replace(/\s+/g, ' ')
+    .trim();
 
 /** 섹션 제목 (목업 .d-section h2) */
 function SectionTitle({ children }: { children: ReactNode }) {
@@ -156,6 +170,8 @@ export default function WorkDetailScreen() {
   const [isSynopsisOpen, setIsSynopsisOpen] = useState(false);
   // 클램프 초과 판정 - 화면 밖 측정용 클론의 전체 줄 수 (null = 미측정)
   const [synopsisLines, setSynopsisLines] = useState<number | null>(null);
+  // 시놉시스 영역 폭 - 폭 변화(분할 화면·폴더블·회전) 시 클램프 판정 재측정
+  const synopsisWidthRef = useRef<number | null>(null);
   const [isCollectSheetOpen, setIsCollectSheetOpen] = useState(false);
 
   const {
@@ -499,7 +515,19 @@ export default function WorkDetailScreen() {
         )}
 
         {/* 시놉시스 - 4줄 클램프 + 더보기 (목업 .d-syn/.d-more) */}
-        <View style={styles.section}>
+        <View
+          style={styles.section}
+          onLayout={(e) => {
+            // 폭이 바뀌면(분할 화면·폴더블·회전) 줄 수가 달라진다 - 측정 리셋
+            const width = Math.round(e.nativeEvent.layout.width);
+            if (
+              synopsisWidthRef.current !== null &&
+              synopsisWidthRef.current !== width
+            ) {
+              setSynopsisLines(null);
+            }
+            synopsisWidthRef.current = width;
+          }}>
           <SectionTitle>시놉시스</SectionTitle>
           {synopsis ? (
             <>

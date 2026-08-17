@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -130,6 +130,7 @@ function RankRow({
 }
 
 export default function RankingScreen() {
+  const listRef = useRef<FlatList<ExternalRanking>>(null);
   const [domainId, setDomainId] = useState<RankingDomain>(DEFAULT_DOMAIN);
   const [platform, setPlatform] = useState<string>(
     RANKING_SOURCES[DEFAULT_DOMAIN].platforms[0],
@@ -141,6 +142,8 @@ export default function RankingScreen() {
     if (id === domainId) return;
     setDomainId(id);
     setPlatform(RANKING_SOURCES[id].platforms[0]);
+    // 도메인 전환 시 목록 최상단 (탐색 관례와 일관)
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
   };
 
   const rankings = usePlatformRankings(platform);
@@ -201,6 +204,7 @@ export default function RankingScreen() {
       </SafeAreaView>
 
       <FlatList
+        ref={listRef}
         style={styles.list}
         data={rankings.isLoading || rankings.isError ? [] : sorted}
         keyExtractor={(item) => String(item.id)}
