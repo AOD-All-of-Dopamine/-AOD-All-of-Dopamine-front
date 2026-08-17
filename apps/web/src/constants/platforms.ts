@@ -19,7 +19,7 @@ export {
   watchPlatformLabels,
 } from "@aod/shared/constants";
 
-// 로고는 웹 번들 에셋이라 shared에 둘 수 없다 — 라벨(공유)과 여기서 합성한다.
+// 로고는 웹 번들 에셋이라 shared에 둘 수 없다 - 라벨(공유)과 여기서 합성한다.
 const PLATFORM_LOGOS: Record<string, string> = {
   TMDB_MOVIE: TMDB_LOGO,
   TMDB_TV: TMDB_LOGO,

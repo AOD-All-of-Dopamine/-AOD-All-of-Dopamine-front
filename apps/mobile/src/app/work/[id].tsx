@@ -120,11 +120,11 @@ export default function WorkDetailScreen() {
       setIsRatingOpen(false);
       return;
     }
+    // 서버 toggleLikeType이 전환(DISLIKE→LIKE 등)을 단일 호출로 처리한다 -
+    // 구 liked/disliked 불리언은 서버 계약(userLikeType)에 없던 죽은 분기라 제거
     if (type === 'like') {
-      if (likeStats?.disliked) toggleDislikeMutation.mutate();
       toggleLikeMutation.mutate();
     } else {
-      if (likeStats?.liked) toggleLikeMutation.mutate();
       toggleDislikeMutation.mutate();
     }
     setIsRatingOpen(false);
