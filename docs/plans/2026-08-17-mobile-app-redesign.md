@@ -34,11 +34,11 @@ useCollections(조회수 회피 캐시 설계) 이미 존재. 모바일은 이�
 ## 태스크
 
 ### M-A. 테마·셸 (구현 → 리뷰 → 수정)
-- [ ] theme.ts AOD 토큰 재정의 + 라이트 락, Pretendard 확인/도입
-- [ ] phosphor-react-native 도입, 탭바 6탭(컬렉션 탭 신설, 라우트 스텁 포함) - 목업 하단 탭 문법
-- [ ] 공용: WorkCard 계열을 목업 카드 문법(포스터/가로 썸네일, meta·tags·foot)으로 재작성 +
+- [x] theme.ts AOD 토큰 재정의 + 라이트 락, Pretendard 확인/도입
+- [x] phosphor-react-native 도입, 탭바 6탭(컬렉션 탭 신설, 라우트 스텁 포함) - 목업 하단 탭 문법
+- [x] 공용: WorkCard 계열을 목업 카드 문법(포스터/가로 썸네일, meta·tags·foot)으로 재작성 +
       RN용 workCardInfo 파생 모듈(shared 상수 소비)
-- [ ] 상단 바 공통(아이콘 헤더 56px / 상세용 뒤로가기+제목 바) 컴포넌트
+- [x] 상단 바 공통(아이콘 헤더 56px / 상세용 뒤로가기+제목 바) 컴포넌트
 
 ### M-B. 목록 화면 (구현 → 리뷰 → 수정)
 - [ ] 홈: 히어로 카드·가로 릴·리뷰 행 (목업 프레임 1)
@@ -69,3 +69,20 @@ useCollections(조회수 회피 캐시 설계) 이미 존재. 모바일은 이�
 ## 편차 기록
 
 (구현·리뷰 중 발견 시 태스크 접두어와 함께 기록)
+
+- M-A: Pretendard는 이미 expo-font로 로드 중(assets/fonts static 4 weights + 루트 useFonts) -
+  신규 도입 없음, 기존 체계 유지.
+- M-A: WEEKDAY_KO가 shared에 없음(웹 workCardInfo.tsx 로컬 정의) - 웹 정의를 모바일
+  components/ui/workCardInfo.tsx에 미러링. shared 승격 여부는 오케스트레이터 판단
+  (shared 수정 금지 룰에 따라 모바일에서 손대지 않음).
+- M-A: 목업 헤더·탭바의 반투명 + backdrop blur(.92/.96)는 RN 코어 미지원 - 불투명 surface로
+  대체 (heavy 의존성 지양 결정과 일관).
+- M-A: 구 화면 컴파일 보존용으로 theme/tokens.ts 구 토큰명을 라이트 팔레트로 근사 매핑
+  (rankGold→star, rankSilver→ink-3, rankBronze→tint-terracotta, changeUp→accent-ink,
+  changeDown·blue→tint-slate, error→danger, surfaceDeep→canvas). 정식 문법은 M-B/C 리스타일에서.
+- M-A: grep 게이트(임의 hex·em-dash·구 svg-assets 참조)는 M-A 신규·수정 파일 기준 0.
+  구 화면(M-B/C 대상)에는 기존 hex·em-dash·svg-assets 참조가 잔존 - 각 화면 리스타일 때 제거.
+- M-A: 신규 WorkCard 썸네일 폴백은 구 svg-assets 대신 Phosphor 도메인 아이콘
+  (FilmSlate/TelevisionSimple/GameController/BookOpenText/Books). 구 FallbackThumb 교체는 M-B/C.
+- M-A: 신규 카드 이미지 비율은 목업 실측대로 포스터 3:4, 게임 16:9 (웹 카드 2:3·460/215와
+  의도적으로 다름 - 모바일 목업이 스펙).

@@ -1,17 +1,37 @@
+import { StyleSheet, Text } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
 import {
-  CalendarTabIcon,
-  ExploreTabIcon,
-  HomeTabIcon,
-  MyTabIcon,
-  RankingTabIcon,
-} from '@/components/tab-icons';
-import { colors, fonts } from '@/theme/tokens';
+  CalendarBlank,
+  Compass,
+  House,
+  Stack,
+  Trophy,
+  User,
+  type Icon,
+} from 'phosphor-react-native';
 
-// 웹 NavigationBar 미러: bg #242424, 활성 white / 비활성 gray, 아이콘+라벨 세로.
-// (NativeTabs는 png만 지원해 웹 svg 아이콘을 쓰기 위해 JS 탭바로 전환)
+import { Palette } from '@/constants/theme';
+import { fonts } from '@/theme/tokens';
+
+// 목업 .m-tabbar 문법 (mobile-light-mockup.html + collections-mockup 5-0 A안 6탭):
+// surface 바탕 + line 상단 보더, 활성 = accent 아이콘(fill) + ink 라벨(600).
+function tabOptions(label: string, IconComponent: Icon) {
+  return {
+    title: label,
+    tabBarIcon: ({ focused }: { focused: boolean }) => (
+      <IconComponent
+        size={23}
+        color={focused ? Palette.accent : Palette.ink3}
+        weight={focused ? 'fill' : 'regular'}
+      />
+    ),
+    tabBarLabel: ({ focused }: { focused: boolean }) => (
+      <Text style={[styles.label, focused && styles.labelActive]}>{label}</Text>
+    ),
+  };
+}
+
 export default function TabLayout() {
   // edge-to-edge(SDK 57 기본)에서 시스템 내비바와 겹치지 않도록
   // 고정 높이 대신 하단 safe-area를 더한다.
@@ -22,54 +42,36 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: colors.background,
-          borderTopWidth: 0,
+          backgroundColor: Palette.surface,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: Palette.line,
           height: 64 + insets.bottom,
           paddingBottom: insets.bottom,
           paddingTop: 8,
         },
-        tabBarActiveTintColor: '#FFFFFF',
-        tabBarInactiveTintColor: '#9CA3AF',
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontFamily: fonts.regular,
-        },
+        tabBarActiveTintColor: Palette.accent,
+        tabBarInactiveTintColor: Palette.ink3,
       }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: '홈',
-          tabBarIcon: ({ color }) => <HomeTabIcon color={color} size={20} />,
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: '탐색',
-          tabBarIcon: ({ color }) => <ExploreTabIcon color={color} size={22} />,
-        }}
-      />
-      <Tabs.Screen
-        name="ranking"
-        options={{
-          title: '랭킹',
-          tabBarIcon: ({ color }) => <RankingTabIcon color={color} size={22} />,
-        }}
-      />
-      <Tabs.Screen
-        name="new"
-        options={{
-          title: '신작',
-          tabBarIcon: ({ color }) => <CalendarTabIcon color={color} size={22} />,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: '프로필',
-          tabBarIcon: ({ color }) => <MyTabIcon color={color} size={22} />,
-        }}
-      />
+      <Tabs.Screen name="index" options={tabOptions('홈', House)} />
+      <Tabs.Screen name="explore" options={tabOptions('탐색', Compass)} />
+      <Tabs.Screen name="collections" options={tabOptions('컬렉션', Stack)} />
+      <Tabs.Screen name="ranking" options={tabOptions('랭킹', Trophy)} />
+      <Tabs.Screen name="new" options={tabOptions('신작', CalendarBlank)} />
+      <Tabs.Screen name="profile" options={tabOptions('프로필', User)} />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  label: {
+    fontSize: 11,
+    lineHeight: 14,
+    marginTop: 3,
+    fontFamily: fonts.regular,
+    color: Palette.ink3,
+  },
+  labelActive: {
+    fontFamily: fonts.semiBold,
+    color: Palette.ink,
+  },
+});

@@ -6,8 +6,8 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "mobile",
-    "userInterfaceStyle": "dark",
-    "backgroundColor": "#242424",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#f7f6f4",
     "ios": {
       "icon": "./assets/expo.icon"
     },

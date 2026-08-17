@@ -1,6 +1,6 @@
 import { Platform, StyleSheet, Text, type TextProps, type TextStyle } from 'react-native';
 
-import { Fonts, ThemeColor } from '@/constants/theme';
+import { Fonts, Palette, ThemeColor } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { fontFamilyForWeight } from '@/theme/tokens';
 
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
   linkPrimary: {
     lineHeight: 30,
     fontSize: 14,
-    color: '#3c87f7',
+    color: Palette.accentInk,
   },
   code: {
     fontFamily: Fonts.mono,

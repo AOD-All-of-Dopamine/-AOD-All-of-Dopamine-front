@@ -1,4 +1,4 @@
-import { DarkTheme, ThemeProvider, Stack } from 'expo-router';
+import { DefaultTheme, ThemeProvider, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -12,14 +12,14 @@ import { colors } from '@/theme/tokens';
 
 SplashScreen.preventAutoHideAsync();
 
-// 웹과 동일한 다크 고정 테마 (#242424 배경, #855BFF 액센트)
+// 웹과 동일한 라이트 고정 테마 (canvas 배경, accent 액센트) - 다크 매핑은 백로그
 const AodTheme = {
-  ...DarkTheme,
+  ...DefaultTheme,
   colors: {
-    ...DarkTheme.colors,
+    ...DefaultTheme.colors,
     primary: colors.accent,
     background: colors.background,
-    card: colors.background,
+    card: colors.surface,
     text: colors.textPrimary,
     border: colors.border,
   },
