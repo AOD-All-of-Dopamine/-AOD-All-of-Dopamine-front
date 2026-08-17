@@ -21,7 +21,9 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { DomainChip } from '@/components/ui/DomainChip';
 import { EmptyState, EmptyStateAction } from '@/components/ui/EmptyState';
 import { FilterChip } from '@/components/ui/FilterChip';
+import { GameCompactCard } from '@/components/ui/GameCompactCard';
 import { SkeletonPulse, WorkCardSkeleton } from '@/components/ui/Skeleton';
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { WorkCard } from '@/components/ui/WorkCard';
 import {
   workCardFooter,
@@ -37,6 +39,7 @@ import {
 } from '@aod/shared/constants';
 import type { WorkSummary } from '@aod/shared/types';
 import { Palette, Radius } from '@/constants/theme';
+import { toListRows, type ListRow } from '@/utils/mixedList';
 
 /**
  * 탐색 (목업 프레임 2·3) - 도메인 칩 가로 스크롤 / 필터 버튼(활성 개수 뱃지) +
@@ -49,10 +52,17 @@ import { Palette, Radius } from '@/constants/theme';
  * - 게임·웹소설·영화·시리즈: 출시(개봉) 시기 era 프리셋 -> releaseFrom/To
  * - 웹툰 전용: 연재 상태(radio) / 연재 요일 / 연령 등급. 완결 선택 시 요일 자동
  *   해제 (완결작 weekday null - 조합이 항상 0건)
+ * - 게임 전용: 리뷰 수(reviewMin -> reviewCountMin, game_contents EXISTS 축) /
+ *   출시 예정 토글. 게임 탭 기본은 releaseTo=오늘 전송(출시 예정작 제외), 토글을
+ *   켜면 미전송. era 선택 시에는 era 범위가 우선이라 토글을 무시(disabled + 안내)
+ *   하되 상태는 보존해 era 해제 시 복원한다 (웹 upcoming 축과 동일 정책).
  * - 전체 탭: 백엔드가 domain 없이는 필터를 적용하지 않아 필터 미지원 안내만
  *
  * 시트는 즉시 적용 - 스테이징 상태 없음. footer [닫기 | N개 작품 보기] 둘 다 닫기.
- * 목록은 FlatList 무한 스크롤 유지 (useInfiniteWorks).
+ * 목록은 FlatList 무한 스크롤 유지 (useInfiniteWorks) - 단 numColumns 대신
+ * utils/mixedList의 행 단위 데이터로 렌더한다. 전체 탭에서 게임은 풀폭 컴팩트
+ * 가로 행(GameCompactCard - 혼합 그리드 1-C의 앱 규칙), 나머지는 2개씩 페어 행.
+ * 도메인 단독 탭은 전 아이템 페어 행 - 기존 2열 그리드와 같은 시각.
  */
 
 type DomainId = 'all' | 'movie' | 'tv' | 'game' | 'webtoon' | 'webnovel';
@@ -103,6 +113,28 @@ const WEEKDAY_OPTIONS = [
 /** 웹툰 연령 등급 - DB 실측값 그대로 */
 const AGE_OPTIONS = ['전체이용가', '12세이용가', '15세이용가', '19세이용가'];
 
+/**
+ * 게임 리뷰 수 radio 프리셋 (웹 REVIEW_MIN_OPTIONS 미러) -
+ * value는 reviewCountMin으로 그대로 전송할 하한값.
+ */
+const REVIEW_MIN_OPTIONS = [
+  { value: '', label: '전체' },
+  { value: '100', label: '100개 이상' },
+  { value: '1000', label: '1,000개 이상' },
+  { value: '10000', label: '10,000개 이상' },
+];
+
+/** 게임 탭 기본 releaseTo(출시 예정작 제외 경계) - 로컬 기준 오늘 yyyy-MM-dd */
+const todayStr = () => {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
+};
+
+const reviewMinChipLabel = (value: string) =>
+  `리뷰 ${Number(value).toLocaleString()}개 이상`;
+
 const eraLabel = (value: string) =>
   ERA_OPTIONS.find((o) => o.value === value)?.label ?? value;
 
@@ -114,13 +146,13 @@ const weekdayChipLabel = (value: string) => {
 const toggleValue = (list: string[], value: string) =>
   list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
 
-/** 시트 필터 그룹 (목업 .fgroup) */
+/** 시트 필터 그룹 (목업 .fgroup) - title은 "리뷰 수 (Steam)" 보조 표기용 ReactNode 허용 */
 function SheetGroup({
   title,
   last = false,
   children,
 }: {
-  title: string;
+  title: ReactNode;
   last?: boolean;
   children: ReactNode;
 }) {
@@ -222,7 +254,7 @@ function FilterLoadError({ onRetry }: { onRetry: () => void }) {
 
 export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
-  const listRef = useRef<FlatList<WorkSummary>>(null);
+  const listRef = useRef<FlatList<ListRow<WorkSummary>>>(null);
 
   // 웹 URL 쿼리 축과 동일한 로컬 상태 (기본 도메인 game - 웹 동일)
   const [domainId, setDomainId] = useState<DomainId>('game');
@@ -232,11 +264,14 @@ export default function ExploreScreen() {
   const [status, setStatus] = useState('');
   const [weekdays, setWeekdays] = useState<string[]>([]);
   const [ages, setAges] = useState<string[]>([]);
+  const [reviewMin, setReviewMin] = useState('');
+  const [upcoming, setUpcoming] = useState(false);
   const [genresExpanded, setGenresExpanded] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const isAll = domainId === 'all';
   const isWebtoon = domainId === 'webtoon';
+  const isGame = domainId === 'game';
   const isOttDomain = domainId === 'movie' || domainId === 'tv';
   const domainKey = isAll ? undefined : domainId.toUpperCase();
 
@@ -247,6 +282,8 @@ export default function ExploreScreen() {
     setStatus('');
     setWeekdays([]);
     setAges([]);
+    setReviewMin('');
+    setUpcoming(false);
   };
 
   // 도메인 전환 시 필터·펼침 리셋 + 목록 최상단 (웹 동작 동일)
@@ -264,7 +301,18 @@ export default function ExploreScreen() {
     if (next === '완결') setWeekdays([]);
   };
 
+  // era 선택 동안 출시 예정 토글은 무시 (era 범위 우선 - 웹 upcoming 파싱 정규화
+  // 미러). 상태는 지우지 않아 era 해제 시 토글이 복원된다.
+  const upcomingOn = isGame && !era && upcoming;
+
   const eraRange = era ? ERA_RANGE[era] : undefined;
+  // 게임 탭 기본은 출시 예정작 제외(releaseTo=오늘). era 선택 시 era 범위가
+  // 우선이고, 출시 예정 토글을 켜면 releaseTo를 보내지 않는다 (웹 동일).
+  const releaseTo = eraRange
+    ? eraRange.to
+    : isGame && !upcomingOn
+      ? todayStr()
+      : undefined;
   const {
     data,
     isLoading,
@@ -278,17 +326,23 @@ export default function ExploreScreen() {
     genres: genres.length > 0 ? genres : undefined,
     platforms: platforms.length > 0 ? platforms : undefined,
     releaseFrom: eraRange?.from,
-    releaseTo: eraRange?.to,
+    releaseTo,
     status: status || undefined,
     weekdays: weekdays.length > 0 ? weekdays : undefined,
     ageRatings: ages.length > 0 ? ages : undefined,
+    reviewCountMin: reviewMin ? Number(reviewMin) : undefined,
     size: PAGE_SIZE,
     // 도메인 경로는 서버가 release_date DESC 고정, 전체 탭만 이 값을 따른다 (웹 동일)
     sortBy: 'releaseDate',
     sortDirection: 'desc',
   });
 
-  const works = data?.pages.flatMap((page) => page.content) ?? [];
+  const works = useMemo(
+    () => data?.pages.flatMap((page) => page.content) ?? [],
+    [data],
+  );
+  // 혼합(전체 탭)은 게임 = 풀폭 행, 도메인 탭은 2개씩 페어 행 (1-C 앱 규칙)
+  const rows = useMemo(() => toListRows(works, isAll), [works, isAll]);
   const totalElements = data?.pages?.[0]?.totalElements ?? 0;
 
   const genresQuery = useGenres(domainKey, { enabled: !isAll });
@@ -324,7 +378,9 @@ export default function ExploreScreen() {
     (era ? 1 : 0) +
     (status ? 1 : 0) +
     weekdays.length +
-    ages.length;
+    ages.length +
+    (reviewMin ? 1 : 0) +
+    (upcomingOn ? 1 : 0);
   const hasActiveFilters = activeFilterCount > 0;
 
   // 활성 필터 칩 - 모든 축의 개별 제거 지원 (웹 activeFilterChips 미러)
@@ -361,6 +417,24 @@ export default function ExploreScreen() {
       label: a,
       onRemove: () => setAges((prev) => prev.filter((x) => x !== a)),
     })),
+    ...(reviewMin
+      ? [
+          {
+            key: 'reviewMin',
+            label: reviewMinChipLabel(reviewMin),
+            onRemove: () => setReviewMin(''),
+          },
+        ]
+      : []),
+    ...(upcomingOn
+      ? [
+          {
+            key: 'upcoming',
+            label: '출시 예정 포함',
+            onRemove: () => setUpcoming(false),
+          },
+        ]
+      : []),
   ];
 
   const variant = domainId === 'game' ? 'landscape' : 'portrait';
@@ -454,10 +528,8 @@ export default function ExploreScreen() {
       <FlatList
         ref={listRef}
         style={styles.list}
-        data={isLoading || isError ? [] : works}
-        keyExtractor={(item) => String(item.id)}
-        numColumns={2}
-        columnWrapperStyle={styles.gridRow}
+        data={isLoading || isError ? [] : rows}
+        keyExtractor={(item) => item.key}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         onEndReached={() => {
@@ -465,24 +537,45 @@ export default function ExploreScreen() {
         }}
         onEndReachedThreshold={0.8}
         ListHeaderComponent={listHeader}
-        renderItem={({ item }) => (
-          <WorkCard
-            variant={variant}
-            title={item.title}
-            meta={workCardMeta(item, { withDomain: isAll })}
-            tags={workCardTags(item)}
-            footer={workCardFooter(item)}
-            imageUrl={item.thumbnail}
-            domain={item.domain}
-            onPress={() =>
-              router.push({
-                pathname: '/work/[id]',
-                params: { id: String(item.id) },
-              })
-            }
-            style={styles.gridCell}
-          />
-        )}
+        renderItem={({ item }) =>
+          item.type === 'game' ? (
+            // 혼합 목록의 게임 = 풀폭 컴팩트 가로 행 (혼합 그리드 1-C 앱 규칙)
+            <GameCompactCard
+              work={item.work}
+              onPress={() =>
+                router.push({
+                  pathname: '/work/[id]',
+                  params: { id: String(item.work.id) },
+                })
+              }
+              style={styles.gameRow}
+            />
+          ) : (
+            <View style={styles.gridRow}>
+              {item.works.map((work) => (
+                <WorkCard
+                  key={work.id}
+                  variant={variant}
+                  title={work.title}
+                  meta={workCardMeta(work, { withDomain: isAll })}
+                  tags={workCardTags(work)}
+                  footer={workCardFooter(work)}
+                  imageUrl={work.thumbnail}
+                  domain={work.domain}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/work/[id]',
+                      params: { id: String(work.id) },
+                    })
+                  }
+                  style={styles.gridCell}
+                />
+              ))}
+              {/* 1개짜리 행(게임이 페어를 끊은 지점) - 카드 폭 유지를 위한 스페이서 */}
+              {item.works.length === 1 && <View style={styles.gridCell} />}
+            </View>
+          )
+        }
         ListEmptyComponent={
           isLoading ? (
             <SkeletonPulse style={styles.skeletonGrid}>
@@ -665,13 +758,58 @@ export default function ExploreScreen() {
                   </SheetGroup>
                 </>
               ) : (
-                <SheetGroup title={isOttDomain ? '개봉 시기' : '출시 시기'} last>
-                  <SheetRadioGroup
-                    value={era}
-                    onChange={setEra}
-                    options={ERA_OPTIONS}
-                  />
-                </SheetGroup>
+                <>
+                  <SheetGroup
+                    title={isOttDomain ? '개봉 시기' : '출시 시기'}
+                    last={!isGame}>
+                    <SheetRadioGroup
+                      value={era}
+                      onChange={setEra}
+                      options={ERA_OPTIONS}
+                    />
+                  </SheetGroup>
+                  {isGame && (
+                    <>
+                      <SheetGroup
+                        title={
+                          <>
+                            리뷰 수{' '}
+                            <ThemedText style={styles.fgroupTitleSub}>
+                              (Steam)
+                            </ThemedText>
+                          </>
+                        }>
+                        <SheetRadioGroup
+                          value={reviewMin}
+                          onChange={setReviewMin}
+                          options={REVIEW_MIN_OPTIONS}
+                        />
+                      </SheetGroup>
+                      <SheetGroup title="출시 예정" last>
+                        <View style={styles.upcomingRow}>
+                          <ThemedText
+                            style={[
+                              styles.upcomingLabel,
+                              era ? styles.upcomingLabelDisabled : null,
+                            ]}>
+                            출시 예정작 포함
+                          </ThemedText>
+                          <ToggleSwitch
+                            checked={upcomingOn}
+                            onChange={setUpcoming}
+                            disabled={!!era}
+                            accessibilityLabel="출시 예정작 포함"
+                          />
+                        </View>
+                        <ThemedText style={styles.upcomingNote}>
+                          {era
+                            ? '출시 시기 필터를 선택한 동안에는 해당 기간이 우선 적용돼요.'
+                            : '끄면(기본) 최신 출시순에 미래 출시작이 섞이지 않아요. 켜면 예정작이 상단에 노출됩니다.'}
+                        </ThemedText>
+                      </SheetGroup>
+                    </>
+                  )}
+                </>
               )}
             </>
           )}
@@ -815,6 +953,7 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
   },
   gridRow: {
+    flexDirection: 'row',
     gap: 12,
     paddingHorizontal: 16,
     marginBottom: 12,
@@ -822,6 +961,10 @@ const styles = StyleSheet.create({
   gridCell: {
     flex: 1,
     maxWidth: '50%',
+  },
+  gameRow: {
+    marginHorizontal: 16,
+    marginBottom: 12,
   },
   skeletonGrid: {
     flexDirection: 'row',
@@ -895,6 +1038,36 @@ const styles = StyleSheet.create({
     fontWeight: 700,
     color: Palette.ink,
     marginBottom: 10,
+  },
+  /** "리뷰 수 (Steam)"의 보조 표기 - 연한 색·중간 굵기 (웹 reviewMinTitle 미러) */
+  fgroupTitleSub: {
+    fontSize: 13.5,
+    lineHeight: 18,
+    fontWeight: 500,
+    color: Palette.ink3,
+  },
+  upcomingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingVertical: 5,
+  },
+  upcomingLabel: {
+    fontSize: 14,
+    lineHeight: 19,
+    fontWeight: 400,
+    color: Palette.ink2,
+  },
+  upcomingLabelDisabled: {
+    color: Palette.ink3,
+  },
+  upcomingNote: {
+    paddingTop: 4,
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: 400,
+    color: Palette.ink3,
   },
   optWrap: {
     flexDirection: 'row',

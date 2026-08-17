@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -14,6 +14,7 @@ import { ArrowLeft, MagnifyingGlass, WarningCircle } from 'phosphor-react-native
 
 import { DomainChip } from '@/components/ui/DomainChip';
 import { EmptyState, EmptyStateAction } from '@/components/ui/EmptyState';
+import { GameCompactCard } from '@/components/ui/GameCompactCard';
 import { IconButton } from '@/components/ui/IconButton';
 import { SectionError } from '@/components/ui/SectionError';
 import { SkeletonPulse, WorkCardSkeleton } from '@/components/ui/Skeleton';
@@ -29,11 +30,14 @@ import { DOMAIN_FILTERS } from '@aod/shared/constants';
 import type { WorkSummary } from '@aod/shared/types';
 import { Palette, Radius } from '@/constants/theme';
 import { fonts } from '@/theme/tokens';
+import { toListRows } from '@/utils/mixedList';
 
 /**
  * 검색 - 웹 search-page.tsx 문법(뒤로가기 + 검색 필 + 도메인 칩 + 카드 그리드)의
  * RN 이식. 카드는 공용 WorkCard + workCardInfo 파생(혼합 도메인이라 meta에 도메인
  * 라벨, 도메인별 foot)으로 통일.
+ * 게임 결과는 세로 크롭 대신 풀폭 컴팩트 가로 행(GameCompactCard - 혼합 그리드
+ * 1-C의 앱 규칙, 웹은 페어 셀 스택). utils/mixedList의 행 단위 데이터로 렌더한다.
  * 검색 로직은 기존 유지 - useSearchWorks + 페이지 누적("더 보기", id 기준 dedup).
  */
 
@@ -79,6 +83,10 @@ export default function SearchScreen() {
 
   const hasMore = data ? !data.last : false;
   const showSkeleton = isLoading && items.length === 0;
+
+  // 게임 = 풀폭 행, 나머지 = 2개씩 페어 행 (혼합 그리드 1-C 앱 규칙 - 도메인
+  // 칩으로 게임만 좁혀도 웹과 동일하게 컴팩트 행을 유지한다)
+  const rows = useMemo(() => toListRows(items, true), [items]);
 
   return (
     <View style={styles.screen}>
@@ -158,31 +166,50 @@ export default function SearchScreen() {
         ) : (
           <FlatList
             style={styles.list}
-            data={items}
-            keyExtractor={(item) => String(item.id)}
+            data={rows}
+            keyExtractor={(item) => item.key}
             keyboardShouldPersistTaps="handled"
-            numColumns={2}
-            columnWrapperStyle={styles.gridRow}
             contentContainerStyle={styles.gridContent}
             showsVerticalScrollIndicator={false}
-            renderItem={({ item }) => (
-              <WorkCard
-                variant="portrait"
-                title={item.title}
-                meta={workCardMeta(item, { withDomain: true })}
-                tags={workCardTags(item)}
-                footer={workCardFooter(item)}
-                imageUrl={item.thumbnail}
-                domain={item.domain}
-                onPress={() =>
-                  router.push({
-                    pathname: '/work/[id]',
-                    params: { id: String(item.id) },
-                  })
-                }
-                style={styles.gridCell}
-              />
-            )}
+            renderItem={({ item }) =>
+              item.type === 'game' ? (
+                // 혼합 목록의 게임 = 풀폭 컴팩트 가로 행 (혼합 그리드 1-C 앱 규칙)
+                <GameCompactCard
+                  work={item.work}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/work/[id]',
+                      params: { id: String(item.work.id) },
+                    })
+                  }
+                  style={styles.gameRow}
+                />
+              ) : (
+                <View style={styles.gridRow}>
+                  {item.works.map((work) => (
+                    <WorkCard
+                      key={work.id}
+                      variant="portrait"
+                      title={work.title}
+                      meta={workCardMeta(work, { withDomain: true })}
+                      tags={workCardTags(work)}
+                      footer={workCardFooter(work)}
+                      imageUrl={work.thumbnail}
+                      domain={work.domain}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/work/[id]',
+                          params: { id: String(work.id) },
+                        })
+                      }
+                      style={styles.gridCell}
+                    />
+                  ))}
+                  {/* 1개짜리 행(게임이 페어를 끊은 지점) - 카드 폭 유지 스페이서 */}
+                  {item.works.length === 1 && <View style={styles.gridCell} />}
+                </View>
+              )
+            }
             ListFooterComponent={
               isError ? (
                 // 2페이지 이후 로드 실패 - 누적 목록은 유지하고 인라인 재시도만
@@ -277,6 +304,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   gridRow: {
+    flexDirection: 'row',
     gap: 12,
     paddingHorizontal: 16,
     marginBottom: 12,
@@ -288,6 +316,10 @@ const styles = StyleSheet.create({
   gridCell: {
     flex: 1,
     maxWidth: '50%',
+  },
+  gameRow: {
+    marginHorizontal: 16,
+    marginBottom: 12,
   },
   footerError: {
     marginTop: 4,

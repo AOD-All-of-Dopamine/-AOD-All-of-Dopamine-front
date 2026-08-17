@@ -53,8 +53,8 @@
 - [x] 혼합 그리드(전체 탭·검색): 게임 2칸 스팬 가로 카드 (목업 1-C 확정안)
 
 ### S-FE2. 모바일 앱 (구현 → 리뷰 → 수정)
-- [ ] 필터 시트에 출시 예정 토글·리뷰 수 라디오 (웹 축 미러)
-- [ ] 혼합 목록 게임 풀폭 가로 카드
+- [x] 필터 시트에 출시 예정 토글·리뷰 수 라디오 (웹 축 미러)
+- [x] 혼합 목록 게임 풀폭 가로 카드
 
 ### 게이트
 - [ ] BE: 테스트 그린 + 로컬 부트 V6 적용 확인 / FE: 빌드·타입체크·기존 grep 게이트
@@ -91,3 +91,19 @@
   차지 - 1-C 4열 프레임과 비율은 다르나 문법 동일.
 - S-FE1: FilterGroup·SheetGroup title을 string -> ReactNode로 완화 - 목업의
   "리뷰 수 (Steam)" 보조 표기(연한 색) 렌더 목적. 기존 소비처 시각 불변.
+- S-FE2: RN FlatList는 한 목록에서 numColumns를 아이템별로 섞을 수 없어(2칸 스팬
+  상당 불가) 목록 데이터를 행 단위로 재구성(utils/mixedList.ts toListRows) -
+  게임 = 풀폭 GameCompactCard 행 1개, 포스터 = 2개 페어 행(게임이 끼면 끊고
+  빈 자리는 스페이서 View로 카드 폭 유지). 탐색·검색 모두 numColumns=2를 걷어내고
+  행 렌더로 통일 - 도메인 단독 탭도 페어 행으로 렌더하지만 시각은 기존 2열
+  그리드와 동일(게임 탭 가로 카드 유지). FlatList 가상화는 행 단위로 유지된다.
+- S-FE2: era·upcoming 충돌은 웹 정책 미러 - era 선택 시 쿼리에서 upcoming 무시
+  (upcomingOn 파생값) + 토글 disabled + "해당 기간 우선" 안내. 로컬 상태(URL이
+  없는 앱의 단일 출처)는 지우지 않아 era 해제 시 토글이 복원된다. 활성 칩·개수
+  뱃지도 파생값 기준(웹의 파싱 정규화와 동일 결과).
+- S-FE2: 모바일 ToggleSwitch 신설 - 웹 ui/ToggleSwitch(36x21 트랙 + 16px 노브)
+  수치 이식, Pressable + accessibilityRole="switch". SheetGroup title도 웹 편차와
+  같은 이유로 string -> ReactNode 완화.
+- S-FE2: GameCompactCard 썸네일 폴백은 웹 svg 에셋 대신 Phosphor GameController
+  (M-A 관례 준수). 검색은 도메인 칩으로 게임만 좁혀도 웹과 동일하게 컴팩트 행
+  유지(웹 search-page가 groupMixedGrid를 무조건 적용하는 것의 미러).
