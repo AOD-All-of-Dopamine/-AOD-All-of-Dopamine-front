@@ -4,12 +4,31 @@
  * - "portrait"/"landscape" = WorkCard
  * - "row" = RankRow(feature) - 홈 인기 리스트용
  * - "panel-row" = RankRow(panel) - 랭킹 패널 리스트용 (마지막 행 구분선 없음)
+ * - "game-row" = GameCompactCard - 혼합 목록(전체 탭·검색) 게임 가로 행용
  */
 export interface SkeletonCardProps {
-  variant: "portrait" | "landscape" | "row" | "panel-row";
+  variant: "portrait" | "landscape" | "row" | "panel-row" | "game-row";
 }
 
 const SkeletonCard = ({ variant }: SkeletonCardProps) => {
+  if (variant === "game-row") {
+    return (
+      <div
+        aria-hidden="true"
+        className="flex animate-pulse flex-row overflow-hidden rounded-panel border border-line bg-surface shadow-card"
+      >
+        <div className="my-3 ml-3 w-[42%] flex-none self-center overflow-hidden rounded-input">
+          <div className="aspect-[460/215] bg-line" />
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 px-[13px] py-[11px]">
+          <div className="h-4 w-3/5 rounded-input bg-line" />
+          <div className="h-3 w-2/5 rounded-input bg-canvas" />
+          <div className="h-3 w-1/3 rounded-input bg-canvas" />
+        </div>
+      </div>
+    );
+  }
+
   if (variant === "row") {
     return (
       <div

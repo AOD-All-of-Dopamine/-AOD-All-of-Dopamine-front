@@ -58,6 +58,22 @@ export const workCardMeta = (
 };
 
 /**
+ * 게임 Steam 평가 파생 - desc(한글 매핑)와 긍정 %. 값이 없는 축은 undefined.
+ * 포스터 카드 foot과 GameCompactCard(혼합 목록 가로 행)가 공유한다.
+ */
+export const steamRating = (
+  work: WorkSummary,
+): { desc?: string; pct?: number } => ({
+  desc: work.steamReviewDesc
+    ? steamReviewDescKo(work.steamReviewDesc)
+    : undefined,
+  pct:
+    typeof work.steamPositivePct === "number"
+      ? work.steamPositivePct
+      : undefined,
+});
+
+/**
  * 장르 태그 - 마스터 장르 상위 3개 (없으면 태그 행 생략).
  * 실데이터에 중복 장르가 실재(React key 충돌·중복 태그 노출) - slice 전에
  * dedupe해 상위 슬롯을 고유 장르가 채우도록 한다.
@@ -74,13 +90,7 @@ export const workCardTags = (work: WorkSummary): string[] | undefined => {
 export const workCardFooter = (work: WorkSummary): ReactNode => {
   switch (work.domain) {
     case "GAME": {
-      const desc = work.steamReviewDesc
-        ? steamReviewDescKo(work.steamReviewDesc)
-        : undefined;
-      const pct =
-        typeof work.steamPositivePct === "number"
-          ? work.steamPositivePct
-          : undefined;
+      const { desc, pct } = steamRating(work);
       if (!desc && pct === undefined) return undefined;
       return (
         <>

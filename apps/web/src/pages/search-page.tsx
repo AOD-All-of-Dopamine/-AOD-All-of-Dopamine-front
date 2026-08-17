@@ -120,9 +120,16 @@ export default function SearchPage() {
       {/* 결과 영역: 로딩 / 에러 / 결과 / 결과 없음 / 검색 전 */}
       {isLoading ? (
         <div className={gridClass} aria-hidden="true">
-          {Array.from({ length: 6 }, (_, i) => (
-            <SkeletonCard key={i} variant="portrait" />
-          ))}
+          {/* 혼합 결과의 최종 형상(1-C)대로 게임 페어 형상을 섞어
+              로드 후 레이아웃 시프트를 줄인다 */}
+          <SkeletonCard variant="portrait" />
+          <SkeletonCard variant="portrait" />
+          <div className={gamePairCellClass}>
+            <SkeletonCard variant="game-row" />
+            <SkeletonCard variant="game-row" />
+          </div>
+          <SkeletonCard variant="portrait" />
+          <SkeletonCard variant="portrait" />
         </div>
       ) : isError ? (
         <div className="mt-6">

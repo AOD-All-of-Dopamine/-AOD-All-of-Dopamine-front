@@ -1,36 +1,30 @@
 import { Link } from "react-router-dom";
 import { WorkSummary } from "@aod/shared/types";
-import { steamReviewDescKo } from "@aod/shared/constants";
 import { cardLift } from "./cardStyles";
-import { workCardMeta } from "./workCardInfo";
+import { steamRating, workCardMeta } from "./workCardInfo";
 
 /**
  * 혼합 목록(탐색 전체 탭·검색)용 게임 컴팩트 가로 행 -
- * mixed-grid-mockup.html 1-C 확정안. 좌측 16:9 무크롭 썸네일(42% 폭, 인셋) +
+ * mixed-grid-mockup.html 1-C 확정안. 좌측 460:215 원본(Steam header) 무크롭
+ * 썸네일(42% 폭, 인셋 - WorkCard landscape와 동일 비율 관례) +
  * 우측 제목·meta(도메인·연도·개발사)·Steam 평가(desc + 긍정 %).
  * 그리드 배치(2칸 스팬 x2 스택 / <lg 풀폭)는 소비처 셀 래퍼가 담당한다.
  */
 export interface GameCompactCardProps {
   work: WorkSummary;
   to: string;
-  /** 썸네일 부재 시 16:9 영역 중앙에 표시할 도메인 아이콘 */
+  /** 썸네일 부재 시 460:215 영역 중앙에 표시할 도메인 아이콘 */
   fallbackIconUrl?: string;
 }
 
 const GameCompactCard = ({ work, to, fallbackIconUrl }: GameCompactCardProps) => {
   const meta = workCardMeta(work, { withDomain: true });
-  const desc = work.steamReviewDesc
-    ? steamReviewDescKo(work.steamReviewDesc)
-    : undefined;
-  const pct =
-    typeof work.steamPositivePct === "number"
-      ? work.steamPositivePct
-      : undefined;
+  const { desc, pct } = steamRating(work);
 
   return (
     <Link to={to} className={`flex flex-row bg-surface ${cardLift}`}>
       <div className="my-3 ml-3 w-[42%] flex-none self-center overflow-hidden rounded-input bg-canvas">
-        <div className="aspect-video">
+        <div className="aspect-[460/215]">
           {work.thumbnail ? (
             <img
               src={work.thumbnail}

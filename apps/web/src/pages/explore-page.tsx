@@ -986,9 +986,25 @@ export default function ExplorePage() {
           {/* 상태 3종: 로딩 스켈레톤 / 에러 / 빈 결과 + 카드 그리드 */}
           {isLoading ? (
             <div className={gridClass} aria-hidden="true">
-              {Array.from({ length: PAGE_SIZE }, (_, i) => (
-                <SkeletonCard key={i} variant={variant} />
-              ))}
+              {isAll ? (
+                // 혼합 목록의 최종 형상(1-C)대로 게임 페어 형상을 섞어
+                // 로드 후 레이아웃 시프트를 줄인다
+                <>
+                  <SkeletonCard variant="portrait" />
+                  <SkeletonCard variant="portrait" />
+                  <div className={gamePairCellClass}>
+                    <SkeletonCard variant="game-row" />
+                    <SkeletonCard variant="game-row" />
+                  </div>
+                  {Array.from({ length: PAGE_SIZE - 4 }, (_, i) => (
+                    <SkeletonCard key={i} variant="portrait" />
+                  ))}
+                </>
+              ) : (
+                Array.from({ length: PAGE_SIZE }, (_, i) => (
+                  <SkeletonCard key={i} variant={variant} />
+                ))
+              )}
             </div>
           ) : isError ? (
             <div className="mt-[22px]">
