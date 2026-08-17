@@ -50,6 +50,8 @@ export const Overlay = {
   dim: 'rgba(20, 14, 10, 0.38)',
   /** 홈 히어로 하단 그라데이션 종점 (목업 .hero-grad rgb(20 14 10 / .78)) */
   heroGrad: 'rgba(20, 14, 10, 0.78)',
+  /** 콜라주 "N작품" pill 배경 (목업 .count-pill rgb(20 14 10 / .62)) */
+  pillDim: 'rgba(20, 14, 10, 0.62)',
 } as const;
 
 // ---------- 라운드: 카드·패널 12 / 입력 8 / 칩·버튼 pill ----------

@@ -48,11 +48,11 @@ useCollections(조회수 회피 캐시 설계) 이미 존재. 모바일은 이�
 - [x] 검색: 카드 문법 통일
 
 ### M-C. 상세·컬렉션 (구현 → 리뷰 → 수정)
-- [ ] work/[id]: 게임 16:9 히어로 / 포스터 헤더, 통계 패널(Steam/TMDB), 하단 액션 바,
+- [x] work/[id]: 게임 16:9 히어로 / 포스터 헤더, 통계 패널(Steam/TMDB), 하단 액션 바,
       담기 진입점 (프레임 6·7·8)
-- [ ] 컬렉션 4표면: 발견 탭 / 상세(+좋아요 액션 바) / 생성·편집 / 담기 시트
+- [x] 컬렉션 4표면: 발견 탭 / 상세(+좋아요 액션 바) / 생성·편집 / 담기 시트
       (collections-mockup 5a~5d) - shared useCollections 소비
-- [ ] 프로필 하위(찜/좋아요/리뷰) 카드 문법 통일
+- [x] 프로필 하위(찜/좋아요/리뷰) 카드 문법 통일
 
 ### 게이트 (태스크별)
 - [ ] `pnpm --filter @aod/mobile typecheck` + `pnpm --filter @aod/web build`(shared 회귀 방지)
@@ -107,3 +107,35 @@ useCollections(조회수 회피 캐시 설계) 이미 존재. 모바일은 이�
 - M-B: 스켈레톤 펄스는 Animated opacity 루프(SkeletonPulse)로 웹 animate-pulse 대응.
 - M-B: 탐색 전체 탭의 카드 variant는 웹과 동일하게 페이지 단위(게임 탭만 landscape) -
   혼합 도메인에서 게임 카드도 portrait 크롭 수용.
+- M-A: (리뷰 발견, 오케스트레이터 확정) 카드 foot 강조 방향은 목업(좌측 bold)이 아닌
+  웹 workCardInfo 문법(우측 bold) 채택 - 웹·모바일 파생 규칙 일관성 우선. foot 12.5px 등
+  미세 수치도 웹 값 우선. expo web 실화면 대조에서 시각 문제 시 재검토.
+- 백로그 추가: app.json 스캐폴드 잔재(adaptiveIcon #E6F4FE·스플래시 #208AEF 블루)를
+  라이트 팔레트로 교체 - M-C 정리 커밋 후보.
+- M-C: 컬렉션 라우트는 app/collection/[id]/index.tsx + [id]/edit.tsx + new.tsx -
+  파일과 동명 디렉터리 중첩 회피. 틴트 RN 색 매핑은 shared collectionTintBg가
+  Tailwind 클래스 전용이라 components/ui/collectionTints.ts 로컬 정의
+  (COLLECTION_TINTS·라벨은 shared 소비).
+- M-C: 발견 카드에 설명 줄 없음 - 모바일 목업 5a 실측 (웹 카드와 의도적 차이).
+  발견 탭 페이지네이션은 웹 Pagination 대신 "더 보기" size 증가 재조회 -
+  public 탭은 keepPreviousData(탭 전환 시 이전 탭 목록이 잠깐 보일 수 있음),
+  내 컬렉션 탭은 useMyCollections에 options 파라미터가 없어(shared 수정 금지)
+  더 보기 시 스켈레톤 재표시.
+- M-C: 컬렉션 상세의 상단 공유 아이콘(목업 5b)·"전부 관심 등록" 고스트 생략 -
+  전자는 모바일에 공유할 공개 웹 origin 상수가 없고(웹은 window.location 복사),
+  후자는 일괄 북마크 API 부재(웹 동일 편차). "비슷한 컬렉션"도 추천 API 부재로
+  생략(웹 동일). 아이템 행 인라인 스탯은 workCardFooter 대신 로컬 조립 -
+  동일 파생 규칙이나 목업 5b의 "강조값+보조값 인접" 배치가 foot의 좌우 분리와 달라서.
+- M-C: 편집 정렬은 위/아래 버튼만(플랜 필수 지정) - RN 코어에 DnD가 없고 제스처
+  라이브러리 미도입 결정과 일관(웹은 드래그+버튼 병행). 컬렉션 삭제 버튼은 리스트
+  하단 배치(웹은 패널 하단). 저장 시퀀스·4xx 새로고침/5xx 재시도 분기·성공 시
+  상세 캐시 직접 보정(조회수 회피)은 웹 collection-edit-page 규율 그대로.
+- M-C: work/[id] 액션 바는 목업 3버튼에 담기 고스트(StackPlus) 1개 추가 - 플랜
+  지정 담기 진입점(웹 <lg 액션 바와 동일 구성). 구 화면의 싫어요·공유·리뷰 삭제
+  UI 미이식(웹 work-detail 동일 편차 - 리뷰 삭제는 프로필 > 내 리뷰). 로그인
+  유도는 웹 ConfirmDialog 대신 Alert(기존 모바일 관례). 시놉시스는 구 화면대로
+  HTML 태그 제거 후 렌더(게임 수집 원문에 HTML 실재 - 웹은 원문 그대로), 4줄
+  클램프 초과 판정은 화면 밖 측정용 클론 onTextLayout 1회.
+- M-C: 구 컴포넌트 삭제 - components/icons.tsx·tab-icons.tsx·work/FallbackThumb.tsx
+  (참조 0 확인). svg-assets.ts·work/WorkCard·WorkCarousel은 프로필 탭이 아직
+  참조해 유지 (svg-assets 완전 삭제 백로그 그대로).
