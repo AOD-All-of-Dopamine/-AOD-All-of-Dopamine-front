@@ -48,6 +48,8 @@ export const Overlay = {
   pressed: 'rgba(28, 27, 25, 0.06)',
   /** 바텀시트 딤 (목업 .sheet-dim rgb(20 14 10 / .38)) */
   dim: 'rgba(20, 14, 10, 0.38)',
+  /** 홈 히어로 하단 그라데이션 종점 (목업 .hero-grad rgb(20 14 10 / .78)) */
+  heroGrad: 'rgba(20, 14, 10, 0.78)',
 } as const;
 
 // ---------- 라운드: 카드·패널 12 / 입력 8 / 칩·버튼 pill ----------

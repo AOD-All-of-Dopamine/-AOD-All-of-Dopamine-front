@@ -41,11 +41,11 @@ useCollections(조회수 회피 캐시 설계) 이미 존재. 모바일은 이�
 - [x] 상단 바 공통(아이콘 헤더 56px / 상세용 뒤로가기+제목 바) 컴포넌트
 
 ### M-B. 목록 화면 (구현 → 리뷰 → 수정)
-- [ ] 홈: 히어로 카드·가로 릴·리뷰 행 (목업 프레임 1)
-- [ ] 탐색: 도메인 칩 가로 스크롤 + 필터 시트(즉시 적용, 활성 칩 행) + 2열 카드 (프레임 2·3)
-- [ ] 랭킹: 컴팩트 순위 행(1~3위 accent) (프레임 4)
-- [ ] 신작: 날짜 그룹 행 (프레임 5)
-- [ ] 검색: 카드 문법 통일
+- [x] 홈: 히어로 카드·가로 릴·리뷰 행 (목업 프레임 1)
+- [x] 탐색: 도메인 칩 가로 스크롤 + 필터 시트(즉시 적용, 활성 칩 행) + 2열 카드 (프레임 2·3)
+- [x] 랭킹: 컴팩트 순위 행(1~3위 accent) (프레임 4)
+- [x] 신작: 날짜 그룹 행 (프레임 5)
+- [x] 검색: 카드 문법 통일
 
 ### M-C. 상세·컬렉션 (구현 → 리뷰 → 수정)
 - [ ] work/[id]: 게임 16:9 히어로 / 포스터 헤더, 통계 패널(Steam/TMDB), 하단 액션 바,
@@ -86,3 +86,24 @@ useCollections(조회수 회피 캐시 설계) 이미 존재. 모바일은 이�
   (FilmSlate/TelevisionSimple/GameController/BookOpenText/Books). 구 FallbackThumb 교체는 M-B/C.
 - M-A: 신규 카드 이미지 비율은 목업 실측대로 포스터 3:4, 게임 16:9 (웹 카드 2:3·460/215와
   의도적으로 다름 - 모바일 목업이 스펙).
+- M-B: 홈 히어로 데이터는 추천 엔진 부재로 웹 home과 동일한 임시 선정 - 최근 리뷰작 1건,
+  폴백은 신작 1건. 구 홈의 랭킹 섹션·퀵내비·AI 준비중 박스는 목업 프레임 1에 없어 제거.
+- M-B: 홈 "방금 올라온 리뷰"의 더보기 버튼·인용문·닉네임 생략 (웹 홈과 동일 편차 -
+  이동할 리뷰 목록 화면이 없고 API가 작품 요약만 반환).
+- M-B: 랭킹의 순위 변동(rank-delta)·행 meta(장르·상태)는 생략 - RankingResponse에 필드가
+  없음(웹 랭킹 페이지와 동일 편차). 목업의 "변동은 데이터 있으면" 조건 불충족.
+  구 화면의 OTT 교차 클라 필터는 웹과 동일한 원천(플랫폼) 칩 선택으로 대체.
+- M-B: 신작은 목업 프레임 5의 날짜 그룹 행 문법에 웹 /new 구조(최근 출시 + 출시 예정
+  2섹션, 예정 행 D-day 필)를 적용 - 구 화면의 플랫폼 칩·신작/공개예정 토글 제거
+  (목업·웹 모두 도메인 칩만). 양 섹션 40건 고정이라 FlatList 대신 ScrollView.
+- M-B: 탐색 필터 축 데이터를 구 useGenresWithCount + DOMAIN_PLATFORMS 상수에서 웹과 동일한
+  useGenres/usePlatforms API 축으로 교체 (SOON_PLATFORMS·era·웹툰 3축 웹 미러).
+  전체 탭은 백엔드가 필터 미적용이라 시트에 안내문만 (웹 동일).
+- M-B: 시트는 자작 BottomSheet(RN Modal + Animated 슬라이드업 260ms) - 플랜 결정대로
+  @gorhom/bottom-sheet 미도입. RN에 prefers-reduced-motion 대응 개념이 없어 Animated 기본.
+- M-B: 목업 흰색(#fff) 텍스트(히어로 카피·칩 on·버튼 fill)는 Palette.surface로 대체
+  (웹 text-surface 관례와 통일 - 임의 hex 금지 룰). 히어로 그라데이션 종점은
+  Overlay.heroGrad 토큰으로 theme.ts에 추가(additive).
+- M-B: 스켈레톤 펄스는 Animated opacity 루프(SkeletonPulse)로 웹 animate-pulse 대응.
+- M-B: 탐색 전체 탭의 카드 variant는 웹과 동일하게 페이지 단위(게임 탭만 landscape) -
+  혼합 도메인에서 게임 카드도 portrait 크롭 수용.

@@ -52,6 +52,10 @@ const FALLBACK_ICON: Record<string, Icon> = {
   WEBNOVEL: Books,
 };
 
+/** 카드 밖(릴·순위 행·신작 행 등)에서도 같은 도메인 폴백 아이콘을 쓰기 위한 공용 접근자 */
+export const domainFallbackIcon = (domain?: string | null): Icon =>
+  FALLBACK_ICON[domain ?? ''] ?? FilmSlate;
+
 export function WorkCard({
   variant,
   title,

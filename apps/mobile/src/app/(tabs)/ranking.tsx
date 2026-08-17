@@ -1,7 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
   FlatList,
   Pressable,
   ScrollView,
@@ -11,512 +9,341 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
+import { WarningCircle } from 'phosphor-react-native';
 
+import { AppHeader } from '@/components/ui/AppHeader';
+import { DomainChip } from '@/components/ui/DomainChip';
+import { EmptyState, EmptyStateAction } from '@/components/ui/EmptyState';
+import { SkeletonBlock, SkeletonPulse } from '@/components/ui/Skeleton';
+import { domainFallbackIcon } from '@/components/ui/WorkCard';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { SvgXml } from 'react-native-svg';
-
-import { useApis } from '@aod/shared/hooks';
+import { usePlatformRankings } from '@aod/shared/hooks';
+import { DOMAIN_LABEL_MAP, platformLabel } from '@aod/shared/constants';
 import type { ExternalRanking } from '@aod/shared/api';
-import { DOMAIN_PLATFORMS } from '@aod/shared/constants';
-import { PLATFORM_META } from '@/constants/platforms';
-import { FallbackThumb } from '@/components/work/FallbackThumb';
-import { INFO } from '@/components/svg-assets';
-import { colors, spacing, radius } from '@/theme/tokens';
+import { Palette, Radius } from '@/constants/theme';
 
-// ── 웹 ranking-page.tsx 미러 ──
-type Category = 'movie' | 'tv' | 'game' | 'webtoon' | 'webnovel';
+/**
+ * 랭킹 (목업 프레임 4) - 컴팩트 순위 행. 도메인 칩 + 플랫폼(랭킹 원천) 칩 +
+ * 출처 캡션 + 순위 리스트 (1~3위 순번 accent-ink, 48x62 썸네일).
+ *
+ * 데이터·편차는 웹 ranking-page.tsx <lg 경로와 동일:
+ * - usePlatformRankings(원천 1개 선택) - 도메인 전환 시 기본 원천으로 리셋
+ * - 순위 변동(rank-delta)·행 meta(장르·상태)는 RankingResponse에 필드가 없어 생략
+ *   (스냅샷을 매일 덮어써 비교 원본도 없음 - 목업의 "변동" 표기는 데이터 확보 후)
+ * - contentId 없는 항목(상세 미수집)은 비링크 정적 행
+ */
 
-interface RankingItem {
-  id: string;
-  rank: number;
-  title: string;
-  thumbnail: string | null;
-  score: number;
-  change?: 'up' | 'down' | 'new' | number;
-  watchProviders?: string[];
-  platform?: string;
-}
+const RANKING_DOMAINS = ['webtoon', 'game', 'movie', 'tv', 'webnovel'] as const;
+type RankingDomain = (typeof RANKING_DOMAINS)[number];
 
-const CATEGORIES: { id: Category; label: string }[] = [
-  { id: 'movie', label: '영화' },
-  { id: 'tv', label: '시리즈' },
-  { id: 'game', label: '게임' },
-  { id: 'webtoon', label: '웹툰' },
-  { id: 'webnovel', label: '웹소설' },
-];
-
-const PLATFORM_MAPPING: Record<Category, string> = {
-  movie: 'TMDB_MOVIE',
-  tv: 'TMDB_TV',
-  game: 'STEAM_GAME',
-  webtoon: 'NAVER_WEBTOON',
-  webnovel: 'NAVER_SERIES',
+/**
+ * 도메인별 랭킹 원천 목록 (첫 항목 = 기본 원천) - 웹 RANKING_SOURCES 미러.
+ * caption은 실제 수집 방식 기준의 출처 문구 (매일 새벽 갱신).
+ */
+const RANKING_SOURCES: Record<
+  RankingDomain,
+  { platforms: string[]; caption: string; soonPlatforms: string[] }
+> = {
+  webtoon: {
+    platforms: ['NaverWebtoon'],
+    caption: '네이버웹툰 요일별 인기 순위 기준, 매일 갱신',
+    soonPlatforms: ['카카오웹툰'],
+  },
+  game: {
+    platforms: ['Steam'],
+    caption: '스팀 한국 최고 판매 순위 기준, 매일 갱신',
+    soonPlatforms: ['Epic Games'],
+  },
+  movie: {
+    platforms: ['TMDB_MOVIE'],
+    caption: 'TMDB 인기 순위 기준 (국내 OTT 제공작), 매일 갱신',
+    soonPlatforms: [],
+  },
+  tv: {
+    platforms: ['TMDB_TV'],
+    caption: 'TMDB 인기 순위 기준 (국내 OTT 제공작), 매일 갱신',
+    soonPlatforms: [],
+  },
+  webnovel: {
+    platforms: ['NaverSeries'],
+    caption: '네이버시리즈 일간 Top 100 기준, 매일 갱신',
+    soonPlatforms: ['카카오페이지'],
+  },
 };
 
-const BACKEND_PLATFORM_MAPPING: Record<string, string> = {
-  TMDB_MOVIE: 'TMDB_MOVIE',
-  TMDB_TV: 'TMDB_TV',
-  STEAM_GAME: 'Steam',
-  NAVER_WEBTOON: 'NaverWebtoon',
-  NAVER_SERIES: 'NaverSeries',
+const DEFAULT_DOMAIN: RankingDomain = 'webtoon';
+
+const DOMAIN_KEY: Record<RankingDomain, string> = {
+  webtoon: 'WEBTOON',
+  game: 'GAME',
+  movie: 'MOVIE',
+  tv: 'TV',
+  webnovel: 'WEBNOVEL',
 };
 
-const ASPECT: Record<Category, number> = {
-  movie: 2 / 3,
-  tv: 2 / 3,
-  game: 21.5 / 10,
-  webtoon: 19 / 25,
-  webnovel: 17 / 25,
-};
-
-const OTT_NAMES = ['Netflix', 'Watcha', 'Disney Plus', 'wavve', 'TVING'];
-
-function rankColor(rank: number): string {
-  if (rank === 1) return colors.rankGold;
-  if (rank === 2) return colors.rankSilver;
-  if (rank === 3) return colors.rankBronze;
-  return colors.textPrimary;
-}
-
-function ChangeIndicator({ change }: { change?: RankingItem['change'] }) {
-  if (!change) return null;
-  if (change === 'new') {
-    return (
-      <ThemedText type="small" style={styles.changeNew}>
-        NEW
+function RankRow({
+  item,
+  domainKey,
+}: {
+  item: ExternalRanking;
+  domainKey: string;
+}) {
+  const FallbackIcon = domainFallbackIcon(domainKey);
+  const pressable = !!item.contentId;
+  return (
+    <Pressable
+      accessibilityRole={pressable ? 'button' : undefined}
+      disabled={!pressable}
+      onPress={() =>
+        item.contentId &&
+        router.push({
+          pathname: '/work/[id]',
+          params: { id: String(item.contentId) },
+        })
+      }
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+      <ThemedText
+        style={[styles.rankNo, item.ranking <= 3 && styles.rankNoTop]}>
+        {item.ranking}
       </ThemedText>
-    );
-  }
-  if (change === 'up') {
-    return (
-      <ThemedText type="small" style={styles.changeUp}>
-        ▲
-      </ThemedText>
-    );
-  }
-  if (change === 'down') {
-    return (
-      <ThemedText type="small" style={styles.changeDown}>
-        ▼
-      </ThemedText>
-    );
-  }
-  return change > 0 ? (
-    <ThemedText type="small" style={styles.changeUp}>
-      ▲ {change}
-    </ThemedText>
-  ) : (
-    <ThemedText type="small" style={styles.changeDown}>
-      ▼ {Math.abs(change)}
-    </ThemedText>
+      <View style={styles.thumbWrap}>
+        {item.thumbnailUrl ? (
+          <Image
+            source={{ uri: item.thumbnailUrl }}
+            style={styles.thumb}
+            contentFit="cover"
+            transition={150}
+          />
+        ) : (
+          <View style={styles.thumbFallback}>
+            <FallbackIcon size={20} color={Palette.ink3} />
+          </View>
+        )}
+      </View>
+      <View style={styles.rowInfo}>
+        <ThemedText numberOfLines={1} style={styles.rowTitle}>
+          {item.title}
+        </ThemedText>
+      </View>
+    </Pressable>
   );
 }
 
 export default function RankingScreen() {
-  const { rankingApi } = useApis();
-  const [category, setCategory] = useState<Category>('game');
-  const [selectedPlatforms, setSelectedPlatforms] = useState<Set<string>>(
-    new Set(['ALL']),
+  const [domainId, setDomainId] = useState<RankingDomain>(DEFAULT_DOMAIN);
+  const [platform, setPlatform] = useState<string>(
+    RANKING_SOURCES[DEFAULT_DOMAIN].platforms[0],
   );
-  const [rankings, setRankings] = useState<RankingItem[]>([]);
-  const [loading, setLoading] = useState(false);
 
-  const todayLabel = (() => {
-    const now = new Date();
-    return `${now.getMonth() + 1}.${now.getDate()}`;
-  })();
+  const source = RANKING_SOURCES[domainId];
 
-  const domainKey = category.toUpperCase();
-  const availablePlatforms = (DOMAIN_PLATFORMS[domainKey] ?? []).map((key) => ({
-    key,
-    label: PLATFORM_META[key]?.label ?? key,
-    logo: PLATFORM_META[key]?.logo,
-  }));
-
-  const selectCategory = (next: Category) => {
-    setCategory(next);
-    setSelectedPlatforms(new Set(['ALL']));
+  const selectDomain = (id: RankingDomain) => {
+    if (id === domainId) return;
+    setDomainId(id);
+    setPlatform(RANKING_SOURCES[id].platforms[0]);
   };
 
-  const togglePlatform = (key: string) => {
-    setSelectedPlatforms((prev) => {
-      if (key === 'ALL') return new Set(['ALL']);
-      const next = new Set(prev);
-      next.delete('ALL');
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next.size === 0 ? new Set(['ALL']) : next;
-    });
-  };
+  const rankings = usePlatformRankings(platform);
 
-  // 웹 fetchRankings + 클라이언트 필터링 로직 미러.
-  // ignore 플래그: 탭 전환 후 늦게 도착한 이전 카테고리 응답이
-  // 현재 탭 데이터를 덮어쓰는 레이스 방지 (재시도 백오프로 윈도우가 넓음).
-  useEffect(() => {
-    let ignore = false;
-    const fetchRankings = async () => {
-      setLoading(true);
-      try {
-        const backendPlatform =
-          BACKEND_PLATFORM_MAPPING[PLATFORM_MAPPING[category]];
-        const data = await rankingApi.getRankingsByPlatform(backendPlatform);
-        let mapped: RankingItem[] = data.map((item: ExternalRanking) => ({
-          id: item.contentId ? String(item.contentId) : `no-content-${item.id}`,
-          rank: item.ranking,
-          title: item.title,
-          thumbnail: item.thumbnailUrl || null,
-          score: 0,
-          change: 'new',
-          watchProviders: item.watchProviders,
-          platform: item.platform,
-        }));
+  const sorted = useMemo(
+    () => [...(rankings.data ?? [])].sort((a, b) => a.ranking - b.ranking),
+    [rankings.data],
+  );
 
-        const selectedArray = selectedPlatforms.has('ALL')
-          ? undefined
-          : Array.from(selectedPlatforms);
+  const listHeader = (
+    <View>
+      <ThemedText style={styles.pageTitle}>랭킹</ThemedText>
 
-        if (selectedArray && selectedArray.length > 0) {
-          if (category === 'movie' || category === 'tv') {
-            const selectedOtts = selectedArray.filter((p) =>
-              OTT_NAMES.includes(p),
-            );
-            const selectedTypes = selectedArray.filter(
-              (p) => !OTT_NAMES.includes(p),
-            );
-            mapped = mapped.filter((item) => {
-              let matchOtt = true;
-              let matchPlatform = true;
-              if (selectedOtts.length > 0) {
-                matchOtt =
-                  !!item.watchProviders?.length &&
-                  selectedOtts.every((s) => item.watchProviders!.includes(s));
-              }
-              if (selectedTypes.length > 0) {
-                matchPlatform = item.platform
-                  ? selectedTypes.includes(item.platform)
-                  : false;
-              }
-              return matchOtt && matchPlatform;
-            });
-          } else {
-            mapped = mapped.filter(
-              (item) => item.platform && selectedArray.includes(item.platform),
-            );
-          }
-        }
+      {/* 도메인 칩 (목업 순서: 웹툰·게임·영화·시리즈·웹소설) */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.chipsScroll}
+        contentContainerStyle={styles.chipsRow}>
+        {RANKING_DOMAINS.map((id) => (
+          <DomainChip
+            key={id}
+            label={DOMAIN_LABEL_MAP[DOMAIN_KEY[id]]}
+            active={domainId === id}
+            onPress={() => selectDomain(id)}
+          />
+        ))}
+      </ScrollView>
 
-        if (!ignore) setRankings(mapped);
-      } catch {
-        if (!ignore) setRankings([]);
-      } finally {
-        if (!ignore) setLoading(false);
-      }
-    };
-    fetchRankings();
-    return () => {
-      ignore = true;
-    };
-  }, [category, selectedPlatforms, rankingApi]);
+      {/* 플랫폼 칩 - 랭킹 원천 + 준비 중 disabled */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.chipsScroll}
+        contentContainerStyle={[styles.chipsRow, styles.platformRow]}>
+        {source.platforms.map((key) => (
+          <DomainChip
+            key={key}
+            label={platformLabel(key)}
+            active={platform === key}
+            onPress={() => setPlatform(key)}
+          />
+        ))}
+        {source.soonPlatforms.map((label) => (
+          <DomainChip key={label} label={label} disabled soonLabel="준비 중" />
+        ))}
+      </ScrollView>
 
-  const handlePress = (id: string) => {
-    if (id.startsWith('no-content-')) {
-      Alert.alert('안내', '이 작품의 상세 정보가 아직 준비되지 않았습니다.');
-      return;
-    }
-    router.push({ pathname: '/work/[id]', params: { id } });
-  };
-
-  const aspect = ASPECT[category];
-  const thumbWidth = category === 'game' ? 120 : 72; // 웹 w-30/w-18 미러
+      {/* 출처 캡션 (목업 .rank-note) */}
+      <ThemedText style={styles.rankNote}>{source.caption}</ThemedText>
+    </View>
+  );
 
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView edges={['top']} style={styles.safeArea}>
-        {/* 헤더 */}
-        <View style={styles.header}>
-          <ThemedText style={styles.headerTitle}>랭킹</ThemedText>
-          <Pressable onPress={() => router.push('/search')} hitSlop={8}>
-            <ThemedText style={styles.headerIcon}>🔍</ThemedText>
-          </Pressable>
-        </View>
-
-        {/* 카테고리 탭 */}
-        <View style={styles.categoryRow}>
-          {CATEGORIES.map((cat) => {
-            const active = category === cat.id;
-            return (
-              <Pressable
-                key={cat.id}
-                style={[styles.categoryTab, active && styles.categoryTabActive]}
-                onPress={() => selectCategory(cat.id)}>
-                <ThemedText
-                  type="small"
-                  style={[styles.categoryText, active && styles.categoryTextActive]}>
-                  {cat.label}
-                </ThemedText>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {/* 플랫폼 그라데이션 칩 */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.chipScroll}
-          contentContainerStyle={styles.chipRow}>
-          {availablePlatforms.map((platform) => {
-            const selected = selectedPlatforms.has(platform.key);
-            return (
-              <Pressable
-                key={platform.key}
-                onPress={() => togglePlatform(platform.key)}>
-                {selected ? (
-                  <LinearGradient
-                    colors={[colors.accent, colors.blue]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.chip}>
-                    {platform.logo && (
-                      <Image source={platform.logo} style={styles.chipLogo} contentFit="contain" />
-                    )}
-                    <ThemedText type="small" style={styles.chipTextActive}>
-                      {platform.label}
-                    </ThemedText>
-                  </LinearGradient>
-                ) : (
-                  <View style={[styles.chip, styles.chipInactive]}>
-                    {platform.logo && (
-                      <Image source={platform.logo} style={styles.chipLogo} contentFit="contain" />
-                    )}
-                    <ThemedText type="small" style={styles.chipText}>
-                      {platform.label}
-                    </ThemedText>
-                  </View>
-                )}
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-
-        {/* 기준일 */}
-        <View style={styles.infoRow}>
-          <SvgXml xml={INFO} width={14} height={14} />
-          <ThemedText type="small" style={styles.infoText}>
-            {todayLabel} 기준
-          </ThemedText>
-        </View>
-
-        {/* 랭킹 리스트 */}
-        {loading ? (
-          <View style={styles.center}>
-            <ActivityIndicator color={colors.accent} />
-          </View>
-        ) : (
-          <FlatList
-            data={rankings}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => (
-              <Pressable style={styles.row} onPress={() => handlePress(item.id)}>
-                <ThemedText
-                  style={[styles.rank, { color: rankColor(item.rank) }]}>
-                  {item.rank}
-                </ThemedText>
-                <View
-                  style={[
-                    styles.thumbWrap,
-                    { width: thumbWidth, aspectRatio: aspect },
-                  ]}>
-                  {item.thumbnail ? (
-                    <Image
-                      source={{ uri: item.thumbnail }}
-                      style={styles.thumb}
-                      contentFit="cover"
-                    />
-                  ) : (
-                    <FallbackThumb domain={domainKey} iconSize={28} />
-                  )}
-                </View>
-                <View style={styles.rowInfo}>
-                  <ThemedText type="small" numberOfLines={1} style={styles.rowTitle}>
-                    {item.title}
-                  </ThemedText>
-                  <View style={styles.rowMeta}>
-                    <ThemedText type="small" style={styles.score}>
-                      ★ {item.score.toFixed(1)}
-                    </ThemedText>
-                    <ChangeIndicator change={item.change} />
-                  </View>
-                </View>
-              </Pressable>
-            )}
-            ListEmptyComponent={
-              <View style={styles.center}>
-                <ThemedText type="small" style={styles.muted}>
-                  랭킹 데이터가 없습니다.
-                </ThemedText>
-              </View>
-            }
-          />
-        )}
+    <View style={styles.screen}>
+      <SafeAreaView edges={['top']} style={styles.top}>
+        <AppHeader />
       </SafeAreaView>
-    </ThemedView>
+
+      <FlatList
+        style={styles.list}
+        data={rankings.isLoading || rankings.isError ? [] : sorted}
+        keyExtractor={(item) => String(item.id)}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={listHeader}
+        renderItem={({ item }) => (
+          <RankRow item={item} domainKey={DOMAIN_KEY[domainId]} />
+        )}
+        ListEmptyComponent={
+          rankings.isLoading ? (
+            <SkeletonPulse>
+              {Array.from({ length: 8 }, (_, i) => (
+                <View key={i} style={styles.row}>
+                  <SkeletonBlock width={26} height={20} />
+                  <SkeletonBlock width={48} height={62} radius={6} />
+                  <SkeletonBlock height={14} width="55%" />
+                </View>
+              ))}
+            </SkeletonPulse>
+          ) : rankings.isError ? (
+            <EmptyState
+              icon={<WarningCircle size={44} color={Palette.ink3} />}
+              title="랭킹을 불러오지 못했어요"
+              description="네트워크 상태를 확인한 뒤 다시 시도해 주세요."
+              action={
+                <EmptyStateAction
+                  label="다시 시도"
+                  onPress={() => rankings.refetch()}
+                />
+              }
+            />
+          ) : (
+            <EmptyState
+              title="아직 랭킹 데이터가 없어요"
+              description="랭킹은 매일 새벽에 갱신돼요. 잠시 후 다시 확인해 주세요."
+            />
+          )
+        }
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
+    backgroundColor: Palette.canvas,
   },
-  safeArea: {
-    flex: 1,
+  top: {
+    backgroundColor: Palette.surface,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
+  pressed: {
+    opacity: 0.85,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+  pageTitle: {
+    paddingTop: 18,
+    paddingHorizontal: 16,
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: 800,
+    letterSpacing: -0.4,
+    color: Palette.ink,
   },
-  headerIcon: {
-    fontSize: 18,
-  },
-  categoryRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#333333',
-  },
-  categoryTab: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  categoryTabActive: {
-    borderBottomWidth: 2,
-    borderBottomColor: colors.textPrimary,
-  },
-  categoryText: {
-    color: colors.textMuted,
-  },
-  categoryTextActive: {
-    color: colors.textPrimary,
-    fontWeight: '600',
-  },
-  chipScroll: {
+  chipsScroll: {
     flexGrow: 0,
-    marginTop: spacing.lg,
   },
-  chipRow: {
-    paddingHorizontal: spacing.xl,
-    gap: spacing.md,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-  },
-  chipLogo: {
-    width: 20,
-    height: 20,
-    borderRadius: radius.full,
-  },
-  chipInactive: {
-    backgroundColor: colors.surfaceDeep,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  chipText: {
-    color: colors.textBright,
-    fontWeight: '500',
-  },
-  chipTextActive: {
-    color: colors.textPrimary,
-    fontWeight: '500',
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  chipsRow: {
+    paddingTop: 12,
+    paddingBottom: 4,
+    paddingHorizontal: 16,
     gap: 6,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
   },
-  infoText: {
-    color: colors.textBright,
+  platformRow: {
+    paddingTop: 2,
   },
-  center: {
-    paddingVertical: spacing.xxl * 2,
-    alignItems: 'center',
+  rankNote: {
+    paddingTop: 8,
+    paddingBottom: 10,
+    paddingHorizontal: 16,
+    fontSize: 12.5,
+    lineHeight: 17,
+    fontWeight: 400,
+    color: Palette.ink3,
   },
-  muted: {
-    color: colors.textMuted,
+  list: {
+    flex: 1,
   },
   listContent: {
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xxl * 2,
-    gap: spacing.xs,
+    paddingBottom: 28,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.lg,
-    padding: spacing.xs,
-    borderRadius: radius.sm,
+    gap: 12,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingVertical: 10,
+    paddingLeft: 12,
+    paddingRight: 14,
+    backgroundColor: Palette.surface,
+    borderWidth: 1,
+    borderColor: Palette.line,
+    borderRadius: Radius.panel,
   },
-  rank: {
-    width: 24,
+  rankNo: {
+    width: 26,
     textAlign: 'center',
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: 800,
+    color: Palette.ink3,
+    fontVariant: ['tabular-nums'],
+  },
+  rankNoTop: {
+    color: Palette.accentInk,
   },
   thumbWrap: {
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceDeep,
+    width: 48,
+    height: 62,
+    borderRadius: 6,
     overflow: 'hidden',
+    backgroundColor: Palette.canvas,
   },
   thumb: {
     width: '100%',
     height: '100%',
   },
+  thumbFallback: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.8,
+  },
   rowInfo: {
     flex: 1,
     minWidth: 0,
-    gap: spacing.xs,
   },
   rowTitle: {
-    fontWeight: '500',
-  },
-  rowMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  score: {
-    color: colors.accent,
-    fontWeight: '500',
-  },
-  changeNew: {
-    color: colors.accent,
-    fontWeight: '600',
-    fontSize: 12,
-  },
-  changeUp: {
-    color: colors.changeUp,
-    fontWeight: '600',
-    fontSize: 12,
-  },
-  changeDown: {
-    color: colors.changeDown,
-    fontWeight: '600',
-    fontSize: 12,
+    fontSize: 14.5,
+    lineHeight: 19,
+    fontWeight: 700,
+    color: Palette.ink,
   },
 });
