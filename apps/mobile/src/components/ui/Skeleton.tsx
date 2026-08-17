@@ -79,7 +79,7 @@ export function SkeletonBlock({
   );
 }
 
-/** WorkCard 형상 스켈레톤 (썸네일 + 제목·메타 줄) */
+/** WorkCard 형상 스켈레톤 (썸네일 + 제목·메타 줄) - landscape 비율은 WorkCard 동치 */
 export function WorkCardSkeleton({
   variant,
   style,
@@ -90,13 +90,30 @@ export function WorkCardSkeleton({
   return (
     <View style={[styles.card, style]}>
       <SkeletonBlock
-        aspectRatio={variant === 'landscape' ? 16 / 9 : 3 / 4}
+        aspectRatio={variant === 'landscape' ? 460 / 215 : 3 / 4}
         radius={0}
         style={styles.cardThumb}
       />
       <View style={styles.cardBody}>
         <SkeletonBlock height={14} width="72%" />
         <SkeletonBlock height={11} width="45%" style={styles.cardMeta} />
+      </View>
+    </View>
+  );
+}
+
+/**
+ * GameCompactCard 형상 스켈레톤 - 혼합 목록(탐색 전체 탭)의 게임 풀폭 가로 행용
+ * (웹 SkeletonCard "game-row" variant의 RN 대응 - 로드 후 레이아웃 시프트 완화)
+ */
+export function GameRowSkeleton({ style }: { style?: StyleProp<ViewStyle> }) {
+  return (
+    <View style={[styles.gameRow, style]}>
+      <SkeletonBlock aspectRatio={460 / 215} style={styles.gameRowThumb} />
+      <View style={styles.gameRowBody}>
+        <SkeletonBlock height={14} width="60%" />
+        <SkeletonBlock height={11} width="40%" style={styles.gameRowLine} />
+        <SkeletonBlock height={11} width="33%" style={styles.gameRowLine} />
       </View>
     </View>
   );
@@ -122,6 +139,29 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   cardMeta: {
+    marginTop: 7,
+  },
+  gameRow: {
+    flexDirection: 'row',
+    backgroundColor: Palette.surface,
+    borderWidth: 1,
+    borderColor: Palette.line,
+    borderRadius: Radius.panel,
+    overflow: 'hidden',
+  },
+  gameRowThumb: {
+    width: '42%',
+    alignSelf: 'center',
+    marginVertical: 12,
+    marginLeft: 12,
+  },
+  gameRowBody: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+  },
+  gameRowLine: {
     marginTop: 7,
   },
 });

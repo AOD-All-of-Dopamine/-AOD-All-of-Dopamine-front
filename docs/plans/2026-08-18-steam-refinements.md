@@ -74,6 +74,10 @@
 - 성적 콘텐츠 판정 게임의 DB 삭제 여부 (현재는 숨김만 - 팀 결정 필요)
 - 컬렉션 기존 성인 아이템 정리 정책 (addItem은 차단 — 이미 담긴 아이템·상세 노출은 잔존 허용 중)
 - 리뷰 수 외 Steam 지표 필터(동접·플레이타임)
+- 앱 탐색 무한 스크롤 pages flatMap의 id 기준 dedup 부재 - 페이지 경계 이동 시 중복
+  아이템·key 충돌 가능(행 재구성과 무관한 기존 리스크 - 검색의 dedup 관례를 이식할 것)
+- 앱 SheetRadioGroup 등 radio류 accessibilityState가 selected 사용 중 - RN 관례(checked)로
+  일괄 정리 (신규 ToggleSwitch는 checked 사용)
 
 ## 편차 기록
 
@@ -133,8 +137,10 @@
   상당 불가) 목록 데이터를 행 단위로 재구성(utils/mixedList.ts toListRows) -
   게임 = 풀폭 GameCompactCard 행 1개, 포스터 = 2개 페어 행(게임이 끼면 끊고
   빈 자리는 스페이서 View로 카드 폭 유지). 탐색·검색 모두 numColumns=2를 걷어내고
-  행 렌더로 통일 - 도메인 단독 탭도 페어 행으로 렌더하지만 시각은 기존 2열
-  그리드와 동일(게임 탭 가로 카드 유지). FlatList 가상화는 행 단위로 유지된다.
+  행 렌더로 통일 - 도메인 단독 탭도 페어 행으로 렌더(게임 탭 가로 카드 유지),
+  시각은 기존 2열 그리드의 근사: 홀수 꼬리 행의 카드가 기존(maxWidth 50%, gap
+  미소모)보다 gap 절반(6px)만큼 좁아져 위 행들과 동일 폭으로 정렬된다.
+  FlatList 가상화는 행 단위로 유지된다.
 - S-FE2: era·upcoming 충돌은 웹 정책 미러 - era 선택 시 쿼리에서 upcoming 무시
   (upcomingOn 파생값) + 토글 disabled + "해당 기간 우선" 안내. 로컬 상태(URL이
   없는 앱의 단일 출처)는 지우지 않아 era 해제 시 토글이 복원된다. 활성 칩·개수
@@ -145,3 +151,10 @@
 - S-FE2: GameCompactCard 썸네일 폴백은 웹 svg 에셋 대신 Phosphor GameController
   (M-A 관례 준수). 검색은 도메인 칩으로 게임만 좁혀도 웹과 동일하게 컴팩트 행
   유지(웹 search-page가 groupMixedGrid를 무조건 적용하는 것의 미러).
+- S-FE2 (리뷰 반영): 게임 썸네일 비율 16:9 -> 460:215 정정 3곳 - GameCompactCard·
+  WorkCard landscape(M-A "게임 16:9" 편차를 웹 관례로 정리 - 게임 탭 2열 카드
+  크롭 해소)·WorkCardSkeleton landscape(카드 형상 추종). 탐색 전체 탭 로딩
+  스켈레톤에 게임 풀폭 행 형상(GameRowSkeleton) 1개 반영 - 웹 game-row 스켈레톤과
+  대칭. ToggleSwitch 터치 타깃 hitSlop 확장(52x45 >= 44pt) + 노브 이동
+  Animated.timing 150ms. GameCompactCard 제목 letterSpacing -0.15
+  (웹 tracking-[-0.01em] 대응치).

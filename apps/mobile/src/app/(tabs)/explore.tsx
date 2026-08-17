@@ -22,7 +22,11 @@ import { DomainChip } from '@/components/ui/DomainChip';
 import { EmptyState, EmptyStateAction } from '@/components/ui/EmptyState';
 import { FilterChip } from '@/components/ui/FilterChip';
 import { GameCompactCard } from '@/components/ui/GameCompactCard';
-import { SkeletonPulse, WorkCardSkeleton } from '@/components/ui/Skeleton';
+import {
+  GameRowSkeleton,
+  SkeletonPulse,
+  WorkCardSkeleton,
+} from '@/components/ui/Skeleton';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { WorkCard } from '@/components/ui/WorkCard';
 import {
@@ -579,13 +583,36 @@ export default function ExploreScreen() {
         ListEmptyComponent={
           isLoading ? (
             <SkeletonPulse style={styles.skeletonGrid}>
-              {Array.from({ length: 6 }, (_, i) => (
-                <WorkCardSkeleton
-                  key={i}
-                  variant={variant}
-                  style={styles.skeletonCell}
-                />
-              ))}
+              {isAll ? (
+                // 혼합 목록의 최종 형상(1-C 앱 규칙)대로 게임 풀폭 행 형상을
+                // 섞어 로드 후 레이아웃 시프트를 줄인다 (웹 스켈레톤과 대칭)
+                <>
+                  <WorkCardSkeleton
+                    variant="portrait"
+                    style={styles.skeletonCell}
+                  />
+                  <WorkCardSkeleton
+                    variant="portrait"
+                    style={styles.skeletonCell}
+                  />
+                  <GameRowSkeleton style={styles.skeletonGameRow} />
+                  {Array.from({ length: 4 }, (_, i) => (
+                    <WorkCardSkeleton
+                      key={i}
+                      variant="portrait"
+                      style={styles.skeletonCell}
+                    />
+                  ))}
+                </>
+              ) : (
+                Array.from({ length: 6 }, (_, i) => (
+                  <WorkCardSkeleton
+                    key={i}
+                    variant={variant}
+                    style={styles.skeletonCell}
+                  />
+                ))
+              )}
             </SkeletonPulse>
           ) : isError ? (
             <EmptyState
@@ -975,6 +1002,10 @@ const styles = StyleSheet.create({
   skeletonCell: {
     flexBasis: '46%',
     flexGrow: 1,
+  },
+  /** 혼합 스켈레톤의 게임 행 - flexWrap 그리드에서 한 줄 전체 점유 */
+  skeletonGameRow: {
+    width: '100%',
   },
   footerLoading: {
     marginVertical: 16,

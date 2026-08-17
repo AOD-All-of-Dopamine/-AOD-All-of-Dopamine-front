@@ -16,8 +16,9 @@ import { Palette, Radius } from '@/constants/theme';
 
 /**
  * 혼합 목록(탐색 전체 탭·검색)용 게임 컴팩트 가로 행 - 웹 ui/GameCompactCard
- * (mixed-grid-mockup.html 1-C 확정안)의 RN 이식. 좌측 16:9 무크롭 썸네일
- * (42% 폭, 인셋) + 우측 제목·meta(도메인·연도·개발사)·Steam 평가(desc + 긍정 %).
+ * (mixed-grid-mockup.html 1-C 확정안)의 RN 이식. 좌측 460:215 원본(Steam header)
+ * 무크롭 썸네일(42% 폭, 인셋 - WorkCard landscape와 동일 비율 관례) +
+ * 우측 제목·meta(도메인·연도·개발사)·Steam 평가(desc + 긍정 %).
  * 앱에서는 풀폭 가로 행 1개씩 - 행 배치(마진)는 소비처 style이 담당한다.
  * 썸네일 폴백은 웹 svg 에셋 대신 Phosphor 도메인 아이콘 (M-A 관례).
  */
@@ -99,7 +100,7 @@ const styles = StyleSheet.create({
   },
   thumbWrap: {
     width: '42%',
-    aspectRatio: 16 / 9,
+    aspectRatio: 460 / 215,
     alignSelf: 'center',
     marginVertical: 12,
     marginLeft: 12,
@@ -128,6 +129,8 @@ const styles = StyleSheet.create({
     fontSize: 14.5,
     lineHeight: 19,
     fontWeight: 700,
+    // 웹 tracking-[-0.01em]의 픽셀 대응치 (14.5px 기준)
+    letterSpacing: -0.15,
     color: Palette.ink,
   },
   meta: {

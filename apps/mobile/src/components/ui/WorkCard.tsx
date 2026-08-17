@@ -23,7 +23,7 @@ import { Palette, Radius } from '@/constants/theme';
 /**
  * 목업 .card / .card-body / .card-t / .card-m / .card-foot (mobile-light-mockup.html)
  * - portrait: 포스터 3:4 (영화·시리즈·웹툰·웹소설)
- * - landscape: 게임 가로 16:9
+ * - landscape: 게임 가로 460:215 (Steam header 원본 - 웹 WorkCard와 동일 관례)
  * meta/tags/footer 파생은 components/ui/workCardInfo.tsx 사용.
  */
 export interface WorkCardProps {
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     aspectRatio: 3 / 4,
   },
   thumbLandscape: {
-    aspectRatio: 16 / 9,
+    aspectRatio: 460 / 215,
   },
   thumb: {
     width: '100%',
