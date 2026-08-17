@@ -11,7 +11,7 @@ export interface FilterOption {
 
 export type FilterGroupProps =
   | {
-      title: string;
+      title: ReactNode;
       type: "checkbox";
       options: FilterOption[];
       values: string[];
@@ -20,7 +20,7 @@ export type FilterGroupProps =
       footer?: ReactNode;
     }
   | {
-      title: string;
+      title: ReactNode;
       type: "radio";
       options: FilterOption[];
       value: string;

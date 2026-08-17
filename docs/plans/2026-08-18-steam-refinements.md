@@ -41,16 +41,16 @@
 ## 태스크
 
 ### S-BE. 백엔드 (구현 → 리뷰 → 수정)
-- [ ] V6 마이그레이션: is_adult 컬럼+백필, game_contents.review_count 컬럼+백필
-- [ ] Content 엔티티 is_adult / GameContent reviewCount + steam.yml 매핑
-- [ ] SteamGameExecutor 성인 스킵 (수집 단계)
-- [ ] findWorks: is_adult 제외(전 목록 경로) + reviewCountMin 게임 축, WorkController 파라미터
-- [ ] 테스트: 성인 제외·리뷰 축 케이스
+- [x] V6 마이그레이션: is_adult 컬럼+백필, game_contents.review_count 컬럼+백필
+- [x] Content 엔티티 is_adult / GameContent reviewCount + steam.yml 매핑
+- [x] SteamGameExecutor 성인 스킵 (수집 단계)
+- [x] findWorks: is_adult 제외(전 목록 경로) + reviewCountMin 게임 축, WorkController 파라미터
+- [x] 테스트: 성인 제외·리뷰 축 케이스
 
 ### S-FE1. 웹 (구현 → 리뷰 → 수정)
-- [ ] 게임 탭 기본 releaseTo=오늘 + "출시 예정 포함" 토글 (URL 축 추가)
-- [ ] 게임 탭 리뷰 수 라디오 필터
-- [ ] 혼합 그리드(전체 탭·검색): 게임 2칸 스팬 가로 카드 (목업 확정안)
+- [x] 게임 탭 기본 releaseTo=오늘 + "출시 예정 포함" 토글 (URL 축 `upcoming=1`)
+- [x] 게임 탭 리뷰 수 라디오 필터 (URL 축 `reviewMin` -> API `reviewCountMin`)
+- [x] 혼합 그리드(전체 탭·검색): 게임 2칸 스팬 가로 카드 (목업 1-C 확정안)
 
 ### S-FE2. 모바일 앱 (구현 → 리뷰 → 수정)
 - [ ] 필터 시트에 출시 예정 토글·리뷰 수 라디오 (웹 축 미러)
@@ -69,4 +69,25 @@
 
 ## 편차 기록
 
-(구현·리뷰 중 발견 시 기록)
+- S-BE: 계획의 목록 경로 외에 `findAll(pageable)` 폴백(전체 탭 무필터 목록)이 성인 노출 구멍이라
+  `findAllVisible`(is_adult=false JPQL)로 교체. 미사용 목록 메서드 `findByDomain`/`findByPlatforms`에도
+  필터 부여(향후 사용 대비). 목록 경로 가드는 리플렉션 테스트(ContentRepositoryAdultFilterTest)로
+  고정 — Page 반환 @Query 전수에 is_adult 필터 강제.
+- S-BE: 성인 스킵은 리뷰 집계 API 호출 전에 수행(호출 절약)하고 성공(true)으로 반환 —
+  false면 잡 큐가 실패로 재시도하므로. required_age는 숫자/문자열("18+") 혼재를 흡수해 파싱.
+- S-BE: V6 로컬 적용 결과 — is_adult=true 백필 10건(전부 GAME, 실측과 일치),
+  review_count 백필 3건(review_summary 보유분만 — 나머지는 재크롤 시 yml 매핑으로 채워짐).
+- S-BE 게이트: api+crawler 테스트 그린, bootRun Flyway "validated 6 migrations" 확인 후 서버 종료.
+- S-FE1: era·upcoming 충돌 처리 - era 선택 시 era 범위가 우선(플랜 ③)이라
+  upcoming을 URL 파싱 단계에서 무시(정규화)하고 토글은 disabled + "해당 기간 우선"
+  안내 문구로 대체. URL 값은 지우지 않아 era 해제 시 토글 상태가 복원된다.
+  따라서 era="2024년 이후"(to 없음) 선택 시엔 게임 탭에도 출시 예정작이 섞인다.
+- S-FE1: 목업 섹션 3(<lg 게임 카드)은 이미지 상단형(1-C 이전 시안)이지만 플랜
+  확정 문구 "풀폭 컴팩트 가로 행"에 따라 1-C 가로 행(GameCompactCard)을 풀폭으로
+  재사용. 페어 셀이 <lg에서 풀폭 행 1~2개로 풀린다(내부 gap = 그리드 y-gap).
+- S-FE1: reviewMin·upcoming을 활성 필터 칩·필터 카운트에 포함(기존 era/status 축
+  관례 준수 - 목업에는 칩 언급 없음).
+- S-FE1: 검색 페이지는 max-w-2xl(lg에서도 3열)이라 게임 페어 셀이 3열 중 2칸을
+  차지 - 1-C 4열 프레임과 비율은 다르나 문법 동일.
+- S-FE1: FilterGroup·SheetGroup title을 string -> ReactNode로 완화 - 목업의
+  "리뷰 수 (Steam)" 보조 표기(연한 색) 렌더 목적. 기존 소비처 시각 불변.

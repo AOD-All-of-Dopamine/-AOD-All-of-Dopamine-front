@@ -21,6 +21,7 @@ import {
 } from "../constants/platforms";
 import { thumbnailFallbackMap, type Category } from "../constants/thumbnail";
 import WorkCard from "../components/ui/WorkCard";
+import GameCompactCard from "../components/ui/GameCompactCard";
 import {
   workCardFooter,
   workCardMeta,
@@ -33,6 +34,8 @@ import Pagination from "../components/ui/Pagination";
 import EmptyState from "../components/ui/EmptyState";
 import SkeletonCard from "../components/ui/SkeletonCard";
 import SoonBadge from "../components/ui/SoonBadge";
+import ToggleSwitch from "../components/ui/ToggleSwitch";
+import { gamePairCellClass, groupMixedGrid } from "../utils/mixedGrid";
 
 /**
  * /explore - mockups/explore-light-mockup.html 이식.
@@ -42,8 +45,8 @@ import SoonBadge from "../components/ui/SoonBadge";
  * 스크롤] 툴바와 필터 바텀시트. 시트도 즉시 적용(URL replace 단일 출처
  * 재사용) - 시트 내 스테이징 상태 없음, footer는 현재 결과 수 표시 + 닫기.
  *
- * URL 쿼리(?domain=&genres=&platforms=&era=&status=&weekdays=&ages=&page=)가
- * 상태의 단일 출처. 다중 값은 콤마 직렬화.
+ * URL 쿼리(?domain=&genres=&platforms=&era=&status=&weekdays=&ages=
+ * &reviewMin=&upcoming=&page=)가 상태의 단일 출처. 다중 값은 콤마 직렬화.
  *
  * 히스토리 정책: 도메인 탭 전환과 페이지 이동은 push, 필터 조작(토글,
  * 칩 제거, 초기화)은 replace. 결과 상태가 현재와 같으면 히스토리 no-op.
@@ -56,11 +59,16 @@ import SoonBadge from "../components/ui/SoonBadge";
  * - 웹툰: + 연재 상태(status) / 연재 요일(weekdays) / 연령 등급(ageRatings).
  *   이 세 축은 webtoon_contents EXISTS 서브쿼리라 타 도메인에 보내면 결과가
  *   0건이 되므로 웹툰 탭에서만 파싱, 전송한다.
+ * - 게임: + 리뷰 수(reviewMin -> reviewCountMin, game_contents EXISTS 축 -
+ *   웹툰 3축과 같은 이유로 게임 탭 전용) / 출시 예정 토글(upcoming=1).
+ *   게임 탭 기본은 releaseTo=오늘 전송(출시 예정작 제외), 토글을 켜면 미전송.
+ *   era 선택 시에는 era 범위가 우선이라 토글을 무시(파싱 정규화 + disabled)한다.
  *
  * 남은 편차:
  * - 정렬: 도메인 지정 경로와 필터 경로 모두 서버가 sortBy를 무시하고
  *   release_date DESC 고정이므로 SortSelect를 생략하고 정적 라벨만 표시한다.
- * - attr(JSONB) 기반 축은 필터 금지 (가격, 리뷰 평가 등은 표시 전용).
+ * - attr(JSONB) 기반 축은 필터 금지 (가격 등은 표시 전용 - 리뷰 수는
+ *   game_contents.review_count 도메인 컬럼 승격으로 필터 가능해졌다).
  * - 장르, 플랫폼 필터는 백엔드가 domain 필수라 전체 탭에서는 노출하지 않는다.
  * - placeholderData(keepPreviousData)는 의도적으로 미적용 - 도메인 전환 시 이전
  *   도메인 카드 잔상 방지를 우선하고 페이지 전환 스켈레톤은 수용한다.
@@ -96,6 +104,26 @@ const ERA_RANGE: Record<string, { from?: string; to?: string }> = {
   "2020": { from: "2020-01-01", to: "2023-12-31" },
   "2010": { from: "2010-01-01", to: "2019-12-31" },
   old: { to: "2009-12-31" },
+};
+
+/**
+ * 게임 리뷰 수 radio 프리셋 (mixed-grid-mockup.html 섹션 2) -
+ * value는 reviewCountMin으로 그대로 전송할 하한값.
+ */
+const REVIEW_MIN_OPTIONS = [
+  { value: "", label: "전체" },
+  { value: "100", label: "100개 이상" },
+  { value: "1000", label: "1,000개 이상" },
+  { value: "10000", label: "10,000개 이상" },
+];
+const REVIEW_MIN_VALUES = REVIEW_MIN_OPTIONS.map((o) => o.value).filter(Boolean);
+
+/** 게임 탭 기본 releaseTo(출시 예정작 제외 경계) - 로컬 기준 오늘 yyyy-MM-dd */
+const todayStr = () => {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
 };
 
 /** 웹툰 연재 상태 - DB 실측값(webtoon_contents.status) 그대로 */
@@ -143,6 +171,8 @@ interface ParamPatch {
   status?: string;
   weekdays?: string[];
   ages?: string[];
+  reviewMin?: string;
+  upcoming?: boolean;
   page?: number;
 }
 
@@ -154,6 +184,8 @@ const CLEAR_FILTERS: ParamPatch = {
   status: "",
   weekdays: [],
   ages: [],
+  reviewMin: "",
+  upcoming: false,
   page: 1,
 };
 
@@ -191,18 +223,29 @@ const parseParams = (p: URLSearchParams) => {
   const ages = isWebtoon
     ? parseList(p.get("ages")).filter((a) => AGE_OPTIONS.includes(a))
     : [];
+  // 게임 도메인 컬럼 축은 게임 탭 전용 (타 도메인 전송 시 결과 0건)
+  const isGame = domainId === "game";
+  const rawReviewMin = p.get("reviewMin") ?? "";
+  const reviewMin =
+    isGame && REVIEW_MIN_VALUES.includes(rawReviewMin) ? rawReviewMin : "";
+  // 출시 예정 토글은 era 미선택 시에만 의미 - era 선택 동안은 era 범위가
+  // 우선이므로 무시(URL 값은 남겨 era 해제 시 토글 상태가 복원된다)
+  const upcoming = isGame && !era && p.get("upcoming") === "1";
   const rawPage = Number.parseInt(p.get("page") ?? "1", 10);
   const page = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
   return {
     domainId,
     isAll,
     isWebtoon,
+    isGame,
     genres,
     platforms,
     era,
     status,
     weekdays,
     ages,
+    reviewMin,
+    upcoming,
     page,
   };
 };
@@ -218,6 +261,8 @@ const stateKey = (p: URLSearchParams) => {
     s.status,
     s.weekdays.join(","),
     s.ages.join(","),
+    s.reviewMin,
+    s.upcoming ? "1" : "",
     s.page,
   ].join("|");
 };
@@ -246,6 +291,11 @@ const buildParams = (base: URLSearchParams, patch: ParamPatch) => {
   writeScalar(params, "status", patch.status);
   writeList(params, "weekdays", patch.weekdays);
   writeList(params, "ages", patch.ages);
+  writeScalar(params, "reviewMin", patch.reviewMin);
+  if (patch.upcoming !== undefined) {
+    if (patch.upcoming) params.set("upcoming", "1");
+    else params.delete("upcoming");
+  }
   if (patch.page !== undefined) {
     if (patch.page > 1) params.set("page", String(patch.page));
     else params.delete("page");
@@ -284,7 +334,7 @@ const SheetGroup = ({
   title,
   children,
 }: {
-  title: string;
+  title: ReactNode;
   children: ReactNode;
 }) => (
   <div className="border-b border-line py-3.5 last:border-b-0">
@@ -360,6 +410,49 @@ const SheetRadioGroup = ({
   );
 };
 
+/**
+ * 게임 탭 "출시 예정작 포함" 토글 행 + 안내 문구 (mixed-grid-mockup.html 섹션 2)
+ * - 레일과 바텀시트가 공유. era 선택 동안은 era 범위가 우선이라 disabled.
+ */
+const UpcomingToggle = ({
+  on,
+  eraActive,
+  onChange,
+}: {
+  on: boolean;
+  eraActive: boolean;
+  onChange: (next: boolean) => void;
+}) => (
+  <>
+    <div className="flex items-center justify-between gap-3 py-[5px]">
+      <span className={`text-sm ${eraActive ? "text-ink-3" : "text-ink-2"}`}>
+        출시 예정작 포함
+      </span>
+      <ToggleSwitch
+        checked={on}
+        onChange={onChange}
+        disabled={eraActive}
+        aria-label="출시 예정작 포함"
+      />
+    </div>
+    <p className="pt-1 text-xs leading-relaxed text-ink-3">
+      {eraActive
+        ? "출시 시기 필터를 선택한 동안에는 해당 기간이 우선 적용돼요."
+        : "끄면(기본) 최신 출시순에 미래 출시작이 섞이지 않아요. 켜면 예정작이 상단에 노출됩니다."}
+    </p>
+  </>
+);
+
+/** 게임 리뷰 수 그룹 제목 - 목업 h3 "리뷰 수 (Steam)" (보조 표기는 연한 색) */
+const reviewMinTitle = (
+  <>
+    리뷰 수 <span className="font-medium text-ink-3">(Steam)</span>
+  </>
+);
+
+const reviewMinChipLabel = (value: string) =>
+  `리뷰 ${Number(value).toLocaleString()}개 이상`;
+
 export default function ExplorePage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -369,12 +462,15 @@ export default function ExplorePage() {
     domainId,
     isAll,
     isWebtoon,
+    isGame,
     genres,
     platforms,
     era,
     status,
     weekdays,
     ages,
+    reviewMin,
+    upcoming,
     page,
   } = useMemo(() => parseParams(searchParams), [searchParams]);
   const domainKey = isAll ? undefined : domainId.toUpperCase();
@@ -416,6 +512,10 @@ export default function ExplorePage() {
     writeParams({ weekdays: next, page: 1 }, { replace: true });
   const handleAgesChange = (next: string[]) =>
     writeParams({ ages: next, page: 1 }, { replace: true });
+  const handleReviewMinChange = (next: string) =>
+    writeParams({ reviewMin: next, page: 1 }, { replace: true });
+  const handleUpcomingChange = (next: boolean) =>
+    writeParams({ upcoming: next, page: 1 }, { replace: true });
   const handleReset = () => writeParams(CLEAR_FILTERS, { replace: true });
   const handlePageChange = (next: number) => {
     if (writeParams({ page: next })) {
@@ -424,15 +524,23 @@ export default function ExplorePage() {
   };
 
   const eraRange = era ? ERA_RANGE[era] : undefined;
+  // 게임 탭 기본은 출시 예정작 제외(releaseTo=오늘). era 선택 시 era 범위가
+  // 우선이고, 출시 예정 토글을 켜면 releaseTo를 보내지 않는다.
+  const releaseTo = eraRange
+    ? eraRange.to
+    : isGame && !upcoming
+      ? todayStr()
+      : undefined;
   const { data, isLoading, isError, refetch } = useWorks({
     domain: domainKey,
     genres: genres.length > 0 ? genres : undefined,
     platforms: platforms.length > 0 ? platforms : undefined,
     releaseFrom: eraRange?.from,
-    releaseTo: eraRange?.to,
+    releaseTo,
     status: status || undefined,
     weekdays: weekdays.length > 0 ? weekdays : undefined,
     ageRatings: ages.length > 0 ? ages : undefined,
+    reviewCountMin: reviewMin ? Number(reviewMin) : undefined,
     page: page - 1,
     size: PAGE_SIZE,
     // 도메인 경로에서는 서버가 정렬을 무시하지만(release_date DESC 고정),
@@ -493,7 +601,9 @@ export default function ExplorePage() {
     (era ? 1 : 0) +
     (status ? 1 : 0) +
     weekdays.length +
-    ages.length;
+    ages.length +
+    (reviewMin ? 1 : 0) +
+    (upcoming ? 1 : 0);
   const hasActiveFilters = activeFilterCount > 0;
 
   // 활성 필터 칩 - 데스크톱 래핑 행과 모바일 툴바 스크롤 행이 공유
@@ -524,6 +634,24 @@ export default function ExplorePage() {
       label: a,
       onRemove: () => handleAgesChange(ages.filter((x) => x !== a)),
     })),
+    ...(reviewMin
+      ? [
+          {
+            key: "reviewMin",
+            label: reviewMinChipLabel(reviewMin),
+            onRemove: () => handleReviewMinChange(""),
+          },
+        ]
+      : []),
+    ...(upcoming
+      ? [
+          {
+            key: "upcoming",
+            label: "출시 예정 포함",
+            onRemove: () => handleUpcomingChange(false),
+          },
+        ]
+      : []),
   ];
 
   // 시트 pill 토글 - 즉시 적용(URL replace), 스테이징 없음
@@ -752,13 +880,37 @@ export default function ExplorePage() {
                   />
                 </>
               ) : (
-                <FilterGroup
-                  title={isOttDomain ? "개봉 시기" : "출시 시기"}
-                  type="radio"
-                  value={era}
-                  onChange={handleEraChange}
-                  options={ERA_OPTIONS}
-                />
+                <>
+                  <FilterGroup
+                    title={isOttDomain ? "개봉 시기" : "출시 시기"}
+                    type="radio"
+                    value={era}
+                    onChange={handleEraChange}
+                    options={ERA_OPTIONS}
+                  />
+                  {isGame && (
+                    <>
+                      <FilterGroup
+                        title={reviewMinTitle}
+                        type="radio"
+                        value={reviewMin}
+                        onChange={handleReviewMinChange}
+                        options={REVIEW_MIN_OPTIONS}
+                      />
+                      {/* 출시 예정 - 토글 축이라 FilterGroup 대신 동일 골격 직접 렌더 */}
+                      <div className="border-t border-line px-0.5 py-4">
+                        <h3 className="mb-2.5 text-[13.5px] font-bold text-ink">
+                          출시 예정
+                        </h3>
+                        <UpcomingToggle
+                          on={upcoming}
+                          eraActive={!!era}
+                          onChange={handleUpcomingChange}
+                        />
+                      </div>
+                    </>
+                  )}
+                </>
               )}
             </>
           )}
@@ -870,23 +1022,56 @@ export default function ExplorePage() {
           ) : (
             <>
               <div className={gridClass}>
-                {items.map((work) => (
-                  // 목업 카드 구성 그대로 - meta(연도·제작자)/장르 태그/도메인별 foot.
-                  // 전체 탭만 혼합 도메인이라 meta 앞에 도메인 라벨을 붙인다.
-                  <WorkCard
-                    key={work.id}
-                    variant={variant}
-                    title={work.title}
-                    meta={workCardMeta(work, { withDomain: isAll })}
-                    tags={workCardTags(work)}
-                    imageUrl={work.thumbnail}
-                    fallbackIconUrl={
-                      thumbnailFallbackMap[categoryOf(work.domain)]
-                    }
-                    to={`/work/${work.id}`}
-                    footer={workCardFooter(work)}
-                  />
-                ))}
+                {isAll
+                  ? // 혼합 그리드 1-C - 게임은 컴팩트 가로 행으로 2개씩 스택
+                    // (연속된 게임끼리 페어링), 나머지는 포스터 카드 그대로.
+                    groupMixedGrid(items).map((item) =>
+                      item.type === "poster" ? (
+                        <WorkCard
+                          key={item.work.id}
+                          variant="portrait"
+                          title={item.work.title}
+                          meta={workCardMeta(item.work, { withDomain: true })}
+                          tags={workCardTags(item.work)}
+                          imageUrl={item.work.thumbnail}
+                          fallbackIconUrl={
+                            thumbnailFallbackMap[categoryOf(item.work.domain)]
+                          }
+                          to={`/work/${item.work.id}`}
+                          footer={workCardFooter(item.work)}
+                        />
+                      ) : (
+                        <div
+                          key={`games-${item.works[0].id}`}
+                          className={gamePairCellClass}
+                        >
+                          {item.works.map((game) => (
+                            <GameCompactCard
+                              key={game.id}
+                              work={game}
+                              to={`/work/${game.id}`}
+                              fallbackIconUrl={thumbnailFallbackMap.game}
+                            />
+                          ))}
+                        </div>
+                      ),
+                    )
+                  : items.map((work) => (
+                      // 목업 카드 구성 그대로 - meta(연도·제작자)/장르 태그/도메인별 foot
+                      <WorkCard
+                        key={work.id}
+                        variant={variant}
+                        title={work.title}
+                        meta={workCardMeta(work)}
+                        tags={workCardTags(work)}
+                        imageUrl={work.thumbnail}
+                        fallbackIconUrl={
+                          thumbnailFallbackMap[categoryOf(work.domain)]
+                        }
+                        to={`/work/${work.id}`}
+                        footer={workCardFooter(work)}
+                      />
+                    ))}
               </div>
               {totalPages > 1 && (
                 <div className="mt-10">
@@ -1062,13 +1247,33 @@ export default function ExplorePage() {
                     </SheetGroup>
                   </>
                 ) : (
-                  <SheetGroup title={isOttDomain ? "개봉 시기" : "출시 시기"}>
-                    <SheetRadioGroup
-                      value={era}
-                      onChange={handleEraChange}
-                      options={ERA_OPTIONS}
-                    />
-                  </SheetGroup>
+                  <>
+                    <SheetGroup title={isOttDomain ? "개봉 시기" : "출시 시기"}>
+                      <SheetRadioGroup
+                        value={era}
+                        onChange={handleEraChange}
+                        options={ERA_OPTIONS}
+                      />
+                    </SheetGroup>
+                    {isGame && (
+                      <>
+                        <SheetGroup title={reviewMinTitle}>
+                          <SheetRadioGroup
+                            value={reviewMin}
+                            onChange={handleReviewMinChange}
+                            options={REVIEW_MIN_OPTIONS}
+                          />
+                        </SheetGroup>
+                        <SheetGroup title="출시 예정">
+                          <UpcomingToggle
+                            on={upcoming}
+                            eraActive={!!era}
+                            onChange={handleUpcomingChange}
+                          />
+                        </SheetGroup>
+                      </>
+                    )}
+                  </>
                 )}
               </>
             )}

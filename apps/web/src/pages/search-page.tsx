@@ -9,11 +9,13 @@ import { useSearchWorks } from "@aod/shared/hooks";
 import { DOMAIN_LABEL_MAP, DOMAIN_FILTERS } from "@aod/shared/constants";
 import { thumbnailFallbackMap, type Category } from "../constants/thumbnail";
 import WorkCard from "../components/ui/WorkCard";
+import GameCompactCard from "../components/ui/GameCompactCard";
 import {
   workCardFooter,
   workCardMeta,
   workCardTags,
 } from "../components/ui/workCardInfo";
+import { gamePairCellClass, groupMixedGrid } from "../utils/mixedGrid";
 import DomainChip from "../components/ui/DomainChip";
 import Pagination from "../components/ui/Pagination";
 import EmptyState from "../components/ui/EmptyState";
@@ -26,6 +28,8 @@ import SkeletonCard from "../components/ui/SkeletonCard";
  *   (전 폭 노출 - 데스크톱 SiteHeader의 검색 링크가 이 페이지로 오므로 lg에서도 필요).
  * - 도메인 언더라인 탭 -> DomainChip(1차 칩 위계), 결과 카드 -> WorkCard(portrait),
  *   인라인 페이지네이션 -> ui/Pagination.
+ * - 게임 결과는 세로 크롭 대신 혼합 그리드 1-C(GameCompactCard 가로 행) -
+ *   mixed-grid-mockup.html 확정안. 연속 게임 2개를 한 셀에 스택, <lg는 풀폭.
  */
 
 type Domain = keyof typeof DOMAIN_LABEL_MAP;
@@ -140,20 +144,39 @@ export default function SearchPage() {
       ) : data && data.content.length > 0 ? (
         <>
           <div className={gridClass}>
-            {data.content.map((work) => (
-              // 혼합 도메인 결과라 meta 앞에 도메인 라벨, foot은 도메인별 구성
-              <WorkCard
-                key={work.id}
-                variant="portrait"
-                title={work.title}
-                meta={workCardMeta(work, { withDomain: true })}
-                tags={workCardTags(work)}
-                imageUrl={work.thumbnail || null}
-                fallbackIconUrl={thumbnailFallbackMap[categoryOf(work.domain)]}
-                to={`/work/${work.id}`}
-                footer={workCardFooter(work)}
-              />
-            ))}
+            {/* 혼합 그리드 1-C - 게임은 컴팩트 가로 행(연속 게임 2개 스택),
+                나머지는 포스터 카드. meta 앞에 도메인 라벨, foot은 도메인별 구성 */}
+            {groupMixedGrid(data.content).map((item) =>
+              item.type === "poster" ? (
+                <WorkCard
+                  key={item.work.id}
+                  variant="portrait"
+                  title={item.work.title}
+                  meta={workCardMeta(item.work, { withDomain: true })}
+                  tags={workCardTags(item.work)}
+                  imageUrl={item.work.thumbnail || null}
+                  fallbackIconUrl={
+                    thumbnailFallbackMap[categoryOf(item.work.domain)]
+                  }
+                  to={`/work/${item.work.id}`}
+                  footer={workCardFooter(item.work)}
+                />
+              ) : (
+                <div
+                  key={`games-${item.works[0].id}`}
+                  className={gamePairCellClass}
+                >
+                  {item.works.map((game) => (
+                    <GameCompactCard
+                      key={game.id}
+                      work={game}
+                      to={`/work/${game.id}`}
+                      fallbackIconUrl={thumbnailFallbackMap.game}
+                    />
+                  ))}
+                </div>
+              ),
+            )}
           </div>
 
           {data.totalPages > 1 && (

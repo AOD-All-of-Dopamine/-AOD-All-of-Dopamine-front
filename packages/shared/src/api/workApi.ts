@@ -15,6 +15,8 @@ export interface WorksQueryParams {
   status?: string;
   weekdays?: string[];
   ageRatings?: string[];
+  /** 게임 도메인 축(Steam 리뷰 총수 하한) - 게임 외 도메인에 보내면 결과가 0건이 되므로 게임 탭에서만 사용 */
+  reviewCountMin?: number;
   page?: number;
   size?: number;
   sortBy?: string;
@@ -49,6 +51,7 @@ export function createWorkApi(publicApi: AxiosInstance) {
             status: params.status,
             weekdays: params.weekdays,
             ageRatings: params.ageRatings,
+            reviewCountMin: params.reviewCountMin,
             page: params.page ?? 0,
             size: params.size ?? 20,
             sortBy: params.sortBy ?? "masterTitle",
