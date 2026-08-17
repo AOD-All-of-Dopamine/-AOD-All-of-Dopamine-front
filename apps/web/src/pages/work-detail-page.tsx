@@ -34,7 +34,7 @@ import {
   formatFieldValue,
   getFieldLabel,
   getPlatformLabel,
-} from "../utils/field-labels";
+} from "@aod/shared/constants";
 import Tag from "../components/ui/Tag";
 import StatPill from "../components/ui/StatPill";
 import { WEEKDAY_KO } from "../components/ui/workCardInfo";
