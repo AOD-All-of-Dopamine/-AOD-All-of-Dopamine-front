@@ -21,8 +21,9 @@
 - **신규 수집**: SteamGameExecutor에서 descriptor 3/4면 saveRaw 전에 스킵 (아예 안 담음)
 - **기존분**: 삭제하지 않고 노출 차단 - `contents.is_adult boolean not null default false` 컬럼
   승격(Flyway **V6**) + 목록·검색·신작·발견 쿼리에 `AND is_adult = false`.
-  과거 수집분엔 descriptor가 없어 V6 백필 불가 — yml `attr.content_descriptor_ids` 수집을
-  추가하고, 재크롤로 채워지면 **부팅 reconcile**(SteamRefinementReconciler)이 자동 플래그.
+  **부팅 reconcile**(SteamRefinementReconciler)이 플래그를 채운다 — attr 기반(신규 수집분) +
+  **raw_items.source_payload 원형 기반(기존 수집분 — content_descriptors 894건 전수 보존 실측)**.
+  yml `attr.content_descriptor_ids` 수집도 추가(신규분 원천).
   상세 직접 URL은 허용(목록 비노출이 요구 범위)
 - 필터 규율 준수: attr(JSONB)로 매 쿼리 필터하지 않고 마스터 컬럼으로 승격하는 이유
 
@@ -91,6 +92,12 @@
   교체 — Executor 스킵·reconcile 동일 기준, V6는 구 백필 철회 UPDATE로 로컬 10건 원복.
   과거 수집분엔 descriptor가 없어 즉시 백필 불가 — 재크롤로 attr이 채워지면 부팅
   reconcile이 자동 플래그(재발 창 안전망 겸용, review_count 충전 포함).
+- S-BE (재검증 반영): attr 기반 reconcile만으로는 기존 수집분에 도달 불가 — 프로듀서
+  dedup으로 재크롤이 안 돌고, 성적 콘텐츠는 스킵이 saveRaw 전이라 attr이 영원히 안 채워짐.
+  대신 **raw_items.source_payload에 content_descriptors가 원형 보존**(894건 전수, ids
+  number형 실측)돼 있어 raw → platform_data → contents 조인 UPDATE 1문을 reconcile에
+  추가(기존 수집분 커버). attr 기반 문은 신규 수집분 커버로 유지, V6 수정 불필요
+  (부팅마다 reconcile이 커버). 로컬은 3/4 보유 0건이라 0행 갱신이 정답 — 부팅 로그 확인.
 - S-BE: 성인 스킵은 리뷰 집계 API 호출 전에 수행(호출 절약)하고 성공(true)으로 반환.
   (문구 정정: 구 "false면 재시도" 근거는 부정확 — 실제 시맨틱은 false→markAsFailed로
   maxRetries까지 RETRY 재클레임 후 **영구 FAILED**(RETRY→PENDING 복원 스케줄러는 TODO 미구현).
