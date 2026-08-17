@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AOD 혼합 그리드 목업 (게임 가로 카드)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<style>
+/* Steam 정제 플랜 ② 혼합 그리드 시안 - 토큰은 explore 목업과 동일 출처 */
+:root {
+  --bg: #f7f6f4; --surface: #fdfdfc; --border: #e7e5e1; --border-strong: #d8d5cf;
+  --text: #1c1b19; --text-2: #716f6a; --text-3: #9c9993;
+  --accent: #e2542c; --accent-ink: #b23d1c; --accent-tint: #faeee9; --star: #d9930d;
+  --shadow: 0 1px 2px rgb(58 48 40 / .05), 0 4px 14px rgb(58 48 40 / .06);
+  --r-panel: 12px; --r-input: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Pretendard Variable", Pretendard, sans-serif; background: #eceae6;
+  color: var(--text); line-height: 1.5; font-size: 15px; padding: 32px 24px 64px; }
+.label { max-width: 1200px; margin: 0 auto; font-size: 15px; font-weight: 800; color: var(--text-2); padding-bottom: 4px; }
+.note { max-width: 1200px; margin: 0 auto 14px; font-size: 13px; color: var(--text-3); }
+.frame { max-width: 1200px; margin: 0 auto 40px; background: var(--bg);
+  border: 1px dashed var(--border-strong); border-radius: 16px; padding: 24px; }
+
+/* ---------- 1. 데스크톱 혼합 그리드: 4열, 게임 = 2칸 스팬 가로 ---------- */
+.grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+}
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-panel);
+  overflow: hidden; box-shadow: var(--shadow); display: flex; flex-direction: column;
+}
+.card img { width: 100%; object-fit: cover; display: block; }
+.card.portrait img { aspect-ratio: 2 / 3; }
+.card.game { grid-column: span 2; }
+/* 핵심: 행 높이 완전 정렬. 포스터(2:3) 높이 1.5w에 맞춰 게임 이미지 비율을
+   (2w+gap)/1.5w ≈ 1.36:1로 고정 - 16:9 원본에서 좌우 약 12%씩만 center 크롭.
+   (현행 혼합 목록의 세로(2:3) 크롭은 원본의 63%를 잘라냄 - 12% 크롭이 압도적으로 개선) */
+.card.game img { aspect-ratio: 1.36 / 1; }
+.body { padding: 11px 13px 12px; display: flex; flex-direction: column; flex: 1; }
+.t { font-size: 14.5px; font-weight: 700; line-height: 1.3; }
+.m { font-size: 12.5px; color: var(--text-3); margin-top: 2px; }
+.tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+.tag { font-size: 11.5px; font-weight: 600; border: 1px solid var(--border);
+  border-radius: 999px; padding: 3px 9px; color: var(--text-2); background: var(--surface); }
+.foot { display: flex; justify-content: space-between; gap: 6px; margin-top: auto; padding-top: 9px;
+  border-top: 1px solid var(--border); font-size: 12px; color: var(--text-2); margin-top: auto; }
+.foot .pos { font-weight: 700; color: var(--text); }
+.foot .star-v { color: var(--star); font-weight: 700; }
+.body .spacer { flex: 1; min-height: 9px; }
+
+/* ---------- 2. 게임 탭 필터 레일 추가 그룹 ---------- */
+.rail-demo { display: flex; gap: 28px; }
+.rail { width: 256px; flex-shrink: 0; }
+.fg { border-top: 1px solid var(--border); padding: 15px 2px; }
+.fg h3 { font-size: 13.5px; font-weight: 700; margin-bottom: 9px; }
+.fi { display: flex; align-items: center; gap: 9px; padding: 5px 6px; margin: 0 -6px;
+  border-radius: var(--r-input); font-size: 14px; color: var(--text-2); }
+.fi input { accent-color: var(--accent); width: 15px; height: 15px; }
+.fi.on { color: var(--text); font-weight: 600; }
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 5px 6px; margin: 0 -6px; font-size: 14px; color: var(--text-2); }
+.switch { width: 36px; height: 21px; border-radius: 999px; background: var(--border-strong); position: relative; }
+.switch.on { background: var(--accent-ink); }
+.switch i { position: absolute; top: 2.5px; left: 2.5px; width: 16px; height: 16px; border-radius: 999px; background: #fff; }
+.switch.on i { left: auto; right: 2.5px; }
+.rail-note { font-size: 12px; color: var(--text-3); padding: 4px 2px 0; line-height: 1.5; }
+
+/* ---------- 3. 모바일(2열) : 게임 = 풀폭 ---------- */
+.mgrid { width: 390px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mgrid .card.game { grid-column: span 2; }
+.mgrid .t { font-size: 14px; } .mgrid .m { font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div class="label">1. 혼합 목록 (탐색 전체 탭·검색) - 데스크톱 4열, 게임은 2칸 가로</div>
+<div class="note">게임의 원본 가로(16:9) 썸네일을 크롭 없이 살리고, 세로 포스터와 벽돌식으로 섞이는 배치. 카드 본문 구조(제목·meta·태그·foot)는 기존과 동일.</div>
+<div class="frame">
+  <div class="grid">
+    <div class="card portrait">
+      <img src="https://picsum.photos/seed/mx-webtoon1/400/600" alt="">
+      <div class="body">
+        <div class="t">내 목을 비트는 구원자</div>
+        <div class="m">웹툰 · 백이듬 / 문득</div>
+        <div class="tags"><span class="tag">로맨스</span><span class="tag">완결로맨스</span></div>
+        <div class="spacer"></div>
+        <div class="foot"><span>완결</span><span></span></div>
+      </div>
+    </div>
+    <div class="card game">
+      <img src="https://picsum.photos/seed/mx-game1/832/468" alt="">
+      <div class="body">
+        <div class="t">Counter-Strike</div>
+        <div class="m">게임 · 2000 · Valve</div>
+        <div class="tags"><span class="tag">액션</span><span class="tag">멀티플레이어</span></div>
+        <div class="spacer"></div>
+        <div class="foot"><span class="pos">매우 긍정적</span><span>94%</span></div>
+      </div>
+    </div>
+    <div class="card portrait">
+      <img src="https://picsum.photos/seed/mx-movie1/400/600" alt="">
+      <div class="body">
+        <div class="t">변방의 형제들 3</div>
+        <div class="m">영화 · 2026 · Leila Sy</div>
+        <div class="tags"><span class="tag">드라마</span></div>
+        <div class="spacer"></div>
+        <div class="foot"><span>넷플릭스</span><span class="star-v">★ 7.4</span></div>
+      </div>
+    </div>
+    <div class="card game">
+      <img src="https://picsum.photos/seed/mx-game2/832/468" alt="">
+      <div class="body">
+        <div class="t">Guild Wars Reforged</div>
+        <div class="m">게임 · 2025 · ArenaNet</div>
+        <div class="tags"><span class="tag">RPG</span><span class="tag">대규모 멀티플레이어</span></div>
+        <div class="spacer"></div>
+        <div class="foot"><span class="pos">매우 긍정적</span><span>94%</span></div>
+      </div>
+    </div>
+    <div class="card portrait">
+      <img src="https://picsum.photos/seed/mx-novel1/400/600" alt="">
+      <div class="body">
+        <div class="t">아내가 무림공적이었다</div>
+        <div class="m">웹소설 · 카페인</div>
+        <div class="tags"><span class="tag">무협</span></div>
+        <div class="spacer"></div>
+        <div class="foot"><span>네이버시리즈</span><span></span></div>
+      </div>
+    </div>
+    <div class="card portrait">
+      <img src="https://picsum.photos/seed/mx-webtoon2/400/600" alt="">
+      <div class="body">
+        <div class="t">이슬비 로맨스</div>
+        <div class="m">웹툰 · WINSTON</div>
+        <div class="tags"><span class="tag">로맨스</span><span class="tag">드라마</span></div>
+        <div class="spacer"></div>
+        <div class="foot"><span>화요웹툰 · 연재중</span><span>15세</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="label">2. 게임 탭 필터 레일 - 리뷰 수 + 출시 예정 토글 추가</div>
+<div class="note">리뷰 수는 도메인 컬럼 승격(game_contents.review_count) 기반 라디오. 출시 예정은 기본 제외, 토글로 포함.</div>
+<div class="frame">
+  <div class="rail-demo">
+    <div class="rail">
+      <div class="fg">
+        <h3>리뷰 수 <span style="font-weight:500;color:var(--text-3)">(Steam)</span></h3>
+        <label class="fi on"><input type="radio" name="rv" checked><span>전체</span></label>
+        <label class="fi"><input type="radio" name="rv"><span>100개 이상</span></label>
+        <label class="fi"><input type="radio" name="rv"><span>1,000개 이상</span></label>
+        <label class="fi"><input type="radio" name="rv"><span>10,000개 이상</span></label>
+      </div>
+      <div class="fg">
+        <h3>출시 예정</h3>
+        <div class="toggle-row"><span>출시 예정작 포함</span><span class="switch"><i></i></span></div>
+        <div class="rail-note">끄면(기본) 최신 출시순에 미래 출시작이 섞이지 않아요. 켜면 예정작이 상단에 노출됩니다.</div>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;align-items:center;color:var(--text-3);font-size:13.5px">← 기존 게임 탭 레일(장르/플랫폼/출시 시기) 아래에 두 그룹 추가. 모바일 필터 시트에도 동일 축.</div>
+  </div>
+</div>
+
+<div class="label">3. 모바일 혼합 목록 (웹 &lt;lg · 앱 공통) - 2열, 게임은 풀폭 가로</div>
+<div class="frame">
+  <div class="mgrid">
+    <div class="card portrait">
+      <img src="https://picsum.photos/seed/mx-webtoon1/400/600" alt="">
+      <div class="body"><div class="t">내 목을 비트는 구원자</div><div class="m">웹툰 · 백이듬</div>
+        <div class="spacer"></div><div class="foot"><span>완결</span></div></div>
+    </div>
+    <div class="card portrait">
+      <img src="https://picsum.photos/seed/mx-movie1/400/600" alt="">
+      <div class="body"><div class="t">변방의 형제들 3</div><div class="m">영화 · 2026</div>
+        <div class="spacer"></div><div class="foot"><span>넷플릭스</span><span class="star-v">★ 7.4</span></div></div>
+    </div>
+    <div class="card game">
+      <img src="https://picsum.photos/seed/mx-game1/832/468" alt="">
+      <div class="body"><div class="t">Counter-Strike</div><div class="m">게임 · 2000 · Valve</div>
+        <div class="spacer"></div><div class="foot"><span class="pos">매우 긍정적</span><span>94%</span></div></div>
+    </div>
+    <div class="card portrait">
+      <img src="https://picsum.photos/seed/mx-novel1/400/600" alt="">
+      <div class="body"><div class="t">아내가 무림공적이었다</div><div class="m">웹소설</div>
+        <div class="spacer"></div><div class="foot"><span>네이버시리즈</span></div></div>
+    </div>
+    <div class="card portrait">
+      <img src="https://picsum.photos/seed/mx-webtoon2/400/600" alt="">
+      <div class="body"><div class="t">이슬비 로맨스</div><div class="m">웹툰 · WINSTON</div>
+        <div class="spacer"></div><div class="foot"><span>화요웹툰</span><span>15세</span></div></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
