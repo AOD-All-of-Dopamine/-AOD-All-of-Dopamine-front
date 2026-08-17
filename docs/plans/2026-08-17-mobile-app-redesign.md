@@ -55,16 +55,18 @@ useCollections(조회수 회피 캐시 설계) 이미 존재. 모바일은 이�
 - [x] 프로필 하위(찜/좋아요/리뷰) 카드 문법 통일
 
 ### 게이트 (태스크별)
-- [ ] `pnpm --filter @aod/mobile typecheck` + `pnpm --filter @aod/web build`(shared 회귀 방지)
-      + `pnpm --filter @aod/shared test`
-- [ ] grep: 임의 hex(theme.ts 제외) 0 / em-dash 0 / 구 svg-assets 신규 참조 0
+- [x] `pnpm --filter @aod/mobile typecheck` + `pnpm --filter @aod/web build`(shared 회귀 방지)
+      + `pnpm --filter @aod/shared test` - M-A/B/C + 마무리 라운드 전부 그린
+- [x] grep: 임의 hex(theme.ts 제외) 0 / em-dash 0 / 구 svg-assets 신규 참조 0
+      (마무리 라운드에서 svg-assets 자체 삭제 - 전 화면 리스타일 완료 기준)
 - [ ] expo web(`expo start --web`) 실화면 목업 대조 (오케스트레이터)
 - [ ] 실기기/에뮬레이터 확인은 사용자 몫으로 문서화 (Expo Go)
 
 ## 비스코프 (백로그)
 
 - 다크 테마 매핑, 네이티브 제스처(스와이프 등), 푸시 알림, 성능 튜닝(리스트 가상화 개선)
-- 구 svg-assets 완전 삭제(참조 0 확인 후 별도 정리 커밋)
+- ~~구 svg-assets 완전 삭제(참조 0 확인 후 별도 정리 커밋)~~ 완료(마무리 라운드) -
+  프로필 탭 재스킨으로 마지막 참조 소거 후 svg-assets.ts·work/WorkCard·WorkCarousel 삭제
 
 ## 편차 기록
 
@@ -138,4 +140,19 @@ useCollections(조회수 회피 캐시 설계) 이미 존재. 모바일은 이�
   클램프 초과 판정은 화면 밖 측정용 클론 onTextLayout 1회.
 - M-C: 구 컴포넌트 삭제 - components/icons.tsx·tab-icons.tsx·work/FallbackThumb.tsx
   (참조 0 확인). svg-assets.ts·work/WorkCard·WorkCarousel은 프로필 탭이 아직
-  참조해 유지 (svg-assets 완전 삭제 백로그 그대로).
+  참조해 유지했다가 마무리 라운드에서 프로필 탭 재스킨과 함께 삭제 완료.
+- 마무리(리뷰 후속): (tabs)/profile.tsx는 어느 태스크에도 없던 스코프 공백 -
+  웹 profile-page 문법으로 라이트 재스킨 (기존 기능 보존: 로그인 게이트·세션 확인·
+  로그아웃(Alert 확인)·통계 3분할·릴 2섹션+전체보기). 웹과 동일 편차: /profile/info
+  라우트 부재로 프로필 행 chevron 제거, white-cat 아바타는 Phosphor User 아이콘.
+- 마무리(리뷰 후속): 컬렉션 상세 아이템 인라인 스탯을 웹툰(연재 상태+연령)·
+  웹소설(연령)까지 확장 - workCardInfo에서 ageLabel·webtoonStatusLabel을 export해
+  foot과 파생 규칙 단일 출처 유지. work/[id] 시놉시스는 영역 폭 변화(분할 화면·
+  폴더블) 시 클램프 재측정, stripHtml에 기본 엔티티 디코드 추가. 검색은 2페이지
+  이후 실패 시 인라인 재시도(SectionError), 랭킹·신작은 도메인 전환 시 스크롤
+  최상단(탐색 관례 일관).
+- 마무리(오케스트레이터 지시로 shared 수정 룰 해제): WEEKDAY_KO를
+  packages/shared/src/constants/domain.ts로 승격 - 웹·모바일 workCardInfo는
+  shared import + 호환 재수출로 교체, shared 테스트에 7키 고정 검증 추가
+  (M-A 편차의 "승격 여부는 오케스트레이터 판단" 해소). app.json 스캐폴드 블루
+  (adaptiveIcon #E6F4FE·스플래시 #208AEF)는 canvas(#f7f6f4)로 교체 - 백로그 완료.

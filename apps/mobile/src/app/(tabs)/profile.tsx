@@ -1,43 +1,135 @@
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
+import { CaretRight, SignOut, User } from 'phosphor-react-native';
 
-import { SvgXml } from 'react-native-svg';
-
-import { LOGOUT, VIEW_ALL } from '@/components/svg-assets';
+import { EmptyState, EmptyStateAction } from '@/components/ui/EmptyState';
+import { domainFallbackIcon } from '@/components/ui/WorkCard';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WorkCarousel } from '@/components/work/WorkCarousel';
-import type { WorkCardItem } from '@/components/work/WorkCard';
 import { useAuth } from '@/auth/AuthContext';
-import { useMyReviews, useMyBookmarks, useMyLikes } from '@aod/shared/hooks';
+import { useMyBookmarks, useMyLikes, useMyReviews } from '@aod/shared/hooks';
+import { DOMAIN_LABEL_MAP } from '@aod/shared/constants';
 import type { WorkSummary } from '@aod/shared/types';
-import { colors, spacing, radius } from '@/theme/tokens';
+import { Palette, Radius } from '@/constants/theme';
 
-// ── 웹 profile-page.tsx 미러 ──
+/**
+ * 프로필 탭 - 웹 profile-page 문법의 라이트 재스킨 (M-C 마무리 라운드에서 발견된
+ * 스코프 공백 해소). 기존 구조·기능 보존: 로그인 게이트 / 세션 확인 / 마이페이지
+ * 헤더+로그아웃 / 프로필 요약 / 통계 3분할(하위 화면 진입) / 좋아요·보고 싶은
+ * 작품 가로 릴 + 전체보기.
+ *
+ * 웹과 동일 편차:
+ * - 구 프로필 영역 클릭 이동(/profile/info)은 라우트가 없어 chevron 제거.
+ * - 다크 전용 에셋(white-cat·LOGOUT·VIEW_ALL svg)은 Phosphor 아이콘으로 대체 -
+ *   구 svg-assets 참조 소거. 릴은 홈 신작 릴 문법(128x170 포스터 + 제목 + meta).
+ */
 
-const mapToWorkItem = (item: WorkSummary): WorkCardItem => ({
-  id: String(item.id),
-  title: item.title,
-  thumbnail: item.thumbnail ?? '',
-  score: item.score,
-  domain: item.domain,
-  year: item.releaseDate,
-});
+/** 릴 meta - "도메인 · 연도" (웹 profile WorkRailSection meta 미러) */
+const railMeta = (work: WorkSummary) => {
+  const year = work.releaseDate?.slice(0, 4);
+  return [DOMAIN_LABEL_MAP[work.domain] ?? work.domain, year]
+    .filter(Boolean)
+    .join(' · ');
+};
 
-function EmptySection() {
+const pushWork = (id: number) =>
+  router.push({ pathname: '/work/[id]', params: { id: String(id) } });
+
+function RailCard({ work }: { work: WorkSummary }) {
+  const FallbackIcon = domainFallbackIcon(work.domain);
   return (
-    <View style={styles.empty}>
-      <ThemedText style={styles.emptyText}>아직 등록한 작품이 없어요</ThemedText>
-      <Pressable
-        style={styles.emptyButton}
-        onPress={() => router.push('/explore')}>
-        <ThemedText type="small" style={styles.emptyButtonText}>
-          등록하러 가기
-        </ThemedText>
-      </Pressable>
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => pushWork(work.id)}
+      style={({ pressed }) => [styles.railCard, pressed && styles.pressed]}>
+      <View style={styles.railThumbWrap}>
+        {work.thumbnail ? (
+          <Image
+            source={{ uri: work.thumbnail }}
+            style={styles.fill}
+            contentFit="cover"
+            transition={150}
+          />
+        ) : (
+          <View style={styles.railFallback}>
+            <FallbackIcon size={28} color={Palette.ink3} />
+          </View>
+        )}
+      </View>
+      <ThemedText numberOfLines={1} style={styles.railTitle}>
+        {work.title}
+      </ThemedText>
+      <ThemedText numberOfLines={1} style={styles.railMeta}>
+        {railMeta(work)}
+      </ThemedText>
+    </Pressable>
+  );
+}
+
+/** 좋아요·보고 싶은 작품 공용 섹션 (웹 WorkRailSection 미러) */
+function WorkRailSection({
+  title,
+  count,
+  description,
+  viewAllTo,
+  items,
+}: {
+  title: string;
+  count: number;
+  description: string;
+  viewAllTo: '/profile/likes' | '/profile/bookmarks';
+  items: WorkSummary[] | undefined;
+}) {
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHead}>
+        <View style={styles.sectionTitleRow}>
+          <ThemedText style={styles.sectionTitle}>{title}</ThemedText>
+          <ThemedText style={styles.sectionCount}>{count}</ThemedText>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push(viewAllTo)}
+          hitSlop={8}
+          style={({ pressed }) => [styles.viewAll, pressed && styles.pressed]}>
+          <ThemedText style={styles.viewAllText}>전체보기</ThemedText>
+          <CaretRight size={13} color={Palette.ink2} />
+        </Pressable>
+      </View>
+      <ThemedText style={styles.sectionHint}>{description}</ThemedText>
+
+      {items && items.length > 0 ? (
+        <FlatList
+          horizontal
+          data={items}
+          keyExtractor={(work) => String(work.id)}
+          renderItem={({ item }) => <RailCard work={item} />}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.rail}
+        />
+      ) : (
+        <View style={styles.sectionEmpty}>
+          <EmptyState
+            variant="note"
+            title="아직 등록한 작품이 없어요"
+          />
+          <View style={styles.sectionEmptyAction}>
+            <EmptyStateAction
+              label="작품 둘러보기"
+              onPress={() => router.push('/(tabs)/explore')}
+            />
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -61,79 +153,77 @@ export default function ProfileScreen() {
     ]);
   };
 
-  // hydration 중에는 판단 보류 — 로그인된 사용자에게 로그인 프롬프트가 깜빡이지 않게
+  // hydration 중에는 판단 보류 - 로그인된 사용자에게 로그인 프롬프트가 깜빡이지 않게
   if (state.status === 'loading') {
     return (
-      <ThemedView style={styles.container}>
-        <SafeAreaView edges={['top']} style={styles.centerScreen}>
-          <ThemedText type="small" style={styles.loginHint}>
-            세션 확인 중…
-          </ThemedText>
+      <View style={styles.screen}>
+        <SafeAreaView edges={['top']} style={styles.center}>
+          <ActivityIndicator color={Palette.accent} />
+          <ThemedText style={styles.loadingText}>세션 확인 중</ThemedText>
         </SafeAreaView>
-      </ThemedView>
+      </View>
     );
   }
 
-  // 비로그인 (웹 미러)
   if (!isAuthenticated) {
     return (
-      <ThemedView style={styles.container}>
-        <SafeAreaView edges={['top']} style={styles.centerScreen}>
-          <ThemedText style={styles.loginTitle}>로그인이 필요합니다</ThemedText>
-          <ThemedText type="small" style={styles.loginHint}>
-            프로필을 보려면 로그인해주세요.
-          </ThemedText>
-          <Pressable
-            style={styles.loginButton}
-            onPress={() => router.push('/login')}>
-            <ThemedText style={styles.loginButtonText}>로그인 하기</ThemedText>
-          </Pressable>
+      <View style={styles.screen}>
+        <SafeAreaView edges={['top']} style={styles.gate}>
+          <EmptyState
+            icon={<User size={44} color={Palette.ink3} />}
+            title="로그인이 필요해요"
+            description="프로필을 보려면 로그인해 주세요."
+            action={
+              <EmptyStateAction
+                label="로그인 하기"
+                onPress={() => router.push('/login')}
+              />
+            }
+          />
         </SafeAreaView>
-      </ThemedView>
+      </View>
     );
   }
 
   const username = state.user.username;
 
   return (
-    <ThemedView style={styles.container}>
+    <View style={styles.screen}>
       <SafeAreaView edges={['top']} style={styles.safeArea}>
-        {/* 헤더: 마이페이지 + 로그아웃 */}
-        <View style={styles.header}>
-          <ThemedText style={styles.headerTitle}>마이페이지</ThemedText>
-          <Pressable onPress={handleLogout} hitSlop={8}>
-            <SvgXml xml={LOGOUT} width={24} height={24} />
-          </Pressable>
-        </View>
-
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {/* 프로필 섹션 (그라데이션 링 아바타 — 웹 미러) */}
-          <View style={styles.profileRow}>
-            <View style={styles.profileLeft}>
-              <LinearGradient
-                colors={[colors.accent, colors.blue]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.avatarRing}>
-                <View style={styles.avatarInner}>
-                  <Image
-                    source={require('@/assets/images/white-cat.png')}
-                    style={styles.avatarImage}
-                    contentFit="cover"
-                  />
-                </View>
-              </LinearGradient>
-              <View>
-                <ThemedText style={styles.username}>{username}</ThemedText>
-                <ThemedText type="small" style={styles.handle}>
-                  @{username}
-                </ThemedText>
-              </View>
-            </View>
-            <ThemedText style={styles.chevron}>›</ThemedText>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.content}>
+          {/* 헤더: 마이페이지 + 로그아웃 (웹 profile-page 헤더 미러) */}
+          <View style={styles.headRow}>
+            <ThemedText style={styles.pageTitle}>마이페이지</ThemedText>
+            <Pressable
+              accessibilityRole="button"
+              onPress={handleLogout}
+              style={({ pressed }) => [
+                styles.logoutBtn,
+                pressed && styles.pressed,
+              ]}>
+              <SignOut size={15} color={Palette.ink2} />
+              <ThemedText style={styles.logoutText}>로그아웃</ThemedText>
+            </Pressable>
           </View>
 
-          {/* 통계 3분할 카드 (웹 #2E2E2E, 구분선 #444) */}
+          {/* 프로필 요약 */}
+          <View style={styles.profileRow}>
+            <View style={styles.avatar}>
+              <User size={30} color={Palette.ink3} />
+            </View>
+            <View style={styles.profileInfo}>
+              <ThemedText numberOfLines={1} style={styles.username}>
+                {username}
+              </ThemedText>
+              <ThemedText numberOfLines={1} style={styles.handle}>
+                @{username}
+              </ThemedText>
+            </View>
+          </View>
+
+          {/* 통계 3분할 (하위 화면 진입) */}
           <View style={styles.statsCard}>
             {(
               [
@@ -144,243 +234,275 @@ export default function ProfileScreen() {
             ).map(([id, label, value], idx) => (
               <Pressable
                 key={id}
-                style={[styles.statCell, idx !== 2 && styles.statDivider]}
-                onPress={() => router.push(`/profile/${id}`)}>
+                accessibilityRole="button"
+                onPress={() => router.push(`/profile/${id}`)}
+                style={({ pressed }) => [
+                  styles.statCell,
+                  idx !== 2 && styles.statDivider,
+                  pressed && styles.pressed,
+                ]}>
                 <ThemedText style={styles.statValue}>{value}</ThemedText>
-                <ThemedText type="small" style={styles.statLabel}>
-                  {label}
-                </ThemedText>
+                <ThemedText style={styles.statLabel}>{label}</ThemedText>
               </Pressable>
             ))}
           </View>
 
-          {/* 좋아요 섹션 */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <ThemedText style={styles.sectionTitle}>
-                좋아요 {likeCount}
-              </ThemedText>
-              <Pressable
-                onPress={() => router.push('/profile/likes')}
-                style={styles.viewAllButton}>
-                <ThemedText type="small" style={styles.viewAll}>
-                  전체보기
-                </ThemedText>
-                <SvgXml xml={VIEW_ALL} width={6} height={11} />
-              </Pressable>
-            </View>
-            <ThemedText type="small" style={styles.sectionHint}>
-              좋았던 작품을 찜해보세요
-            </ThemedText>
-            {likesData?.content?.length ? (
-              <WorkCarousel
-                title=""
-                items={likesData.content.map(mapToWorkItem)}
-                onItemPress={(id) =>
-                  router.push({ pathname: '/work/[id]', params: { id } })
-                }
-              />
-            ) : (
-              <EmptySection />
-            )}
-          </View>
+          <WorkRailSection
+            title="좋아요"
+            count={likeCount}
+            description="좋았던 작품을 찜해보세요"
+            viewAllTo="/profile/likes"
+            items={likesData?.content}
+          />
 
-          {/* 보고 싶은 작품 섹션 */}
-          <View style={[styles.section, styles.sectionLast]}>
-            <View style={styles.sectionHeader}>
-              <ThemedText style={styles.sectionTitle}>
-                보고 싶은 작품 {bookmarkCount}
-              </ThemedText>
-              <Pressable
-                onPress={() => router.push('/profile/bookmarks')}
-                style={styles.viewAllButton}>
-                <ThemedText type="small" style={styles.viewAll}>
-                  전체보기
-                </ThemedText>
-                <SvgXml xml={VIEW_ALL} width={6} height={11} />
-              </Pressable>
-            </View>
-            <ThemedText type="small" style={styles.sectionHint}>
-              나중에 볼 작품을 등록해요
-            </ThemedText>
-            {bookmarksData?.content?.length ? (
-              <WorkCarousel
-                title=""
-                items={bookmarksData.content.map(mapToWorkItem)}
-                onItemPress={(id) =>
-                  router.push({ pathname: '/work/[id]', params: { id } })
-                }
-              />
-            ) : (
-              <EmptySection />
-            )}
-          </View>
+          <WorkRailSection
+            title="보고 싶은 작품"
+            count={bookmarkCount}
+            description="나중에 볼 작품을 등록해요"
+            viewAllTo="/profile/bookmarks"
+            items={bookmarksData?.content}
+          />
         </ScrollView>
       </SafeAreaView>
-    </ThemedView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
+    backgroundColor: Palette.canvas,
   },
   safeArea: {
     flex: 1,
   },
-  centerScreen: {
+  content: {
+    paddingBottom: 28,
+  },
+  fill: {
+    width: '100%',
+    height: '100%',
+  },
+  pressed: {
+    opacity: 0.8,
+  },
+  center: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.xl,
+    gap: 10,
   },
-  loginTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+  loadingText: {
+    fontSize: 13.5,
+    lineHeight: 19,
+    fontWeight: 400,
+    color: Palette.ink2,
   },
-  loginHint: {
-    color: colors.textBright,
-    marginBottom: spacing.md,
+  gate: {
+    flex: 1,
+    justifyContent: 'center',
   },
-  loginButton: {
-    backgroundColor: colors.accent,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-  },
-  loginButtonText: {
-    color: colors.textPrimary,
-    fontWeight: '500',
-  },
-  header: {
+  headRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
+    justifyContent: 'space-between',
+    paddingTop: 18,
+    paddingHorizontal: 16,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+  pageTitle: {
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: 800,
+    letterSpacing: -0.4,
+    color: Palette.ink,
+  },
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Palette.line,
+    backgroundColor: Palette.surface,
   },
   logoutText: {
-    color: colors.textMuted,
+    fontSize: 13.5,
+    lineHeight: 18,
+    fontWeight: 600,
+    color: Palette.ink2,
   },
   profileRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    marginTop: spacing.xl,
+    gap: 14,
+    paddingTop: 22,
+    paddingHorizontal: 16,
   },
-  profileLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
-  },
-  avatarRing: {
+  avatar: {
     width: 64,
     height: 64,
-    borderRadius: radius.full,
-    padding: 2,
-  },
-  avatarInner: {
-    flex: 1,
-    borderRadius: radius.full,
-    backgroundColor: colors.surface,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Palette.line,
+    backgroundColor: Palette.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
+    // 목업 shadow-card 근사
+    shadowColor: Palette.shadowInk,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  avatarImage: {
-    width: 36,
-    height: 36,
+  profileInfo: {
+    flex: 1,
+    minWidth: 0,
   },
   username: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: 800,
+    letterSpacing: -0.4,
+    color: Palette.ink,
   },
   handle: {
-    color: colors.textFaint,
-  },
-  chevron: {
-    fontSize: 24,
-    color: colors.textFaint,
+    marginTop: 1,
+    fontSize: 14,
+    lineHeight: 19,
+    fontWeight: 400,
+    color: Palette.ink2,
   },
   statsCard: {
     flexDirection: 'row',
-    backgroundColor: '#2E2E2E',
-    borderRadius: radius.md,
-    marginHorizontal: spacing.xl,
-    marginTop: spacing.xxl,
-    paddingVertical: spacing.lg,
+    marginTop: 22,
+    marginHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: Palette.surface,
+    borderWidth: 1,
+    borderColor: Palette.line,
+    borderRadius: Radius.panel,
+    // 목업 shadow-card 근사
+    shadowColor: Palette.shadowInk,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   statCell: {
     flex: 1,
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: 4,
   },
   statDivider: {
-    borderRightWidth: 1,
-    borderRightColor: '#444444',
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: Palette.line,
   },
   statValue: {
     fontSize: 20,
-    fontWeight: '700',
+    lineHeight: 26,
+    fontWeight: 800,
+    color: Palette.ink,
+    fontVariant: ['tabular-nums'],
   },
   statLabel: {
-    color: colors.textFaint,
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: 400,
+    color: Palette.ink2,
   },
   section: {
-    marginTop: spacing.xxl,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingBottom: spacing.lg,
+    marginTop: 30,
   },
-  sectionLast: {
-    borderBottomWidth: 0,
-    paddingBottom: spacing.xxl * 2,
-  },
-  sectionHeader: {
+  sectionHead: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.xl,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: 800,
+    letterSpacing: -0.2,
+    color: Palette.ink,
   },
-  viewAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
+  sectionCount: {
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: 700,
+    color: Palette.accentInk,
+    fontVariant: ['tabular-nums'],
   },
   viewAll: {
-    color: colors.textMuted,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  viewAllText: {
+    fontSize: 13.5,
+    lineHeight: 18,
+    fontWeight: 500,
+    color: Palette.ink2,
   },
   sectionHint: {
-    color: colors.textMuted,
-    paddingHorizontal: spacing.xl,
     marginTop: 2,
-    marginBottom: spacing.sm,
+    paddingHorizontal: 16,
+    fontSize: 13.5,
+    lineHeight: 18,
+    fontWeight: 400,
+    color: Palette.ink3,
   },
-  empty: {
+  rail: {
+    paddingTop: 14,
+    paddingHorizontal: 16,
+    gap: 10,
+  },
+  railCard: {
+    width: 128,
+  },
+  railThumbWrap: {
+    width: 128,
+    height: 170,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Palette.line,
+    overflow: 'hidden',
+    backgroundColor: Palette.canvas,
+  },
+  railFallback: {
+    width: '100%',
+    height: '100%',
     alignItems: 'center',
-    paddingVertical: spacing.xxl,
-    gap: spacing.md,
+    justifyContent: 'center',
+    opacity: 0.8,
   },
-  emptyText: {
-    fontSize: 16,
+  railTitle: {
+    marginTop: 7,
+    fontSize: 13.5,
+    lineHeight: 17,
+    fontWeight: 600,
+    color: Palette.ink,
   },
-  emptyButton: {
-    backgroundColor: colors.accent,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+  railMeta: {
+    marginTop: 1,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: 400,
+    color: Palette.ink3,
   },
-  emptyButtonText: {
-    color: colors.textPrimary,
+  sectionEmpty: {
+    marginTop: 14,
+    marginHorizontal: 16,
+  },
+  sectionEmptyAction: {
+    alignItems: 'center',
+    marginTop: 10,
   },
 });
