@@ -17,7 +17,11 @@ import { EmptyState, EmptyStateAction } from '@/components/ui/EmptyState';
 import { GameCompactCard } from '@/components/ui/GameCompactCard';
 import { IconButton } from '@/components/ui/IconButton';
 import { SectionError } from '@/components/ui/SectionError';
-import { SkeletonPulse, WorkCardSkeleton } from '@/components/ui/Skeleton';
+import {
+  GameRowSkeleton,
+  SkeletonPulse,
+  WorkCardSkeleton,
+} from '@/components/ui/Skeleton';
 import { WorkCard } from '@/components/ui/WorkCard';
 import {
   workCardFooter,
@@ -134,14 +138,14 @@ export default function SearchScreen() {
 
         {/* 결과: 스켈레톤 / 검색 전 / 에러 / 빈 결과 / 그리드 */}
         {showSkeleton ? (
+          // 혼합 목록의 최종 형상(1-C 앱 규칙)대로 게임 풀폭 행 형상을 섞어
+          // 로드 후 레이아웃 시프트를 줄인다 (웹 search-page 스켈레톤 미러)
           <SkeletonPulse style={styles.skeletonGrid}>
-            {Array.from({ length: 6 }, (_, i) => (
-              <WorkCardSkeleton
-                key={i}
-                variant="portrait"
-                style={styles.skeletonCell}
-              />
-            ))}
+            <WorkCardSkeleton variant="portrait" style={styles.skeletonCell} />
+            <WorkCardSkeleton variant="portrait" style={styles.skeletonCell} />
+            <GameRowSkeleton style={styles.skeletonGameRow} />
+            <WorkCardSkeleton variant="portrait" style={styles.skeletonCell} />
+            <WorkCardSkeleton variant="portrait" style={styles.skeletonCell} />
           </SkeletonPulse>
         ) : keyword === '' ? (
           <EmptyState
@@ -299,6 +303,10 @@ const styles = StyleSheet.create({
   skeletonCell: {
     flexBasis: '46%',
     flexGrow: 1,
+  },
+  /** 혼합 스켈레톤의 게임 행 - flexWrap 그리드에서 한 줄 전체 점유 */
+  skeletonGameRow: {
+    width: '100%',
   },
   list: {
     flex: 1,

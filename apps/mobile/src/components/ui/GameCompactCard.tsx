@@ -15,7 +15,8 @@ import { workCardMeta } from '@/components/ui/workCardInfo';
 import { Palette, Radius } from '@/constants/theme';
 
 /**
- * 혼합 목록(탐색 전체 탭·검색)용 게임 컴팩트 가로 행 - 웹 ui/GameCompactCard
+ * 혼합 목록(검색 - 탐색 전체 탭 제거 후 유일한 혼합 표면)용 게임 컴팩트 가로
+ * 행 - 웹 ui/GameCompactCard
  * (mixed-grid-mockup.html 1-C 확정안)의 RN 이식. 좌측 460:215 원본(Steam header)
  * 무크롭 썸네일(42% 폭, 인셋 - WorkCard landscape와 동일 비율 관례) +
  * 우측 제목·meta(도메인·연도·개발사)·Steam 평가(desc + 긍정 %).

@@ -30,9 +30,9 @@
 - [x] 장르 필터 genres-with-count 전환 + 개수 뱃지 (레일·시트)
 
 ### E-FE2. 모바일 앱 (구현 → 리뷰 → 수정)
-- [ ] 탐색 전체 탭 제거(기본 game 유지) - 혼합 행 로직은 검색 전용화
-- [ ] 랭킹·신작 게임 가로 썸네일
-- [ ] 장르 시트 genres-with-count + 개수 뱃지
+- [x] 탐색 전체 탭 제거(기본 game 유지) - 혼합 행 로직은 검색 전용화
+- [x] 랭킹·신작 게임 가로 썸네일
+- [x] 장르 시트 genres-with-count + 개수 뱃지
 
 ### 게이트
 - [ ] web build + mobile typecheck + shared test + grep 게이트
@@ -65,3 +65,14 @@
 - E-FE1: 탐색 도메인 탭 순서를 기본 탭(게임) 기준으로 재배열하자는 리뷰 제안은
   기각 - 전역 도메인 순서(DOMAIN_FILTERS: 영화·시리즈·게임·웹툰·웹소설)를 검색·
   신작 칩과 일관되게 유지하는 쪽을 우선.
+- E-FE2: 탐색 혼합 스켈레톤 제거로 GameRowSkeleton 실사용처가 사라져, 검색
+  스켈레톤을 웹 search-page와 동일한 혼합 형상(포트레이트 2 + 게임 풀폭 행 +
+  포트레이트 2)으로 전환 - 플랜은 검색 무변경이었으나 혼합 행의 검색 전용화에
+  스켈레톤 관례까지 함께 이관(로드 후 레이아웃 시프트 완화 목적 동일).
+- E-FE2: toListRows는 도메인 탭에서도 페어 행 파생용으로 존속(mixed=false 고정,
+  행 타입 유니온 유지) - renderItem의 game 분기만 제거하고 도달 불가 타입은
+  null 처리. GameCompactCard·mixedList·workCardInfo·bookmarks 주석의 "전체 탭"
+  어휘 잔재도 검색 전용 표현으로 정리.
+- E-FE2: 장르 순서는 설계 결정 ④ 개정(개수 내림차순 방어 정렬)을 웹과 동일하게
+  적용 - Object.entries 정렬 후 키만 사용, 개수 뱃지는 선택 상태와 무관하게
+  ink-3 유지(웹 count span 미러).

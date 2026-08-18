@@ -78,7 +78,7 @@ const FootEndText = ({ children }: { children: ReactNode }) => (
 
 /**
  * 메타 줄 - "연도 · 제작자" (웹툰은 목업대로 작가만, 작가 없으면 연도 폴백).
- * withDomain: 혼합 도메인 목록(전체 탭·검색·보관함)에서 도메인 라벨을 앞에 붙인다.
+ * withDomain: 혼합 도메인 목록(검색·보관함)에서 도메인 라벨을 앞에 붙인다.
  */
 export const workCardMeta = (
   work: WorkSummary,

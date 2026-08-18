@@ -103,7 +103,7 @@ export function WorkCardSkeleton({
 }
 
 /**
- * GameCompactCard 형상 스켈레톤 - 혼합 목록(탐색 전체 탭)의 게임 풀폭 가로 행용
+ * GameCompactCard 형상 스켈레톤 - 혼합 목록(검색)의 게임 풀폭 가로 행용
  * (웹 SkeletonCard "game-row" variant의 RN 대응 - 로드 후 레이아웃 시프트 완화)
  */
 export function GameRowSkeleton({ style }: { style?: StyleProp<ViewStyle> }) {

@@ -21,12 +21,7 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { DomainChip } from '@/components/ui/DomainChip';
 import { EmptyState, EmptyStateAction } from '@/components/ui/EmptyState';
 import { FilterChip } from '@/components/ui/FilterChip';
-import { GameCompactCard } from '@/components/ui/GameCompactCard';
-import {
-  GameRowSkeleton,
-  SkeletonPulse,
-  WorkCardSkeleton,
-} from '@/components/ui/Skeleton';
+import { SkeletonPulse, WorkCardSkeleton } from '@/components/ui/Skeleton';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { WorkCard } from '@/components/ui/WorkCard';
 import {
@@ -35,7 +30,11 @@ import {
   workCardTags,
 } from '@/components/ui/workCardInfo';
 import { ThemedText } from '@/components/themed-text';
-import { useGenres, useInfiniteWorks, usePlatforms } from '@aod/shared/hooks';
+import {
+  useGenresWithCount,
+  useInfiniteWorks,
+  usePlatforms,
+} from '@aod/shared/hooks';
 import {
   COLLECTION_SOURCES,
   DOMAIN_FILTERS,
@@ -52,7 +51,8 @@ import { toListRows, type ListRow } from '@/utils/mixedList';
  * 필터 축은 웹 explore-page.tsx와 동일 (백엔드 findWorks 계약 기준) -
  * 웹은 URL 쿼리가 단일 출처, 모바일은 같은 축을 로컬 상태로 유지한다:
  * - 공통: 장르(@> AND) / 플랫폼(&& OR). 영화·시리즈는 수집 소스(TMDB_*)를 뺀
- *   "볼 수 있는 곳"만 노출
+ *   "볼 수 있는 곳"만 노출. 장르 축은 genres-with-count(개수 내림차순 -
+ *   숫자 장르 키 순서 함정 대비 개수 기준 방어 정렬) + pill 라벨 옆 개수 표기
  * - 게임·웹소설·영화·시리즈: 출시(개봉) 시기 era 프리셋 -> releaseFrom/To
  * - 웹툰 전용: 연재 상태(radio) / 연재 요일 / 연령 등급. 완결 선택 시 요일 자동
  *   해제 (완결작 weekday null - 조합이 항상 0건)
@@ -60,16 +60,20 @@ import { toListRows, type ListRow } from '@/utils/mixedList';
  *   출시 예정 토글. 게임 탭 기본은 releaseTo=오늘 전송(출시 예정작 제외), 토글을
  *   켜면 미전송. era 선택 시에는 era 범위가 우선이라 토글을 무시(disabled + 안내)
  *   하되 상태는 보존해 era 해제 시 복원한다 (웹 upcoming 축과 동일 정책).
- * - 전체 탭: 백엔드가 domain 없이는 필터를 적용하지 않아 필터 미지원 안내만
+ *
+ * 전체 탭은 제거 - 기본 도메인 game (웹 EXPLORE_DOMAINS 동일). 혼합 목록의
+ * 게임 풀폭 행(GameCompactCard·toListRows mixed)은 검색 전용으로만 남는다.
  *
  * 시트는 즉시 적용 - 스테이징 상태 없음. footer [닫기 | N개 작품 보기] 둘 다 닫기.
  * 목록은 FlatList 무한 스크롤 유지 (useInfiniteWorks) - 단 numColumns 대신
- * utils/mixedList의 행 단위 데이터로 렌더한다. 전체 탭에서 게임은 풀폭 컴팩트
- * 가로 행(GameCompactCard - 혼합 그리드 1-C의 앱 규칙), 나머지는 2개씩 페어 행.
- * 도메인 단독 탭은 전 아이템 페어 행 - 기존 2열 그리드와 같은 시각.
+ * utils/mixedList의 행 단위 데이터로 렌더한다. 전 아이템 2개씩 페어 행 -
+ * 기존 2열 그리드와 같은 시각.
  */
 
-type DomainId = 'all' | 'movie' | 'tv' | 'game' | 'webtoon' | 'webnovel';
+type DomainId = 'movie' | 'tv' | 'game' | 'webtoon' | 'webnovel';
+
+/** 도메인 칩 - "전체" 탭 제거 (웹 EXPLORE_DOMAINS 미러) */
+const EXPLORE_DOMAINS = DOMAIN_FILTERS.filter((d) => d.id !== 'ALL');
 
 const PAGE_SIZE = 30;
 
@@ -171,12 +175,15 @@ function SheetGroup({
 /** 시트 옵션 pill (목업 .opt) - on = accent-tint 배경 + accent-ink 테두리·텍스트 */
 function OptPill({
   label,
+  count,
   on = false,
   disabled = false,
   soonLabel,
   onPress,
 }: {
   label: string;
+  /** 라벨 옆 작품 수 표기 (장르 축 - genres-with-count, 웹 SheetOptionPill 미러) */
+  count?: number;
   on?: boolean;
   disabled?: boolean;
   soonLabel?: string;
@@ -197,6 +204,11 @@ function OptPill({
       <ThemedText style={[styles.optText, on && styles.optTextOn]}>
         {soonLabel ? `${label} · ${soonLabel}` : label}
       </ThemedText>
+      {count !== undefined && (
+        <ThemedText style={styles.optCount}>
+          {count.toLocaleString()}
+        </ThemedText>
+      )}
     </Pressable>
   );
 }
@@ -273,11 +285,10 @@ export default function ExploreScreen() {
   const [genresExpanded, setGenresExpanded] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const isAll = domainId === 'all';
   const isWebtoon = domainId === 'webtoon';
   const isGame = domainId === 'game';
   const isOttDomain = domainId === 'movie' || domainId === 'tv';
-  const domainKey = isAll ? undefined : domainId.toUpperCase();
+  const domainKey = domainId.toUpperCase();
 
   const resetFilters = () => {
     setGenres([]);
@@ -336,7 +347,8 @@ export default function ExploreScreen() {
     ageRatings: ages.length > 0 ? ages : undefined,
     reviewCountMin: reviewMin ? Number(reviewMin) : undefined,
     size: PAGE_SIZE,
-    // 도메인 경로는 서버가 release_date DESC 고정, 전체 탭만 이 값을 따른다 (웹 동일)
+    // 서버가 도메인 경로 정렬을 무시하고 release_date DESC 고정이지만,
+    // 화면 라벨(최신 출시순)과 의도를 일치시키기 위해 명시해 보낸다 (웹 동일)
     sortBy: 'releaseDate',
     sortDirection: 'desc',
   });
@@ -345,25 +357,32 @@ export default function ExploreScreen() {
     () => data?.pages.flatMap((page) => page.content) ?? [],
     [data],
   );
-  // 혼합(전체 탭)은 게임 = 풀폭 행, 도메인 탭은 2개씩 페어 행 (1-C 앱 규칙)
-  const rows = useMemo(() => toListRows(works, isAll), [works, isAll]);
+  // 전 아이템 2개씩 페어 행 (mixed=false - 게임 풀폭 행은 검색 전용)
+  const rows = useMemo(() => toListRows(works, false), [works]);
   const totalElements = data?.pages?.[0]?.totalElements ?? 0;
 
-  const genresQuery = useGenres(domainKey, { enabled: !isAll });
-  const platformsQuery = usePlatforms(domainKey, { enabled: !isAll });
+  const genresQuery = useGenresWithCount(domainKey);
+  const platformsQuery = usePlatforms(domainKey);
 
-  const sortedGenres = useMemo(
-    () => [...(genresQuery.data ?? [])].sort((a, b) => a.localeCompare(b, 'ko')),
-    [genresQuery.data],
+  // genres-with-count는 개수 내림차순 LinkedHashMap이지만, 순수 숫자 장르가
+  // 유입되면 JS 객체가 정수형 키를 삽입 순서 앞으로 끌어올려 순서가 깨진다 -
+  // 개수 내림차순 방어 정렬로 API 정렬을 복원한다 (웹 동일)
+  const genreCounts = genresQuery.data;
+  const genreNames = useMemo(
+    () =>
+      Object.entries(genreCounts ?? {})
+        .sort((a, b) => b[1] - a[1])
+        .map(([name]) => name),
+    [genreCounts],
   );
 
   // 접힘 상태에서도 체크된 항목은 유지 노출 (칩-레일 불일치 방지, 웹 동일)
   const visibleGenres = genresExpanded
-    ? sortedGenres
-    : sortedGenres.filter(
+    ? genreNames
+    : genreNames.filter(
         (g, i) => i < GENRE_COLLAPSE_LIMIT || genres.includes(g),
       );
-  const hiddenGenreCount = sortedGenres.length - visibleGenres.length;
+  const hiddenGenreCount = genreNames.length - visibleGenres.length;
 
   // 영화·시리즈는 수집 소스(TMDB_*)를 제외한 OTT만 "볼 수 있는 곳"으로 노출
   const visiblePlatforms = isOttDomain
@@ -445,13 +464,13 @@ export default function ExploreScreen() {
 
   const listHeader = (
     <View>
-      {/* 도메인 칩 (목업 .chips-row - nowrap 가로 스크롤) */}
+      {/* 도메인 칩 (목업 .chips-row - nowrap 가로 스크롤, 전체 탭 없음) */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.chipsScroll}
         contentContainerStyle={styles.chipsRow}>
-        {DOMAIN_FILTERS.map((d) => {
+        {EXPLORE_DOMAINS.map((d) => {
           const id = d.id.toLowerCase() as DomainId;
           return (
             <DomainChip
@@ -542,26 +561,15 @@ export default function ExploreScreen() {
         onEndReachedThreshold={0.8}
         ListHeaderComponent={listHeader}
         renderItem={({ item }) =>
-          item.type === 'game' ? (
-            // 혼합 목록의 게임 = 풀폭 컴팩트 가로 행 (혼합 그리드 1-C 앱 규칙)
-            <GameCompactCard
-              work={item.work}
-              onPress={() =>
-                router.push({
-                  pathname: '/work/[id]',
-                  params: { id: String(item.work.id) },
-                })
-              }
-              style={styles.gameRow}
-            />
-          ) : (
+          // mixed=false 경로라 game 풀폭 행은 생기지 않는다 (검색 전용)
+          item.type !== 'pair' ? null : (
             <View style={styles.gridRow}>
               {item.works.map((work) => (
                 <WorkCard
                   key={work.id}
                   variant={variant}
                   title={work.title}
-                  meta={workCardMeta(work, { withDomain: isAll })}
+                  meta={workCardMeta(work)}
                   tags={workCardTags(work)}
                   footer={workCardFooter(work)}
                   imageUrl={work.thumbnail}
@@ -575,7 +583,7 @@ export default function ExploreScreen() {
                   style={styles.gridCell}
                 />
               ))}
-              {/* 1개짜리 행(게임이 페어를 끊은 지점) - 카드 폭 유지를 위한 스페이서 */}
+              {/* 홀수 마지막 행 - 카드 폭 유지를 위한 스페이서 */}
               {item.works.length === 1 && <View style={styles.gridCell} />}
             </View>
           )
@@ -583,36 +591,13 @@ export default function ExploreScreen() {
         ListEmptyComponent={
           isLoading ? (
             <SkeletonPulse style={styles.skeletonGrid}>
-              {isAll ? (
-                // 혼합 목록의 최종 형상(1-C 앱 규칙)대로 게임 풀폭 행 형상을
-                // 섞어 로드 후 레이아웃 시프트를 줄인다 (웹 스켈레톤과 대칭)
-                <>
-                  <WorkCardSkeleton
-                    variant="portrait"
-                    style={styles.skeletonCell}
-                  />
-                  <WorkCardSkeleton
-                    variant="portrait"
-                    style={styles.skeletonCell}
-                  />
-                  <GameRowSkeleton style={styles.skeletonGameRow} />
-                  {Array.from({ length: 4 }, (_, i) => (
-                    <WorkCardSkeleton
-                      key={i}
-                      variant="portrait"
-                      style={styles.skeletonCell}
-                    />
-                  ))}
-                </>
-              ) : (
-                Array.from({ length: 6 }, (_, i) => (
-                  <WorkCardSkeleton
-                    key={i}
-                    variant={variant}
-                    style={styles.skeletonCell}
-                  />
-                ))
-              )}
+              {Array.from({ length: 6 }, (_, i) => (
+                <WorkCardSkeleton
+                  key={i}
+                  variant={variant}
+                  style={styles.skeletonCell}
+                />
+              ))}
             </SkeletonPulse>
           ) : isError ? (
             <EmptyState
@@ -673,169 +658,157 @@ export default function ExploreScreen() {
           style={styles.sheetScroll}
           contentContainerStyle={styles.sheetBody}
           showsVerticalScrollIndicator={false}>
-          {isAll ? (
-            <ThemedText style={styles.sheetNote}>
-              전체 탭에서는 필터를 지원하지 않아요. 도메인을 선택하면 장르와
-              플랫폼 필터를 쓸 수 있어요.
-            </ThemedText>
+          {genresQuery.isError ? (
+            <FilterLoadError onRetry={() => genresQuery.refetch()} />
+          ) : (
+            genreNames.length > 0 && (
+              <SheetGroup title="장르">
+                <View style={styles.optWrap}>
+                  {visibleGenres.map((g) => (
+                    <OptPill
+                      key={g}
+                      label={g}
+                      count={genreCounts?.[g]}
+                      on={genres.includes(g)}
+                      onPress={() =>
+                        setGenres((prev) => toggleValue(prev, g))
+                      }
+                    />
+                  ))}
+                  {(genresExpanded || hiddenGenreCount > 0) && (
+                    <OptPill
+                      label={
+                        genresExpanded ? '접기' : `더보기 +${hiddenGenreCount}`
+                      }
+                      onPress={() => setGenresExpanded((v) => !v)}
+                    />
+                  )}
+                </View>
+              </SheetGroup>
+            )
+          )}
+          {platformsQuery.isError ? (
+            <FilterLoadError onRetry={() => platformsQuery.refetch()} />
+          ) : (
+            (visiblePlatforms.length > 0 || soonPlatforms.length > 0) && (
+              <SheetGroup title={isOttDomain ? '볼 수 있는 곳' : '플랫폼'}>
+                <View style={styles.optWrap}>
+                  {visiblePlatforms.map((v) => (
+                    <OptPill
+                      key={v}
+                      label={platformLabel(v)}
+                      on={platforms.includes(v)}
+                      onPress={() =>
+                        setPlatforms((prev) => toggleValue(prev, v))
+                      }
+                    />
+                  ))}
+                  {soonPlatforms.map((label) => (
+                    <OptPill
+                      key={label}
+                      label={label}
+                      disabled
+                      soonLabel="준비 중"
+                    />
+                  ))}
+                </View>
+              </SheetGroup>
+            )
+          )}
+          {isWebtoon ? (
+            <>
+              <SheetGroup title="연재 상태">
+                <SheetRadioGroup
+                  value={status}
+                  onChange={handleStatusChange}
+                  options={[
+                    { value: '', label: '전체' },
+                    ...STATUS_VALUES.map((v) => ({ value: v, label: v })),
+                  ]}
+                />
+              </SheetGroup>
+              {/* 완결작은 weekday null이라 요일 그룹은 완결 상태에서 숨김 */}
+              {status !== '완결' && (
+                <SheetGroup title="연재 요일">
+                  <View style={styles.optWrap}>
+                    {WEEKDAY_OPTIONS.map((option) => (
+                      <OptPill
+                        key={option.value}
+                        label={option.label}
+                        on={weekdays.includes(option.value)}
+                        onPress={() =>
+                          setWeekdays((prev) =>
+                            toggleValue(prev, option.value),
+                          )
+                        }
+                      />
+                    ))}
+                  </View>
+                </SheetGroup>
+              )}
+              <SheetGroup title="연령 등급" last>
+                <View style={styles.optWrap}>
+                  {AGE_OPTIONS.map((age) => (
+                    <OptPill
+                      key={age}
+                      label={age}
+                      on={ages.includes(age)}
+                      onPress={() => setAges((prev) => toggleValue(prev, age))}
+                    />
+                  ))}
+                </View>
+              </SheetGroup>
+            </>
           ) : (
             <>
-              {genresQuery.isError ? (
-                <FilterLoadError onRetry={() => genresQuery.refetch()} />
-              ) : (
-                sortedGenres.length > 0 && (
-                  <SheetGroup title="장르">
-                    <View style={styles.optWrap}>
-                      {visibleGenres.map((g) => (
-                        <OptPill
-                          key={g}
-                          label={g}
-                          on={genres.includes(g)}
-                          onPress={() =>
-                            setGenres((prev) => toggleValue(prev, g))
-                          }
-                        />
-                      ))}
-                      {(genresExpanded || hiddenGenreCount > 0) && (
-                        <OptPill
-                          label={
-                            genresExpanded
-                              ? '접기'
-                              : `더보기 +${hiddenGenreCount}`
-                          }
-                          onPress={() => setGenresExpanded((v) => !v)}
-                        />
-                      )}
-                    </View>
-                  </SheetGroup>
-                )
-              )}
-              {platformsQuery.isError ? (
-                <FilterLoadError onRetry={() => platformsQuery.refetch()} />
-              ) : (
-                (visiblePlatforms.length > 0 || soonPlatforms.length > 0) && (
-                  <SheetGroup title={isOttDomain ? '볼 수 있는 곳' : '플랫폼'}>
-                    <View style={styles.optWrap}>
-                      {visiblePlatforms.map((v) => (
-                        <OptPill
-                          key={v}
-                          label={platformLabel(v)}
-                          on={platforms.includes(v)}
-                          onPress={() =>
-                            setPlatforms((prev) => toggleValue(prev, v))
-                          }
-                        />
-                      ))}
-                      {soonPlatforms.map((label) => (
-                        <OptPill
-                          key={label}
-                          label={label}
-                          disabled
-                          soonLabel="준비 중"
-                        />
-                      ))}
-                    </View>
-                  </SheetGroup>
-                )
-              )}
-              {isWebtoon ? (
-                <>
-                  <SheetGroup title="연재 상태">
-                    <SheetRadioGroup
-                      value={status}
-                      onChange={handleStatusChange}
-                      options={[
-                        { value: '', label: '전체' },
-                        ...STATUS_VALUES.map((v) => ({ value: v, label: v })),
-                      ]}
-                    />
-                  </SheetGroup>
-                  {/* 완결작은 weekday null이라 요일 그룹은 완결 상태에서 숨김 */}
-                  {status !== '완결' && (
-                    <SheetGroup title="연재 요일">
-                      <View style={styles.optWrap}>
-                        {WEEKDAY_OPTIONS.map((option) => (
-                          <OptPill
-                            key={option.value}
-                            label={option.label}
-                            on={weekdays.includes(option.value)}
-                            onPress={() =>
-                              setWeekdays((prev) =>
-                                toggleValue(prev, option.value),
-                              )
-                            }
-                          />
-                        ))}
-                      </View>
-                    </SheetGroup>
-                  )}
-                  <SheetGroup title="연령 등급" last>
-                    <View style={styles.optWrap}>
-                      {AGE_OPTIONS.map((age) => (
-                        <OptPill
-                          key={age}
-                          label={age}
-                          on={ages.includes(age)}
-                          onPress={() =>
-                            setAges((prev) => toggleValue(prev, age))
-                          }
-                        />
-                      ))}
-                    </View>
-                  </SheetGroup>
-                </>
-              ) : (
+              <SheetGroup
+                title={isOttDomain ? '개봉 시기' : '출시 시기'}
+                last={!isGame}>
+                <SheetRadioGroup
+                  value={era}
+                  onChange={setEra}
+                  options={ERA_OPTIONS}
+                />
+              </SheetGroup>
+              {isGame && (
                 <>
                   <SheetGroup
-                    title={isOttDomain ? '개봉 시기' : '출시 시기'}
-                    last={!isGame}>
+                    title={
+                      <>
+                        리뷰 수{' '}
+                        <ThemedText style={styles.fgroupTitleSub}>
+                          (Steam)
+                        </ThemedText>
+                      </>
+                    }>
                     <SheetRadioGroup
-                      value={era}
-                      onChange={setEra}
-                      options={ERA_OPTIONS}
+                      value={reviewMin}
+                      onChange={setReviewMin}
+                      options={REVIEW_MIN_OPTIONS}
                     />
                   </SheetGroup>
-                  {isGame && (
-                    <>
-                      <SheetGroup
-                        title={
-                          <>
-                            리뷰 수{' '}
-                            <ThemedText style={styles.fgroupTitleSub}>
-                              (Steam)
-                            </ThemedText>
-                          </>
-                        }>
-                        <SheetRadioGroup
-                          value={reviewMin}
-                          onChange={setReviewMin}
-                          options={REVIEW_MIN_OPTIONS}
-                        />
-                      </SheetGroup>
-                      <SheetGroup title="출시 예정" last>
-                        <View style={styles.upcomingRow}>
-                          <ThemedText
-                            style={[
-                              styles.upcomingLabel,
-                              era ? styles.upcomingLabelDisabled : null,
-                            ]}>
-                            출시 예정작 포함
-                          </ThemedText>
-                          <ToggleSwitch
-                            checked={upcomingOn}
-                            onChange={setUpcoming}
-                            disabled={!!era}
-                            accessibilityLabel="출시 예정작 포함"
-                          />
-                        </View>
-                        <ThemedText style={styles.upcomingNote}>
-                          {era
-                            ? '출시 시기 필터를 선택한 동안에는 해당 기간이 우선 적용돼요.'
-                            : '끄면(기본) 최신 출시순에 미래 출시작이 섞이지 않아요. 켜면 예정작이 상단에 노출됩니다.'}
-                        </ThemedText>
-                      </SheetGroup>
-                    </>
-                  )}
+                  <SheetGroup title="출시 예정" last>
+                    <View style={styles.upcomingRow}>
+                      <ThemedText
+                        style={[
+                          styles.upcomingLabel,
+                          era ? styles.upcomingLabelDisabled : null,
+                        ]}>
+                        출시 예정작 포함
+                      </ThemedText>
+                      <ToggleSwitch
+                        checked={upcomingOn}
+                        onChange={setUpcoming}
+                        disabled={!!era}
+                        accessibilityLabel="출시 예정작 포함"
+                      />
+                    </View>
+                    <ThemedText style={styles.upcomingNote}>
+                      {era
+                        ? '출시 시기 필터를 선택한 동안에는 해당 기간이 우선 적용돼요.'
+                        : '끄면(기본) 최신 출시순에 미래 출시작이 섞이지 않아요. 켜면 예정작이 상단에 노출됩니다.'}
+                    </ThemedText>
+                  </SheetGroup>
                 </>
               )}
             </>
@@ -989,10 +962,6 @@ const styles = StyleSheet.create({
     flex: 1,
     maxWidth: '50%',
   },
-  gameRow: {
-    marginHorizontal: 16,
-    marginBottom: 12,
-  },
   skeletonGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1002,10 +971,6 @@ const styles = StyleSheet.create({
   skeletonCell: {
     flexBasis: '46%',
     flexGrow: 1,
-  },
-  /** 혼합 스켈레톤의 게임 행 - flexWrap 그리드에서 한 줄 전체 점유 */
-  skeletonGameRow: {
-    width: '100%',
   },
   footerLoading: {
     marginVertical: 16,
@@ -1047,13 +1012,6 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     paddingBottom: 8,
     paddingHorizontal: 20,
-  },
-  sheetNote: {
-    paddingVertical: 16,
-    fontSize: 13,
-    lineHeight: 20,
-    fontWeight: 400,
-    color: Palette.ink2,
   },
   fgroup: {
     paddingVertical: 14,
@@ -1106,6 +1064,9 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   opt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingHorizontal: 13,
     paddingVertical: 8,
     borderRadius: Radius.pill,
@@ -1128,6 +1089,14 @@ const styles = StyleSheet.create({
   },
   optTextOn: {
     color: Palette.accentInk,
+  },
+  /** 라벨 옆 작품 수 - 선택 상태와 무관하게 ink-3 유지 (웹 count span 미러) */
+  optCount: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: 500,
+    color: Palette.ink3,
+    fontVariant: ['tabular-nums'],
   },
   radioCol: {
     gap: 2,

@@ -22,7 +22,9 @@ import { Palette, Radius } from '@/constants/theme';
 
 /**
  * 신작 (목업 프레임 5) - 날짜 그룹 헤더("7월 1일 수요일") + 행(44x58 썸네일 +
- * 제목 + "작가 · 플랫폼" 메타). 구조는 웹 new-releases-page.tsx와 동일하게
+ * 제목 + "작가 · 플랫폼" 메타). 게임 작품 행은 460:215 가로 썸네일(Steam header
+ * 원본 비율, 세로 크롭 제거 - 행 높이 유지, 폭만 작품 도메인별 분기. 웹
+ * ReleaseRow thumbShape 미러). 구조는 웹 new-releases-page.tsx와 동일하게
  * 최근 출시(날짜 그룹) + 출시 예정(월 그룹 + D-day 필) 2섹션.
  * 구 화면의 플랫폼 칩·신작/공개예정 토글은 제거 (목업·웹 모두 도메인 칩만).
  *
@@ -160,6 +162,9 @@ function ReleaseRow({
   dday?: string | null;
 }) {
   const FallbackIcon = domainFallbackIcon(work.domain);
+  // 게임 = 460:215 가로 썸네일 - "전체" 탭 혼합 목록도 작품 도메인 기준 분기
+  // (웹 thumbShapeOf(work.domain) 미러)
+  const landscape = work.domain === 'GAME';
   return (
     <Pressable
       accessibilityRole="button"
@@ -167,7 +172,7 @@ function ReleaseRow({
         router.push({ pathname: '/work/[id]', params: { id: String(work.id) } })
       }
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
-      <View style={styles.thumbWrap}>
+      <View style={landscape ? styles.thumbWrapGame : styles.thumbWrap}>
         {work.thumbnail ? (
           <Image
             source={{ uri: work.thumbnail }}
@@ -210,8 +215,11 @@ function DateHead({ main, sub }: { main: string; sub: string }) {
   );
 }
 
-/** 섹션 스켈레톤 - 날짜 줄 + 행 3개 (최종 형상 근사) */
-function GroupSkeleton() {
+/**
+ * 섹션 스켈레톤 - 날짜 줄 + 행 3개 (최종 형상 근사). landscape는 게임 탭 전용 -
+ * 460:215 가로 썸네일 골격 (로드 후 레이아웃 시프트 방지, 웹 GroupSkeleton 미러)
+ */
+function GroupSkeleton({ landscape = false }: { landscape?: boolean }) {
   return (
     <SkeletonPulse>
       <View style={styles.dateHead}>
@@ -221,7 +229,11 @@ function GroupSkeleton() {
       <View style={styles.groupList}>
         {Array.from({ length: 3 }, (_, i) => (
           <View key={i} style={styles.row}>
-            <SkeletonBlock width={44} height={58} radius={6} />
+            {landscape ? (
+              <SkeletonBlock height={58} aspectRatio={460 / 215} radius={6} />
+            ) : (
+              <SkeletonBlock width={44} height={58} radius={6} />
+            )}
             <View style={styles.rowInfo}>
               <SkeletonBlock height={14} width="55%" />
               <SkeletonBlock height={11} width="35%" style={styles.skelMeta} />
@@ -299,7 +311,7 @@ export default function NewReleasesScreen() {
         {/* 최근 출시 */}
         <ThemedText style={styles.sectionTitle}>최근 출시</ThemedText>
         {recent.isLoading ? (
-          <GroupSkeleton />
+          <GroupSkeleton landscape={domainId === 'game'} />
         ) : recent.isError ? (
           <SectionError
             style={styles.sectionError}
@@ -333,7 +345,7 @@ export default function NewReleasesScreen() {
         {/* 출시 예정 */}
         <ThemedText style={styles.sectionTitle}>출시 예정</ThemedText>
         {upcoming.isLoading ? (
-          <GroupSkeleton />
+          <GroupSkeleton landscape={domainId === 'game'} />
         ) : upcoming.isError ? (
           <SectionError
             style={styles.sectionError}
@@ -459,6 +471,14 @@ const styles = StyleSheet.create({
   thumbWrap: {
     width: 44,
     height: 58,
+    borderRadius: 6,
+    overflow: 'hidden',
+    backgroundColor: Palette.canvas,
+  },
+  /** 게임 작품 - 460:215 가로 썸네일 (행 높이 유지, 폭만 비율 확장) */
+  thumbWrapGame: {
+    height: 58,
+    aspectRatio: 460 / 215,
     borderRadius: 6,
     overflow: 'hidden',
     backgroundColor: Palette.canvas,
