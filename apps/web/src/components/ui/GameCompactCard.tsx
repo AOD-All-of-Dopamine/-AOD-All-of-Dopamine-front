@@ -4,7 +4,7 @@ import { cardLift } from "./cardStyles";
 import { steamRating, workCardMeta } from "./workCardInfo";
 
 /**
- * 혼합 목록(탐색 전체 탭·검색)용 게임 컴팩트 가로 행 -
+ * 검색 혼합 목록용 게임 컴팩트 가로 행 (탐색 전체 탭 제거 후 검색 전용) -
  * mixed-grid-mockup.html 1-C 확정안. 좌측 460:215 원본(Steam header) 무크롭
  * 썸네일(42% 폭, 인셋 - WorkCard landscape와 동일 비율 관례) +
  * 우측 제목·meta(도메인·연도·개발사)·Steam 평가(desc + 긍정 %).
@@ -17,7 +17,11 @@ export interface GameCompactCardProps {
   fallbackIconUrl?: string;
 }
 
-const GameCompactCard = ({ work, to, fallbackIconUrl }: GameCompactCardProps) => {
+const GameCompactCard = ({
+  work,
+  to,
+  fallbackIconUrl,
+}: GameCompactCardProps) => {
   const meta = workCardMeta(work, { withDomain: true });
   const { desc, pct } = steamRating(work);
 

@@ -21,10 +21,10 @@
 ## 태스크
 
 ### E-FE1. 웹 (구현 → 리뷰 → 수정)
-- [ ] 전체 탭 제거 + 기본 game 정규화 (탐색)
-- [ ] 랭킹 포디움 제거·전 순위 동일 행 + 게임 가로 썸네일
-- [ ] 신작 행 게임 가로 썸네일
-- [ ] 장르 필터 genres-with-count 전환 + 개수 뱃지 (레일·시트)
+- [x] 전체 탭 제거 + 기본 game 정규화 (탐색)
+- [x] 랭킹 포디움 제거·전 순위 동일 행 + 게임 가로 썸네일
+- [x] 신작 행 게임 가로 썸네일
+- [x] 장르 필터 genres-with-count 전환 + 개수 뱃지 (레일·시트)
 
 ### E-FE2. 모바일 앱 (구현 → 리뷰 → 수정)
 - [ ] 탐색 전체 탭 제거(기본 game 유지) - 혼합 행 로직은 검색 전용화
@@ -40,3 +40,16 @@
 
 ## 편차 기록
 (구현·리뷰 중 발견 시 기록)
+
+- E-FE1: shared 무변경 - workApi.getGenresWithCount·useGenresWithCount·
+  metaKeys.genresWithCount가 이미 존재해 플랜이 허용한 "shared 1곳 추가"가
+  불필요했다. 웹은 소비만 전환.
+- E-FE1: PodiumCard는 랭킹 페이지 외에 dev 컴포넌트 갤러리
+  (dev-components-page)도 참조하고 있어 갤러리 섹션까지 제거(22종으로 갱신)한 뒤
+  참조 0 확인 후 파일 삭제. SkeletonCard "panel-row"·RankRow "panel" 변형은
+  dev 갤러리 전시가 남아 존속(주석에 실사용처 소멸 명시).
+- E-FE1: 신작 GroupSkeleton도 게임 탭에서 460:215 가로 썸네일 골격으로 분기 -
+  플랜은 랭킹 스켈레톤만 명시했으나 로드 후 레이아웃 시프트 방지 목적의
+  동일 관례 적용(행 높이 78px 불변).
+- E-FE1: 탐색 URL 정규화는 도메인 값 표기 자체를 canonicalize하는 이펙트로 구현
+  (domain 부재·all·미지 값·대문자 표기 모두 domain=game/소문자로 replace).

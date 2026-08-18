@@ -5,17 +5,16 @@ import { usePlatformRankings } from "@aod/shared/hooks";
 import { DOMAIN_LABEL_MAP } from "@aod/shared/constants";
 import { platformLabel } from "../constants/platforms";
 import DomainChip from "../components/ui/DomainChip";
-import PodiumCard from "../components/ui/PodiumCard";
 import RankRow from "../components/ui/RankRow";
-import SkeletonCard from "../components/ui/SkeletonCard";
 import EmptyState from "../components/ui/EmptyState";
 
 /**
- * /ranking - mockups/ranking-mockup.html 이식.
+ * /ranking - mockups/ranking-mockup.html 이식 + 포디움 제거 개편(2026-08-18).
  * 레이아웃: h1 랭킹 + 도메인 칩 / 플랫폼 칩(랭킹 원천) / 출처 캡션 /
- * 톱3 포디움(2·3위 단차) / 4위~ 패널 리스트. 컨테이너 max-w 1080.
- * <lg(mobile-light-mockup 프레임 4): 포디움 없이 1위부터 컴팩트 순위 행
- * (RankRow compact, 1~3위 순번 accent-ink). 칩 행은 가로 스크롤.
+ * 전 순위 동일 컴팩트 순위 행(RankRow compact, 1~3위 순번 accent-ink) -
+ * 전 브레이크포인트 공통(모바일 문법 통일, 톱3 대형 포디움 카드 폐지).
+ * 게임 도메인 행 썸네일은 460:215 가로(Steam header 원본 비율), 타 도메인은
+ * 기존 세로. 컨테이너 max-w 1080, <lg 칩 행은 가로 스크롤.
  *
  * 히스토리 정책: 도메인 칩 전환은 push (탭 성격), 플랫폼은 replace (필터 성격).
  * URL 쿼리(?domain=&platform=)가 상태의 단일 출처, 기본값은 파라미터 생략.
@@ -26,7 +25,7 @@ import EmptyState from "../components/ui/EmptyState";
  *   external_ranking 테이블에 기간·기준·장르 컬럼이 없다. RankingScheduler가
  *   매일 04시 플랫폼당 단일 스냅샷만 upsert하므로 축 자체가 수집되지 않는다.
  * - DeltaBadge(순위 변동) 생략: RankingResponse에 변동 필드가 없다
- *   (이전 스냅샷을 덮어써 비교 원본도 없음). 모바일 컴팩트 행의 우측
+ *   (이전 스냅샷을 덮어써 비교 원본도 없음). 컴팩트 행의 우측
  *   변동 표시(↑n/-/NEW)도 같은 이유로 생략.
  * - 행 meta(목업 "장르 · 작가") 생략: RankingResponse에 해당 필드가 없다.
  * - 플랫폼 칩은 현재 도메인당 수집 원천이 1개라 사실상 출처 표시 +
@@ -99,14 +98,16 @@ const parseParams = (p: URLSearchParams) => {
   return { domainId, platform, source };
 };
 
-/** PodiumCard 형태 스켈레톤 (포스터 + 순위·제목 바) */
-const PodiumSkeleton = () => (
-  <div className="animate-pulse overflow-hidden rounded-panel border border-line bg-surface shadow-card">
-    <div className="aspect-[2/3] bg-line" />
-    <div className="flex items-center gap-3 px-4 py-[13px]">
-      <div className="h-7 w-5 rounded-input bg-line" />
-      <div className="h-4 w-2/5 rounded-input bg-line" />
-    </div>
+/** 컴팩트 순위 행 형태 스켈레톤 - 게임 도메인은 460:215 가로 썸네일 골격 */
+const RankRowSkeleton = ({ landscape }: { landscape: boolean }) => (
+  <div className="flex animate-pulse items-center gap-3 rounded-panel border border-line bg-surface py-2.5 pl-3 pr-3.5">
+    <div className="h-6 w-[26px] flex-none rounded-input bg-line" />
+    <div
+      className={`h-[62px] flex-none rounded-md bg-line ${
+        landscape ? "aspect-[460/215]" : "w-12"
+      }`}
+    />
+    <div className="h-4 w-3/5 rounded-input bg-line" />
   </div>
 );
 
@@ -149,14 +150,13 @@ export default function RankingPage() {
 
   const rankings = usePlatformRankings(platform);
 
-  // 순위 오름차순 정렬 후 슬라이싱 - 3건 이상이면 톱3 포디움 + 나머지 리스트,
-  // 3건 미만이면 포디움 없이 전부 리스트 (목업 renderList와 동일)
+  // 순위 오름차순 정렬 - 전 순위가 동일한 컴팩트 행이라 슬라이싱 없음
   const sorted = useMemo(
     () => [...(rankings.data ?? [])].sort((a, b) => a.ranking - b.ranking),
     [rankings.data],
   );
-  const podium = sorted.length >= 3 ? sorted.slice(0, 3) : [];
-  const rest = sorted.length >= 3 ? sorted.slice(3) : sorted;
+  // 게임 도메인은 460:215 가로 썸네일 (Steam header 원본 비율 - 세로 크롭 제거)
+  const isGame = domainId === "game";
 
   return (
     <div className="mx-auto max-w-[1080px] px-6 pb-20 pt-7">
@@ -200,42 +200,12 @@ export default function RankingPage() {
       <p className="mt-3.5 text-[13.5px] text-ink-3">{source.caption}</p>
 
       {rankings.isLoading ? (
-        <>
-          {/* <lg 컴팩트 행 골격 */}
-          <div aria-hidden="true" className="mt-3 flex flex-col gap-2 lg:hidden">
-            {Array.from({ length: 8 }, (_, i) => (
-              <div
-                key={i}
-                className="flex animate-pulse items-center gap-3 rounded-panel border border-line bg-surface py-2.5 pl-3 pr-3.5"
-              >
-                <div className="h-6 w-[26px] flex-none rounded-input bg-line" />
-                <div className="h-[62px] w-12 flex-none rounded-md bg-line" />
-                <div className="h-4 w-3/5 rounded-input bg-line" />
-              </div>
-            ))}
-          </div>
-          <div className="hidden lg:block">
-            <div
-              aria-hidden="true"
-              className="mt-5 grid grid-cols-1 items-start gap-[18px] min-[768px]:grid-cols-3"
-            >
-              {[0, 1, 2].map((i) => (
-                <div key={i} className={i > 0 ? "min-[768px]:mt-[30px]" : undefined}>
-                  <PodiumSkeleton />
-                </div>
-              ))}
-            </div>
-            {/* 실물 패널(py-1 + RankRow panel)과 동일 골격 - 로딩 전환 점프 방지 */}
-            <div
-              aria-hidden="true"
-              className="mt-7 rounded-panel border border-line bg-surface py-1 shadow-card"
-            >
-              {Array.from({ length: 7 }, (_, i) => (
-                <SkeletonCard key={i} variant="panel-row" />
-              ))}
-            </div>
-          </div>
-        </>
+        // 실물과 동일한 컴팩트 행 골격 - 게임 도메인은 가로 썸네일 형상
+        <div aria-hidden="true" className="mt-3 flex flex-col gap-2">
+          {Array.from({ length: 10 }, (_, i) => (
+            <RankRowSkeleton key={i} landscape={isGame} />
+          ))}
+        </div>
       ) : rankings.isError ? (
         <div className="mt-7">
           <EmptyState
@@ -261,61 +231,21 @@ export default function RankingPage() {
           />
         </div>
       ) : (
-        <>
-          {/* <lg 컴팩트 순위 행 - 1위부터 전체, 1~3위 순번 accent-ink */}
-          <div className="mt-3 flex flex-col gap-2 lg:hidden">
-            {sorted.map((item) => (
-              <RankRow
-                key={item.id}
-                variant="compact"
-                accent={item.ranking <= 3}
-                no={item.ranking}
-                title={item.title}
-                imageUrl={item.thumbnailUrl}
-                to={item.contentId ? `/work/${item.contentId}` : undefined}
-              />
-            ))}
-          </div>
-
-          {/* lg 이상 - 기존 포디움 + 패널 리스트 그대로 */}
-          <div className="hidden lg:block">
-            {/* 톱3 포디움 - 2·3위는 30px 단차 */}
-            {podium.length > 0 && (
-              <div className="mt-5 grid grid-cols-1 items-start gap-[18px] min-[768px]:grid-cols-3">
-                {podium.map((item, i) => (
-                  <div
-                    key={item.id}
-                    className={i > 0 ? "min-[768px]:mt-[30px]" : undefined}
-                  >
-                    <PodiumCard
-                      rank={(i + 1) as 1 | 2 | 3}
-                      title={item.title}
-                      imageUrl={item.thumbnailUrl}
-                      to={
-                        item.contentId ? `/work/${item.contentId}` : undefined
-                      }
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* 4위~ 패널 리스트 */}
-            {rest.length > 0 && (
-              <div className="mt-7 rounded-panel border border-line bg-surface py-1 shadow-card">
-                {rest.map((item) => (
-                  <RankRow
-                    key={item.id}
-                    no={item.ranking}
-                    title={item.title}
-                    imageUrl={item.thumbnailUrl}
-                    to={item.contentId ? `/work/${item.contentId}` : undefined}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </>
+        // 전 순위 동일 컴팩트 순위 행 - 1위부터 전체, 1~3위 순번 accent-ink
+        <div className="mt-3 flex flex-col gap-2">
+          {sorted.map((item) => (
+            <RankRow
+              key={item.id}
+              variant="compact"
+              accent={item.ranking <= 3}
+              no={item.ranking}
+              title={item.title}
+              imageUrl={item.thumbnailUrl}
+              thumbShape={isGame ? "landscape" : "portrait"}
+              to={item.contentId ? `/work/${item.contentId}` : undefined}
+            />
+          ))}
+        </div>
       )}
     </div>
   );

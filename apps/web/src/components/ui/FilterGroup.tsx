@@ -5,6 +5,8 @@ import SoonBadge from "./SoonBadge";
 export interface FilterOption {
   value: string;
   label: string;
+  /** 라벨 옆 작품 수 표기 (장르 축 - genres-with-count) */
+  count?: number;
   disabled?: boolean;
   soonLabel?: string;
 }
@@ -73,6 +75,11 @@ const FilterGroup = (props: FilterGroupProps) => {
               <span className={checked ? "font-semibold text-ink" : ""}>
                 {option.label}
               </span>
+              {option.count !== undefined && (
+                <span className="text-xs tabular-nums text-ink-3">
+                  {option.count.toLocaleString()}
+                </span>
+              )}
               {option.soonLabel && (
                 <SoonBadge className="ml-auto">{option.soonLabel}</SoonBadge>
               )}

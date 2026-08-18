@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 /**
  * 목업 .row (new-releases-mockup.html) - 신작 타임라인 작품 행.
  * 썸네일 52px + 제목 + 메타 + 우측 slot(도메인 Tag, DdayPill 등).
+ * thumbShape "landscape"는 게임 도메인 전용 - 460:215 가로 썸네일
+ * (Steam header 원본 비율, 세로 크롭 제거 - 행 높이 78px은 동일하고 폭만 확장).
  * 호버 시 오른쪽 3px 이동 (목업 .row:hover translateX).
  */
 export interface ReleaseRowProps {
@@ -14,6 +16,8 @@ export interface ReleaseRowProps {
   imageAlt?: string;
   /** imageUrl 부재 시 썸네일 영역 중앙에 표시할 도메인별 아이콘 */
   fallbackIconUrl?: string;
+  /** 게임 도메인은 460:215 가로 썸네일 (기본 portrait) */
+  thumbShape?: "portrait" | "landscape";
   /** 우측 고정 슬롯 - 도메인 Tag, DdayPill 등 */
   slot?: ReactNode;
   to: string;
@@ -25,6 +29,7 @@ const ReleaseRow = ({
   imageUrl,
   imageAlt = "",
   fallbackIconUrl,
+  thumbShape = "portrait",
   slot,
   to,
 }: ReleaseRowProps) => {
@@ -33,7 +38,13 @@ const ReleaseRow = ({
       to={to}
       className="flex items-center gap-4 rounded-panel border border-line bg-surface px-4 py-3 shadow-card transition-transform hover:translate-x-[3px] motion-reduce:transition-none motion-reduce:hover:translate-x-0"
     >
-      <div className="aspect-[2/3] w-[52px] flex-none overflow-hidden rounded-input bg-canvas">
+      <div
+        className={`flex-none overflow-hidden rounded-input bg-canvas ${
+          thumbShape === "landscape"
+            ? "aspect-[460/215] h-[78px]"
+            : "aspect-[2/3] w-[52px]"
+        }`}
+      >
         {imageUrl ? (
           <img
             src={imageUrl}
