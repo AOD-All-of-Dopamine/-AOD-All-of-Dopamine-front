@@ -22,7 +22,7 @@ import { fonts } from '@/theme/tokens';
  * 프로필 > 내가 북마크한 작품 - 웹 my-bookmarks-page 문법 이식.
  * 기존 구조(제목 검색 + 카드 그리드) 유지 + 신규 WorkCard 문법(2열, meta에
  * 도메인 라벨 포함, 도메인별 태그·foot) + 상태 3종(스켈레톤/에러/빈) 정합.
- * 혼합 도메인 목록이라 카드 variant는 portrait 통일 (탐색 전체 탭 편차 동일).
+ * 혼합 도메인 목록이라 카드 variant는 portrait 통일 (검색 혼합 목록 편차 동일).
  */
 export default function MyBookmarksScreen() {
   const [searchQuery, setSearchQuery] = useState('');

@@ -7,5 +7,5 @@
 export const cardBase =
   "overflow-hidden rounded-panel border border-line shadow-card";
 
-/** 카드 베이스 + 호버 리프트. WorkCard · RailCard · PodiumCard 공유. */
+/** 카드 베이스 + 호버 리프트. WorkCard · RailCard · GameCompactCard 공유. */
 export const cardLift = `${cardBase} transition hover:-translate-y-[3px] hover:shadow-lift motion-reduce:transition-none motion-reduce:hover:translate-y-0`;

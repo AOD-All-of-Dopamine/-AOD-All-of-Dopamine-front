@@ -3,8 +3,9 @@
  * animate-pulse로 로딩 표시.
  * - "portrait"/"landscape" = WorkCard
  * - "row" = RankRow(feature) - 홈 인기 리스트용
- * - "panel-row" = RankRow(panel) - 랭킹 패널 리스트용 (마지막 행 구분선 없음)
- * - "game-row" = GameCompactCard - 혼합 목록(전체 탭·검색) 게임 가로 행용
+ * - "panel-row" = RankRow(panel) 형상 (마지막 행 구분선 없음 - 랭킹 포디움
+ *   제거 후 실사용처는 없고 dev 갤러리 전시만 남음)
+ * - "game-row" = GameCompactCard - 검색 혼합 목록 게임 가로 행용
  */
 export interface SkeletonCardProps {
   variant: "portrait" | "landscape" | "row" | "panel-row" | "game-row";

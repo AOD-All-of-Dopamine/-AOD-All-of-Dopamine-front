@@ -5,10 +5,11 @@ import { Link } from "react-router-dom";
  * 랭킹 리스트 행. variant "panel"(기본) = ranking-mockup .rrow 수치(카드 안에 담기는
  * 리스트, 마지막 행 구분선 없음). variant "feature" = home-mockup .rank 수치(카드 없이
  * 바로 놓이는 리스트, 모든 행에 구분선). variant "compact" = mobile-light-mockup
- * .rank-row 수치(행 자체가 개별 카드, 48×62 썸네일 - 랭킹 <lg 전용). accent가 true면
- * 순위 숫자를 강조 - feature는 text-accent(홈 1·2위), compact는 text-accent-ink(1~3위).
- * to를 넘기면 Link, 아니면 정적 div로 렌더하며 정적 렌더에서는 호버 시 제목 색
- * 전환 등 인터랙티브 어포던스를 끈다.
+ * .rank-row 수치(행 자체가 개별 카드, 48×62 썸네일 - 랭킹 전 순위 공통 행). accent가
+ * true면 순위 숫자를 강조 - feature는 text-accent(홈 1·2위), compact는
+ * text-accent-ink(1~3위). thumbShape "landscape"는 compact 전용 - 게임 도메인 랭킹의
+ * 460:215 가로 썸네일(행 높이 62px 유지, 폭만 확장). to를 넘기면 Link, 아니면 정적
+ * div로 렌더하며 정적 렌더에서는 호버 시 제목 색 전환 등 인터랙티브 어포던스를 끈다.
  */
 export interface RankRowProps {
   no: number;
@@ -21,6 +22,8 @@ export interface RankRowProps {
   to?: string;
   variant?: "panel" | "feature" | "compact";
   accent?: boolean;
+  /** compact 전용 - 게임 도메인은 460:215 가로 썸네일 (기본 portrait) */
+  thumbShape?: "portrait" | "landscape";
 }
 
 const RankRow = ({
@@ -33,6 +36,7 @@ const RankRow = ({
   to,
   variant = "panel",
   accent = false,
+  thumbShape = "portrait",
 }: RankRowProps) => {
   const isFeature = variant === "feature";
   const isCompact = variant === "compact";
@@ -54,7 +58,9 @@ const RankRow = ({
       : "w-[30px] flex-none text-lg font-extrabold tabular-nums text-ink-3";
 
   const thumbClassName = isCompact
-    ? "h-[62px] w-12 flex-none overflow-hidden rounded-md bg-canvas"
+    ? `h-[62px] flex-none overflow-hidden rounded-md bg-canvas ${
+        thumbShape === "landscape" ? "aspect-[460/215]" : "w-12"
+      }`
     : isFeature
       ? "aspect-[2/3] w-11 flex-none overflow-hidden rounded-input bg-canvas"
       : "aspect-[2/3] w-[42px] flex-none overflow-hidden rounded-input bg-canvas";

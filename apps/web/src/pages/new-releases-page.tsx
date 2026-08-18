@@ -22,6 +22,9 @@ import EmptyState from "../components/ui/EmptyState";
  * 히스토리 정책: 도메인 칩 전환은 push (탭 성격) + 동일 값 no-op 가드.
  * URL 쿼리(?domain=)가 상태의 단일 출처, all(전체)은 파라미터 생략.
  *
+ * 게임 작품 행은 460:215 가로 썸네일(ReleaseRow thumbShape - Steam header
+ * 원본 비율, 세로 크롭 제거), 타 도메인은 기존 세로 - 행 높이는 동일.
+ *
  * 백엔드 계약(WorkApiService.getRecent/UpcomingReleases 기준) 편차:
  * - 행 메타는 목업대로 "작가 · 플랫폼"(최근)/"작가 · 날짜"(예정) - creator·
  *   platforms 필드 미수집 작품은 있는 쪽만 표기. 도메인 태그는 Tag(canvas)
@@ -60,6 +63,12 @@ const categoryOf = (domain?: string): Category => {
 
 const domainLabel = (domain?: string) =>
   DOMAIN_LABEL_MAP[domain ?? ""] ?? domain ?? "";
+
+/** 게임은 460:215 가로 썸네일, 타 도메인은 세로 (ReleaseRow thumbShape) */
+const thumbShapeOf = (domain?: string) =>
+  categoryOf(domain) === "game"
+    ? ("landscape" as const)
+    : ("portrait" as const);
 
 /**
  * 최근 출시 행 meta - "모죠 · 네이버웹툰" (목업 .row .m: 작가 · 플랫폼).
@@ -188,8 +197,8 @@ const SectionError = ({
   </div>
 );
 
-/** ReleaseRow 형태 스켈레톤 그룹 (라벨 + 행 3개) */
-const GroupSkeleton = () => (
+/** ReleaseRow 형태 스켈레톤 그룹 (라벨 + 행 3개) - 게임 탭은 가로 썸네일 골격 */
+const GroupSkeleton = ({ landscape = false }: { landscape?: boolean }) => (
   <div
     aria-hidden="true"
     className="mt-[26px] grid animate-pulse gap-2.5 min-[768px]:grid-cols-[148px_1fr] min-[768px]:gap-6"
@@ -204,7 +213,11 @@ const GroupSkeleton = () => (
           key={i}
           className="flex items-center gap-4 rounded-panel border border-line bg-surface px-4 py-3 shadow-card"
         >
-          <div className="aspect-[2/3] w-[52px] flex-none rounded-input bg-line" />
+          <div
+            className={`flex-none rounded-input bg-line ${
+              landscape ? "aspect-[460/215] h-[78px]" : "aspect-[2/3] w-[52px]"
+            }`}
+          />
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <div className="h-4 w-2/5 rounded-input bg-line" />
             <div className="h-3 w-1/4 rounded-input bg-canvas" />
@@ -285,8 +298,8 @@ export default function NewReleasesPage() {
         </h2>
         {recent.isLoading ? (
           <>
-            <GroupSkeleton />
-            <GroupSkeleton />
+            <GroupSkeleton landscape={domainId === "game"} />
+            <GroupSkeleton landscape={domainId === "game"} />
           </>
         ) : recent.isError ? (
           <SectionError
@@ -309,7 +322,10 @@ export default function NewReleasesPage() {
                   title={work.title}
                   meta={recentMeta(work)}
                   imageUrl={work.thumbnail}
-                  fallbackIconUrl={thumbnailFallbackMap[categoryOf(work.domain)]}
+                  fallbackIconUrl={
+                    thumbnailFallbackMap[categoryOf(work.domain)]
+                  }
+                  thumbShape={thumbShapeOf(work.domain)}
                   to={`/work/${work.id}`}
                   slot={
                     // 목업과 동일하게 모바일에서는 도메인 태그 숨김
@@ -330,7 +346,7 @@ export default function NewReleasesPage() {
           출시 예정
         </h2>
         {upcoming.isLoading ? (
-          <GroupSkeleton />
+          <GroupSkeleton landscape={domainId === "game"} />
         ) : upcoming.isError ? (
           <SectionError
             message="출시 예정작을 불러오지 못했어요."
@@ -357,6 +373,7 @@ export default function NewReleasesPage() {
                     fallbackIconUrl={
                       thumbnailFallbackMap[categoryOf(work.domain)]
                     }
+                    thumbShape={thumbShapeOf(work.domain)}
                     to={`/work/${work.id}`}
                     slot={
                       <DdayPill variant={dday.variant}>{dday.label}</DdayPill>

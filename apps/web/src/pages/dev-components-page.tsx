@@ -4,7 +4,6 @@ import WorkCard from "../components/ui/WorkCard";
 import RailCard from "../components/ui/RailCard";
 import FeatureCard from "../components/ui/FeatureCard";
 import RankRow from "../components/ui/RankRow";
-import PodiumCard from "../components/ui/PodiumCard";
 import ReviewCard from "../components/ui/ReviewCard";
 import ReviewQuoteCard from "../components/ui/ReviewQuoteCard";
 import UpcomingCard from "../components/ui/UpcomingCard";
@@ -27,9 +26,10 @@ import { thumbnailFallbackMap } from "../constants/thumbnail";
 
 /**
  * /dev/components - Phase 2 공용 컴포넌트 시각 게이트용 갤러리.
- * 목업(mockups/*.html)과 동일한 샘플 데이터로 23종 컴포넌트를 전부 렌더한다.
+ * 목업(mockups/*.html)과 동일한 샘플 데이터로 22종 컴포넌트를 전부 렌더한다.
  * (Phase 5에서 FeatureCard·ReviewQuoteCard·UpcomingCard 추가,
- *  Phase 6에서 ReleaseRow 신설 + DomainChip sm + EmptyState note 변형 추가)
+ *  Phase 6에서 ReleaseRow 신설 + DomainChip sm + EmptyState note 변형 추가,
+ *  2026-08-18 랭킹 포디움 제거로 PodiumCard 삭제)
  * Phase 7에서 제거 예정 (프로덕션 라우트 아님).
  */
 
@@ -37,17 +37,14 @@ const HWASAN = "https://picsum.photos/seed/aod-webtoon-hwasan/400/600";
 const ORV = "https://picsum.photos/seed/aod-webtoon-orv/400/600";
 const PARASITE = "https://picsum.photos/seed/aod-movie-parasite/400/600";
 const SEOUL = "https://picsum.photos/seed/aod-movie-seoul/400/600";
-const ELDEN_RING = "https://cdn.akamai.steamstatic.com/steam/apps/1245620/header.jpg";
-const BLACK_MYTH = "https://cdn.akamai.steamstatic.com/steam/apps/2358720/header.jpg";
-const BALATRO = "https://cdn.akamai.steamstatic.com/steam/apps/2379780/header.jpg";
+const ELDEN_RING =
+  "https://cdn.akamai.steamstatic.com/steam/apps/1245620/header.jpg";
+const BLACK_MYTH =
+  "https://cdn.akamai.steamstatic.com/steam/apps/2358720/header.jpg";
+const BALATRO =
+  "https://cdn.akamai.steamstatic.com/steam/apps/2379780/header.jpg";
 
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
+function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mt-14 first:mt-0">
       <h2 className="mb-4 text-lg font-bold tracking-tight text-ink">
@@ -76,7 +73,7 @@ export default function DevComponentsPage() {
         UI 컴포넌트 갤러리
       </h1>
       <p className="mt-1.5 text-sm text-ink-2">
-        라이트 리디자인 공용 컴포넌트(src/components/ui) 23종을 mockups/*.html
+        라이트 리디자인 공용 컴포넌트(src/components/ui) 22종을 mockups/*.html
         기준 실물 샘플로 렌더합니다.
       </p>
 
@@ -342,41 +339,7 @@ export default function DevComponentsPage() {
         </div>
       </Section>
 
-      {/* 4. PodiumCard */}
-      <Section title="PodiumCard">
-        <div className="grid grid-cols-1 items-start gap-4.5 sm:grid-cols-3">
-          <div className="sm:mt-[30px]">
-            <PodiumCard
-              rank={2}
-              title="Balatro"
-              meta="로그라이크 · LocalThunk"
-              imageUrl={BALATRO}
-              to="/work/game-balatro"
-              slot={<DeltaBadge delta="new" />}
-            />
-          </div>
-          <PodiumCard
-            rank={1}
-            title="화산귀환"
-            meta="무협 · 비가"
-            imageUrl={HWASAN}
-            to="/work/webtoon-hwasan"
-            slot={<DeltaBadge delta="0" />}
-          />
-          <div className="sm:mt-[30px]">
-            <PodiumCard
-              rank={3}
-              title="서울의 봄"
-              meta="드라마 · 김성수"
-              imageUrl={SEOUL}
-              to="/work/movie-seoul"
-              slot={<DeltaBadge delta="-1" />}
-            />
-          </div>
-        </div>
-      </Section>
-
-      {/* 5. ReviewCard */}
+      {/* 4. ReviewCard */}
       <Section title="ReviewCard">
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
           <ReviewCard name="매화검존1호팬" date="2026-08-06" score={5.0}>
@@ -472,7 +435,7 @@ export default function DevComponentsPage() {
         </div>
       </Section>
 
-      {/* 6. Chip */}
+      {/* 5. Chip */}
       <Section title="Chip (제거 가능)">
         <div className="flex flex-wrap gap-2">
           {chips.length > 0 ? (
@@ -497,7 +460,7 @@ export default function DevComponentsPage() {
         </div>
       </Section>
 
-      {/* 7. DomainChip */}
+      {/* 6. DomainChip */}
       <Section title="DomainChip">
         <div className="flex flex-wrap gap-1.5">
           <DomainChip
@@ -542,7 +505,7 @@ export default function DevComponentsPage() {
         </div>
       </Section>
 
-      {/* 8. GenreChip */}
+      {/* 7. GenreChip */}
       <Section title="GenreChip">
         <div className="flex flex-wrap gap-1.5">
           {["전체", "액션", "RPG", "FPS", "어드벤처"].map((g) => (
@@ -557,7 +520,7 @@ export default function DevComponentsPage() {
         </div>
       </Section>
 
-      {/* 9. FilterGroup */}
+      {/* 8. FilterGroup */}
       <Section title="FilterGroup">
         <div className="max-w-[256px] rounded-panel border border-line bg-surface px-3">
           <FilterGroup
@@ -587,7 +550,7 @@ export default function DevComponentsPage() {
         </div>
       </Section>
 
-      {/* 10. SortSelect */}
+      {/* 9. SortSelect */}
       <Section title="SortSelect">
         <SortSelect
           value={sort}
@@ -600,7 +563,7 @@ export default function DevComponentsPage() {
         />
       </Section>
 
-      {/* 11. SegmentedControl */}
+      {/* 10. SegmentedControl */}
       <Section title="SegmentedControl">
         <div className="flex flex-wrap items-center gap-6">
           <SegmentedControl
@@ -627,12 +590,12 @@ export default function DevComponentsPage() {
         </div>
       </Section>
 
-      {/* 12. Pagination */}
+      {/* 11. Pagination */}
       <Section title="Pagination">
         <Pagination page={page} totalPages={12} onChange={setPage} />
       </Section>
 
-      {/* 13. Tag */}
+      {/* 12. Tag */}
       <Section title="Tag">
         <div className="flex flex-wrap gap-1.5">
           <Tag>무협</Tag>
@@ -646,22 +609,27 @@ export default function DevComponentsPage() {
         </div>
       </Section>
 
-      {/* 14. StatPill */}
+      {/* 13. StatPill */}
       <Section title="StatPill">
         <div className="flex flex-wrap gap-2.5">
-          <StatPill icon={<Star weight="fill" size={14} className="text-star" />}>
+          <StatPill
+            icon={<Star weight="fill" size={14} className="text-star" />}
+          >
             8.5 <small className="font-medium text-ink-2">TMDB</small>
           </StatPill>
-          <StatPill icon={<Star weight="fill" size={14} className="text-star" />}>
+          <StatPill
+            icon={<Star weight="fill" size={14} className="text-star" />}
+          >
             4.5 <small className="font-medium text-ink-2">AOD 리뷰 3</small>
           </StatPill>
           <StatPill icon={<ThumbsUp size={14} className="text-ink-2" />}>
-            매우 긍정적 91% <small className="font-medium text-ink-2">Steam</small>
+            매우 긍정적 91%{" "}
+            <small className="font-medium text-ink-2">Steam</small>
           </StatPill>
         </div>
       </Section>
 
-      {/* 15. DdayPill */}
+      {/* 14. DdayPill */}
       <Section title="DdayPill">
         <div className="flex flex-wrap gap-2.5">
           <DdayPill>D-99</DdayPill>
@@ -669,7 +637,7 @@ export default function DevComponentsPage() {
         </div>
       </Section>
 
-      {/* 16. DeltaBadge */}
+      {/* 15. DeltaBadge */}
       <Section title="DeltaBadge">
         <div className="flex flex-wrap items-center gap-4">
           <DeltaBadge delta="+2" />
@@ -679,7 +647,7 @@ export default function DevComponentsPage() {
         </div>
       </Section>
 
-      {/* 17. EmptyState */}
+      {/* 16. EmptyState */}
       <Section title="EmptyState">
         <EmptyState
           title="조건에 맞는 작품이 없어요"
@@ -695,11 +663,14 @@ export default function DevComponentsPage() {
         />
         {/* note = 신작 섹션 0건 안내 (new-releases-mockup .empty-note) */}
         <div className="mt-4">
-          <EmptyState variant="note" title="이 도메인의 최근 출시작이 없어요." />
+          <EmptyState
+            variant="note"
+            title="이 도메인의 최근 출시작이 없어요."
+          />
         </div>
       </Section>
 
-      {/* 18. SkeletonCard */}
+      {/* 17. SkeletonCard */}
       <Section title="SkeletonCard">
         <div className="flex flex-col gap-6">
           <div className="grid grid-cols-2 gap-5 sm:grid-cols-4">

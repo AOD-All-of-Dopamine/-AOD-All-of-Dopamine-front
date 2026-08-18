@@ -24,9 +24,11 @@ import { Palette, Radius } from '@/constants/theme';
 
 /**
  * 랭킹 (목업 프레임 4) - 컴팩트 순위 행. 도메인 칩 + 플랫폼(랭킹 원천) 칩 +
- * 출처 캡션 + 순위 리스트 (1~3위 순번 accent-ink, 48x62 썸네일).
+ * 출처 캡션 + 순위 리스트 (1~3위 순번 accent-ink, 48x62 썸네일 - 단 게임
+ * 도메인은 460:215 가로 썸네일. 행 높이 62px 유지, 폭만 확장 - 웹 RankRow
+ * thumbShape 미러).
  *
- * 데이터·편차는 웹 ranking-page.tsx <lg 경로와 동일:
+ * 데이터·편차는 웹 ranking-page.tsx와 동일:
  * - usePlatformRankings(원천 1개 선택) - 도메인 전환 시 기본 원천으로 리셋
  * - 순위 변동(rank-delta)·행 meta(장르·상태)는 RankingResponse에 필드가 없어 생략
  *   (스냅샷을 매일 덮어써 비교 원본도 없음 - 목업의 "변동" 표기는 데이터 확보 후)
@@ -90,6 +92,9 @@ function RankRow({
 }) {
   const FallbackIcon = domainFallbackIcon(domainKey);
   const pressable = !!item.contentId;
+  // 게임 = 460:215 가로 썸네일 (Steam header 원본 비율, 세로 크롭 제거 -
+  // 행 높이 62px은 유지하고 폭만 도메인별 분기. 웹 thumbShape="landscape" 미러)
+  const landscape = domainKey === 'GAME';
   return (
     <Pressable
       accessibilityRole={pressable ? 'button' : undefined}
@@ -106,7 +111,7 @@ function RankRow({
         style={[styles.rankNo, item.ranking <= 3 && styles.rankNoTop]}>
         {item.ranking}
       </ThemedText>
-      <View style={styles.thumbWrap}>
+      <View style={landscape ? styles.thumbWrapGame : styles.thumbWrap}>
         {item.thumbnailUrl ? (
           <Image
             source={{ uri: item.thumbnailUrl }}
@@ -220,7 +225,16 @@ export default function RankingScreen() {
               {Array.from({ length: 8 }, (_, i) => (
                 <View key={i} style={styles.row}>
                   <SkeletonBlock width={26} height={20} />
-                  <SkeletonBlock width={48} height={62} radius={6} />
+                  {/* 게임 탭은 460:215 가로 썸네일 골격 (최종 형상 근사) */}
+                  {domainId === 'game' ? (
+                    <SkeletonBlock
+                      height={62}
+                      aspectRatio={460 / 215}
+                      radius={6}
+                    />
+                  ) : (
+                    <SkeletonBlock width={48} height={62} radius={6} />
+                  )}
                   <SkeletonBlock height={14} width="55%" />
                 </View>
               ))}
@@ -325,6 +339,14 @@ const styles = StyleSheet.create({
   thumbWrap: {
     width: 48,
     height: 62,
+    borderRadius: 6,
+    overflow: 'hidden',
+    backgroundColor: Palette.canvas,
+  },
+  /** 게임 도메인 - 460:215 가로 썸네일 (행 높이 62px 유지, 폭만 비율 확장) */
+  thumbWrapGame: {
+    height: 62,
+    aspectRatio: 460 / 215,
     borderRadius: 6,
     overflow: 'hidden',
     backgroundColor: Palette.canvas,
