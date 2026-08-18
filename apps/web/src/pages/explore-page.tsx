@@ -61,8 +61,9 @@ import ToggleSwitch from "../components/ui/ToggleSwitch";
  *   게임 탭 기본은 releaseTo=오늘 전송(출시 예정작 제외), 토글을 켜면 미전송.
  *   era 선택 시에는 era 범위가 우선이라 토글을 무시(파싱 정규화 + disabled)한다.
  *
- * 장르 축은 genres-with-count(개수 내림차순 Map - 서버 정렬 그대로, 클라
- * 재정렬 없음)로 로드하고 옵션 라벨 옆에 작품 수를 표기한다 (레일·시트 공통).
+ * 장르 축은 genres-with-count(개수 내림차순 Map)로 로드하고 옵션 라벨 옆에
+ * 작품 수를 표기한다 (레일·시트 공통). API 내림차순 계약을 신뢰하되 클라는
+ * 동일 기준(개수 내림차순) 방어 정렬만 적용 - 별도 기준 재정렬 없음.
  *
  * 남은 편차:
  * - 정렬: 도메인 지정 경로와 필터 경로 모두 서버가 sortBy를 무시하고
@@ -586,10 +587,15 @@ export default function ExplorePage() {
     refetch: refetchPlatforms,
   } = usePlatforms(domainKey);
 
-  // genres-with-count는 개수 내림차순 LinkedHashMap - JSON 키 순서가 곧
-  // 정렬이므로 클라 재정렬 없이 그대로 쓴다
+  // genres-with-count는 개수 내림차순 LinkedHashMap - 키 순서가 곧 정렬이지만,
+  // 순수 숫자 장르명(예: "2024")이 유입되면 JS 객체의 정수 키 승격이 순서를
+  // 깨므로 동일 기준(개수 내림차순) 방어 정렬을 한 번 적용한다
+  // (안정 정렬이라 동률은 서버 순서 유지)
   const genreNames = useMemo(
-    () => Object.keys(genreCounts ?? {}),
+    () =>
+      Object.entries(genreCounts ?? {})
+        .sort((a, b) => b[1] - a[1])
+        .map(([genre]) => genre),
     [genreCounts],
   );
 

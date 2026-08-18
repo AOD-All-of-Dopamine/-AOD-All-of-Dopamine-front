@@ -13,6 +13,8 @@ import EmptyState from "../components/ui/EmptyState";
  * 레이아웃: h1 랭킹 + 도메인 칩 / 플랫폼 칩(랭킹 원천) / 출처 캡션 /
  * 전 순위 동일 컴팩트 순위 행(RankRow compact, 1~3위 순번 accent-ink) -
  * 전 브레이크포인트 공통(모바일 문법 통일, 톱3 대형 포디움 카드 폐지).
+ * ≥lg는 2열 그리드(홈 인기 리스트 min-[1024px]:grid-cols-2 선례) - 1080px
+ * 풀폭 행의 우측 여백 해소, 순위 흐름은 좌→우·위→아래 자연(DOM) 순서.
  * 게임 도메인 행 썸네일은 460:215 가로(Steam header 원본 비율), 타 도메인은
  * 기존 세로. 컨테이너 max-w 1080, <lg 칩 행은 가로 스크롤.
  *
@@ -201,7 +203,10 @@ export default function RankingPage() {
 
       {rankings.isLoading ? (
         // 실물과 동일한 컴팩트 행 골격 - 게임 도메인은 가로 썸네일 형상
-        <div aria-hidden="true" className="mt-3 flex flex-col gap-2">
+        <div
+          aria-hidden="true"
+          className="mt-3 grid grid-cols-1 gap-2 min-[1024px]:grid-cols-2"
+        >
           {Array.from({ length: 10 }, (_, i) => (
             <RankRowSkeleton key={i} landscape={isGame} />
           ))}
@@ -231,8 +236,9 @@ export default function RankingPage() {
           />
         </div>
       ) : (
-        // 전 순위 동일 컴팩트 순위 행 - 1위부터 전체, 1~3위 순번 accent-ink
-        <div className="mt-3 flex flex-col gap-2">
+        // 전 순위 동일 컴팩트 순위 행 - 1위부터 전체, 1~3위 순번 accent-ink.
+        // ≥lg 2열 그리드: 좌→우·위→아래 자연 순서 (1·2위가 첫 행)
+        <div className="mt-3 grid grid-cols-1 gap-2 min-[1024px]:grid-cols-2">
           {sorted.map((item) => (
             <RankRow
               key={item.id}
