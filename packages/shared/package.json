@@ -8,7 +8,8 @@
     "./constants": "./src/constants/index.ts",
     "./api": "./src/api/index.ts",
     "./queries": "./src/queries/index.ts",
-    "./hooks": "./src/hooks/index.ts"
+    "./hooks": "./src/hooks/index.ts",
+    "./tracking": "./src/tracking/index.ts"
   },
   "scripts": {
     "test": "vitest run",
