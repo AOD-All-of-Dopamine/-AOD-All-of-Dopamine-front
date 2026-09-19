@@ -4,13 +4,17 @@ import { useTracker } from "./trackerContext";
 
 /**
  * 카드 노출 계측 (REC_TAB_DESIGN §5-4): 50% 이상 보인 누적 1초에 1회 + 최종값 1회 → impression_viewed.
- * fields 가 null 이면 재지 않는다. 같은 카드는 impressionId(없으면 contentId)로 구분한다.
+ * fields 가 null 이거나 impressionId·contentId 가 둘 다 없으면 재지 않는다. 같은 카드는 impressionId(없으면 contentId)로 구분한다.
  */
 export function useImpressionTracker(ref: RefObject<Element | null>, fields: RecEventFields | null): void {
   const tracker = useTracker();
   const fieldsRef = useRef(fields);
-  fieldsRef.current = fields;
-  const key = fields ? `${fields.impressionId ?? ""}:${fields.contentId ?? ""}` : null;
+  // 렌더 중에 ref 를 쓰지 않는다 — 커밋된 값만 담기도록 effect 에서 갱신한다 (아래 관찰 effect 보다 먼저 선언)
+  useEffect(() => {
+    fieldsRef.current = fields;
+  });
+  const id = fields?.impressionId ?? fields?.contentId;
+  const key = id === undefined ? null : String(id);
 
   useEffect(() => {
     const el = ref.current;

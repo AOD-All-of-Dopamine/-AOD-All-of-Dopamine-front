@@ -49,10 +49,15 @@ export function useDwellTracker(target: DwellTarget | null): () => string | null
       lastActivityAt = t;
       meter.activity(t);
     };
+    // scrollHeight 는 레이아웃을 강제로 계산시킨다 — 스크롤 이벤트마다 읽지 않고 프레임당 한 번만 읽는다
+    let scrollFrame: number | null = null;
     const onScroll = () => {
-      const doc = document.documentElement;
-      const ratio = doc.scrollHeight > 0 ? (window.scrollY + window.innerHeight) / doc.scrollHeight : 0;
-      meter.scroll(ratio, now());
+      if (scrollFrame !== null) return;
+      scrollFrame = window.requestAnimationFrame(() => {
+        scrollFrame = null;
+        const height = document.documentElement.scrollHeight;
+        meter.scroll(height > 0 ? (window.scrollY + window.innerHeight) / height : 0, now());
+      });
     };
     const onVisibility = () => meter.setPageVisible(document.visibilityState === "visible", now());
 
@@ -73,6 +78,7 @@ export function useDwellTracker(target: DwellTarget | null): () => string | null
       document.removeEventListener("visibilitychange", onVisibility);
       window.clearInterval(interval);
       offFinalizer();
+      if (scrollFrame !== null) window.cancelAnimationFrame(scrollFrame);
       report();   // 다른 화면으로 이동 — 최종값
       openIdRef.current = null;
     };
