@@ -10,7 +10,8 @@ export interface ImpressionSnapshot {
 
 /**
  * 카드 1장의 노출 계측 (REC_TAB_DESIGN §5-4). 시각(ms)은 전부 호출자가 넘긴다.
- * 카드당 최대 2건: 기준(50%·1초)을 넘는 순간 1회 + 최종값 1회.
+ * 기준(50%·1초)을 넘는 순간 1회 + 최종값(final: true). 최종값은 새로 잰 시간이 있을 때만 나오므로
+ * snapshot·finish 를 잇따라 불러도 같은 값이 두 번 나가지 않는다.
  */
 export class ImpressionMeter {
   /** "50% 이상 + 페이지 보임" 구간이 시작된 시각. 그 상태가 아니면 null */
@@ -19,6 +20,8 @@ export class ImpressionMeter {
   private maxRatio = 0;
   private thresholdSent = false;
   private finished = false;
+  /** 직전에 내보낸 최종값의 visible_ms. 같은 값을 다시 내지 않으려고 기억한다. */
+  private lastFinalMs: number | null = null;
 
   /** 교차 비율이나 페이지 가시성이 바뀔 때마다 부른다. 기준을 막 넘었으면 스냅샷을 돌려준다. */
   update(ratio: number, pageVisible: boolean, nowMs: number): ImpressionSnapshot | null {
@@ -51,14 +54,23 @@ export class ImpressionMeter {
     return this.thresholdSent ? this.finish(nowMs) : null;
   }
 
+  /**
+   * 페이지가 가려질 때처럼 "여기까지"를 알리되 계측은 이어 간다.
+   * 탭 전환마다 finish 를 부르면 돌아와도 그 카드가 끝난 채로 남는다 (2번 실행 기록).
+   */
+  snapshot(nowMs: number): ImpressionSnapshot | null {
+    if (this.finished) return null;
+    this.accumulate(nowMs);
+    return this.emitFinal();
+  }
+
   /** 페이지를 떠나거나 컴포넌트가 사라질 때 한 번. 한 번도 보인 적 없으면 null. */
   finish(nowMs: number): ImpressionSnapshot | null {
     if (this.finished) return null;
     this.accumulate(nowMs);
     this.finished = true;
     this.countingSince = null;
-    if (this.maxRatio <= 0) return null;
-    return { max_visible_ratio: this.maxRatio, visible_ms: Math.round(this.visibleMs), final: true };
+    return this.emitFinal();
   }
 
   private accumulate(nowMs: number): void {
@@ -71,5 +83,14 @@ export class ImpressionMeter {
     if (this.thresholdSent || this.visibleMs < IMPRESSION_MIN_MS) return null;
     this.thresholdSent = true;
     return { max_visible_ratio: this.maxRatio, visible_ms: Math.round(this.visibleMs), final: false };
+  }
+
+  /** 최종값은 새로 잰 시간이 있을 때만 낸다 — 같은 값이 두 번 적재되지 않게. */
+  private emitFinal(): ImpressionSnapshot | null {
+    if (this.maxRatio <= 0) return null;
+    const visibleMs = Math.round(this.visibleMs);
+    if (this.lastFinalMs !== null && visibleMs <= this.lastFinalMs) return null;
+    this.lastFinalMs = visibleMs;
+    return { max_visible_ratio: this.maxRatio, visible_ms: visibleMs, final: true };
   }
 }

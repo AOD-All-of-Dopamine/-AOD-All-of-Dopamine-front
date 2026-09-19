@@ -71,4 +71,38 @@ describe("ImpressionMeter", () => {
     expect(m.tick(10_000)).toBeNull();
     expect(m.finish(20_000)).toEqual({ max_visible_ratio: 1, visible_ms: 400, final: true });
   });
+
+  it("snapshot 은 최종값을 내되 계측을 끝내지 않는다", () => {
+    const m = new ImpressionMeter();
+    m.update(1, true, 0);
+    expect(m.tick(1000)).toEqual({ max_visible_ratio: 1, visible_ms: 1000, final: false });
+    // 탭을 숨긴다 — 여기서 finish 를 부르면 돌아와도 계측이 끝난 채로 남는다
+    expect(m.snapshot(2000)).toEqual({ max_visible_ratio: 1, visible_ms: 2000, final: true });
+    // 돌아와서 계속 본다
+    expect(m.update(1, true, 2000)).toBeNull();
+    expect(m.finish(5000)).toEqual({ max_visible_ratio: 1, visible_ms: 5000, final: true });
+  });
+
+  it("새로 잰 시간이 없으면 snapshot 과 finish 가 같은 값을 두 번 내지 않는다", () => {
+    const m = new ImpressionMeter();
+    m.update(1, true, 0);
+    m.tick(1000);
+    expect(m.snapshot(1500)).toEqual({ max_visible_ratio: 1, visible_ms: 1500, final: true });
+    expect(m.snapshot(1500)).toBeNull();
+    expect(m.finish(1500)).toBeNull();
+  });
+
+  it("한 번도 보인 적 없으면 snapshot 도 null 이고 계측은 계속된다", () => {
+    const m = new ImpressionMeter();
+    expect(m.snapshot(1000)).toBeNull();
+    m.update(1, true, 1000);
+    expect(m.tick(2000)).toEqual({ max_visible_ratio: 1, visible_ms: 1000, final: false });
+  });
+
+  it("끝난 계측기는 snapshot 도 null 이다", () => {
+    const m = new ImpressionMeter();
+    m.update(1, true, 0);
+    m.finish(500);
+    expect(m.snapshot(900)).toBeNull();
+  });
 });
