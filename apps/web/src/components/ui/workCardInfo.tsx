@@ -33,6 +33,9 @@ const ageLabel = (ageRating?: string | null) => {
 };
 
 /** 우측 정렬 강조 값 (목업 .review-pct / .star-score) */
+// 이 파일은 컴포넌트 모듈이 아니라 카드 표시 정보를 파생하는 헬퍼 모듈이다(내보내는 것은 전부 함수·상수).
+// FootEnd 는 footer 조립용 내부 조각이라 fast refresh 경계가 될 필요가 없다.
+// eslint-disable-next-line react-refresh/only-export-components
 const FootEnd = ({ children }: { children: ReactNode }) => (
   <span className="ml-auto inline-flex items-center gap-1 font-bold text-ink">
     {children}

@@ -12,6 +12,8 @@ export interface ApiClientOptions {
   isDev?: boolean;
   retry?: { retries?: number; retryDelay?: number };
   sleep?: (ms: number) => Promise<void>;
+  /** privateApi 요청마다 병합할 헤더(예: X-Anon-Id·X-Session-Id). 이미 있는 헤더는 덮지 않는다. */
+  getExtraHeaders?: () => Record<string, string>;
 }
 
 export interface ApiClients {
@@ -28,6 +30,7 @@ export function createApiClients(options: ApiClientOptions): ApiClients {
     onSessionExpired,
     isDev = false,
     sleep = defaultSleep,
+    getExtraHeaders,
   } = options;
   const { retries = 2, retryDelay = 500 } = options.retry ?? {};
 
@@ -155,9 +158,17 @@ export function createApiClients(options: ApiClientOptions): ApiClients {
 
   privateApi.interceptors.request.use(async (config) => {
     const token = await getToken();
-    if (token) {
-      config.headers = config.headers ?? {};
-      config.headers.Authorization = `Bearer ${token}`;
+    if (token) config.headers.set("Authorization", `Bearer ${token}`);
+    if (getExtraHeaders) {
+      let extra: Record<string, string> = {};
+      try {
+        extra = getExtraHeaders() ?? {};
+      } catch {
+        // 로깅용 헤더 때문에 요청이 깨지면 안 된다 (저장소 접근 예외 등)
+      }
+      for (const [name, value] of Object.entries(extra)) {
+        if (value && !config.headers.has(name)) config.headers.set(name, value);
+      }
     }
     return logRequest(config);
   }, logRequestError);
