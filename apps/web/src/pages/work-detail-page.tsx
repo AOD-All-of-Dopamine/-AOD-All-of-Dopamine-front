@@ -270,7 +270,7 @@ export default function WorkDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const contentId = id ? Number(id) : 0;
-  // 추천 탭에서 넘어오면 ?rid=&iid= 가 붙는다(5번 하위 프로젝트). 지금은 항상 없다.
+  // 추천 탭(/for-you)에서 넘어오면 ?rid=&iid= 가 붙는다 — 다른 경로로 들어오면 없다.
   const [searchParams] = useSearchParams();
   const rid = searchParams.get("rid") ?? undefined;
   const iid = searchParams.get("iid") ?? undefined;

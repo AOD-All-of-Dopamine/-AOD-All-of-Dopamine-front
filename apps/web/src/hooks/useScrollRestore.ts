@@ -2,11 +2,20 @@ import { useEffect, useRef } from "react";
 
 const PREFIX = "aod_scroll_";
 
+/**
+ * 이 페이지 로드에서만 유효하다는 표. 저장은 sessionStorage 라 새로고침해도 살아남지만,
+ * 새로고침하면 목록은 1쪽부터 다시 받으므로 옛 위치로 내려가면 안 된다 —
+ * 표가 다르면 저장된 값을 없는 것으로 본다. 같은 로드 안의 뒤로가기는 그대로 복원된다.
+ */
+const LOAD_ID = Math.random().toString(36).slice(2);
+
 function read(key: string): number | null {
   try {
     const raw = window.sessionStorage.getItem(PREFIX + key);
     if (raw === null) return null;
-    const value = Number(raw);
+    const [load, y] = raw.split(":");
+    if (load !== LOAD_ID) return null;
+    const value = Number(y);
     return Number.isFinite(value) ? value : null;
   } catch {
     return null;
@@ -15,7 +24,7 @@ function read(key: string): number | null {
 
 function write(key: string, y: number): void {
   try {
-    window.sessionStorage.setItem(PREFIX + key, String(y));
+    window.sessionStorage.setItem(PREFIX + key, `${LOAD_ID}:${y}`);
   } catch {
     // 저장 못 해도 화면은 그대로 돈다
   }

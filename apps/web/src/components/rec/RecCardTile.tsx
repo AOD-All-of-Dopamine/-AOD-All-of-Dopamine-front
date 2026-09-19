@@ -5,7 +5,7 @@ import type { RecCard } from "@aod/shared/types";
 import { thumbnailFallbackMap, type Category } from "../../constants/thumbnail";
 import { useImpressionTracker } from "../../tracking/useImpressionTracker";
 import Tag from "../ui/Tag";
-import { cardLift } from "../ui/cardStyles";
+import { cardLiftOpen } from "../ui/cardStyles";
 import { workCardFooter, workCardMeta, workCardTags } from "../ui/workCardInfo";
 import RecFeedbackMenu from "./RecFeedbackMenu";
 
@@ -32,6 +32,9 @@ export interface RecCardTileProps {
  * 그래서 같은 조각(cardLift·workCardMeta·workCardTags·workCardFooter)으로 다시 조립하고
  * 링크 영역과 버튼 행을 형제로 둔다.
  * 카드 전체가 노출 계측 대상이다 — 대체 목록 카드도 impressionId 가 있으므로 똑같이 잰다(분모).
+ *
+ * WorkCard 와 달리 카드 상자에 overflow-hidden 을 두지 않는다(cardLiftOpen) — 좁은 화면에서
+ * 더보기 메뉴가 카드 밖으로 나가야 하기 때문이다. 위쪽 모서리는 썸네일 상자가 맡는다.
  */
 const RecCardTile = ({
   card,
@@ -50,9 +53,9 @@ const RecCardTile = ({
   const footer = workCardFooter(work);
 
   return (
-    <article ref={setImpressionRef} className={`flex flex-col bg-surface ${cardLift}`}>
+    <article ref={setImpressionRef} className={`flex flex-col bg-surface ${cardLiftOpen}`}>
       <Link to={recWorkPath(card)} onClick={() => onOpen(card)} className="flex flex-1 flex-col">
-        <div className="aspect-[2/3] overflow-hidden bg-canvas">
+        <div className="aspect-[2/3] overflow-hidden rounded-t-panel bg-canvas">
           {work.thumbnail ? (
             <img src={work.thumbnail} alt="" loading="lazy" className="h-full w-full object-cover" />
           ) : (

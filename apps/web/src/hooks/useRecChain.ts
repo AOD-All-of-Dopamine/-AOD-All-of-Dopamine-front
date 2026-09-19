@@ -9,6 +9,7 @@ import {
 } from "@aod/shared/rec";
 import { REC_TABS, type RecTab } from "@aod/shared/types";
 import { newUuid } from "../tracking/browserIds";
+import { forgetAllChainState, forgetChainState, recChainStateKey } from "./recChainState";
 
 /** 사생활 보호 모드 등에서는 접근 자체가 던진다 — 그때는 메모리 저장소로 돈다. */
 function sessionStorageOrNull(): KeyValueStorage | null {
@@ -32,6 +33,7 @@ function chainStore(): RecChainStore {
 export function clearRecChains(): void {
   const current = chainStore();
   for (const tab of REC_TABS) current.reset(tab);
+  forgetAllChainState();
 }
 
 export interface RecChain {
@@ -47,29 +49,32 @@ export interface RecChain {
   restartOnChainExpired: (error: unknown) => boolean;
 }
 
+/** 새 체인을 연다 — 그 체인에 매달린 화면 상태(숨김·♡)도 함께 버린다. */
+function openNewChain(tab: RecTab, nonce: string): void {
+  forgetChainState(recChainStateKey(tab, nonce));
+  chainStore().reset(tab);
+}
+
 /**
  * 체인 수명 = 브라우저 세션 × 칩 (설계 §4). 저장소는 웹이 갖고, 판정은 shared 가 한다.
  *
- * 저장소가 단일 진실 출처다 — 렌더마다 읽고, 바꾼 뒤에는 rereadChain 으로 다시 읽는다.
+ * 렌더 중에는 저장소를 **읽기만** 한다. get() 은 "없으면 만들어 저장"하는 게으른 초기화라
+ * 두 번 돌려도(StrictMode) 두 번째부터는 저장된 값을 그대로 주므로 체인이 갈리지 않는다.
+ * 체인을 바꾸는 쓰기는 전부 이벤트·effect 에서만 한다.
  */
 export function useRecChain(tab: RecTab): RecChain {
   const [, rereadChain] = useReducer((n: number) => n + 1, 0);
   const queryClient = useQueryClient();
   const restartedRef = useRef<Set<string>>(new Set());
 
-  let entry = chainStore().get(tab);
+  const entry = chainStore().get(tab);
 
-  // 새로고침·캐시 만료로 앞쪽 쪽들이 화면에서 사라졌는데 chainId 만 남아 있으면 이어 보기는
-  // 말이 안 된다 — 서버는 그 체인의 "다음" 쪽을 주지 1쪽을 다시 주지 않는다. 새 체인으로 시작한다.
-  // (뒤로가기처럼 캐시가 살아 있으면 여기 걸리지 않는다 — 그때는 재조회 자체가 없다.)
-  if (
-    entry.chainId !== null &&
-    queryClient.getQueryData(recKeys.list(tab, entry.nonce)) === undefined
-  ) {
-    entry = chainStore().reset(tab);
-  }
-
-  const { nonce, chainId } = entry;
+  // 캐시가 비어 있으면(새로고침·gcTime 만료) 저장된 chainId 를 싣지 않는다 —
+  // 서버는 그 체인의 "다음" 쪽을 주지 1쪽을 다시 주지 않으므로, 앞쪽이 화면에서 사라진
+  // 이어 보기는 말이 안 된다. 저장소는 건드리지 않는다(렌더는 부작용을 남기지 않는다) —
+  // 첫 응답의 chainId 가 곧 덮어쓴다.
+  const hasCachedPages = queryClient.getQueryData(recKeys.list(tab, entry.nonce)) !== undefined;
+  const initialChainId = hasCachedPages ? entry.chainId : null;
 
   const remember = useCallback(
     (next: string | null) => {
@@ -79,22 +84,25 @@ export function useRecChain(tab: RecTab): RecChain {
   );
 
   const restart = useCallback(() => {
-    chainStore().reset(tab);
+    openNewChain(tab, chainStore().get(tab).nonce);
     rereadChain();
   }, [tab]);
 
   const restartOnChainExpired = useCallback(
     (error: unknown) => {
+      // 저장소의 **지금** 값을 본다 — remember() 는 리렌더 없이 저장소만 고치므로
+      // 렌더 시점에 잡아 둔 값은 "더 보기" 시점에는 이미 낡았다.
+      const current = chainStore().get(tab);
       // chainId 를 안 실었으면 404 가 체인 만료일 수 없다 — 새 체인으로 바꿔도 결과가 같다(루프 방지).
-      if (chainId === null) return false;
-      if (!shouldRestartChain(error, nonce, restartedRef.current)) return false;
-      restartedRef.current.add(nonce);
-      chainStore().reset(tab);
+      if (current.chainId === null) return false;
+      if (!shouldRestartChain(error, current.nonce, restartedRef.current)) return false;
+      restartedRef.current.add(current.nonce);
+      openNewChain(tab, current.nonce);
       rereadChain();
       return true;
     },
-    [chainId, nonce, tab],
+    [tab],
   );
 
-  return { nonce, initialChainId: chainId, remember, restart, restartOnChainExpired };
+  return { nonce: entry.nonce, initialChainId, remember, restart, restartOnChainExpired };
 }

@@ -147,7 +147,7 @@ PageResponse<T> // content[], page, size, totalElements, totalPages, first, last
 | `usePlatforms(domain)` | 플랫폼 목록 |
 | `useReviews(contentId)` | 리뷰 목록 (+ 작성/수정/삭제 mutation) |
 | `useMyReviews()` / `useMyBookmarks()` / `useMyLikes()` | 내 활동 |
-| `useLikeStats` / `useToggleLike` / `useToggleBookmark` 등 | 상호작용 |
+| `useLikeStats` / `useToggleLike` / `useToggleBookmark` 등 | 상호작용 (목록에서 카드마다 토글할 때는 `useToggleBookmarkById`) |
 | `useRecommendations(tab, chainNonce, opts)` | 추천 무한 쿼리 (이 쿼리만 staleTime 무한·gcTime 30분·재조회/재시도 없음) |
 | `useSetReaction` / `useSetNotInterested` | 반응 상태 지정(LIKE·DISLIKE·NONE)·관심 없음 켜기/끄기 |
 
