@@ -8,6 +8,7 @@ import type { ReviewRequest, Review, LikeStats } from "../api/interactionApi";
 import type { PageResponse } from "../types";
 import { useApis } from "./ApiProvider";
 import { reviewKeys, interactionKeys, myKeys, workKeys } from "../queries/keys";
+import type { RecRequestContext } from "../tracking/types";
 
 /**
  * 리뷰 목록 조회
@@ -34,13 +35,13 @@ export const useReviews = (
 /**
  * 리뷰 작성
  */
-export const useCreateReview = (contentId: number) => {
+export const useCreateReview = (contentId: number, rec?: RecRequestContext) => {
   const { reviewApi } = useApis();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (reviewData: ReviewRequest) =>
-      reviewApi.createReview(contentId, reviewData),
+      reviewApi.createReview(contentId, reviewData, rec),
     onSuccess: () => {
       // 리뷰 목록 + 내 리뷰 목록/카운트 + 작품 평점 갱신
       queryClient.invalidateQueries({ queryKey: reviewKeys.byContent(contentId) });
@@ -53,7 +54,7 @@ export const useCreateReview = (contentId: number) => {
 /**
  * 리뷰 수정
  */
-export const useUpdateReview = (contentId: number) => {
+export const useUpdateReview = (contentId: number, rec?: RecRequestContext) => {
   const { reviewApi } = useApis();
   const queryClient = useQueryClient();
 
@@ -64,7 +65,7 @@ export const useUpdateReview = (contentId: number) => {
     }: {
       reviewId: number;
       reviewData: ReviewRequest;
-    }) => reviewApi.updateReview(reviewId, reviewData),
+    }) => reviewApi.updateReview(reviewId, reviewData, rec),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: reviewKeys.byContent(contentId) });
     },
@@ -106,12 +107,12 @@ export const useLikeStats = (contentId: number) => {
  * 옵티미스틱 전이는 서버 LikeService.toggleLikeType과 동일:
  * LIKE -> NONE(해제), DISLIKE -> LIKE(전환), NONE -> LIKE(생성)
  */
-export const useToggleLike = (contentId: number) => {
+export const useToggleLike = (contentId: number, rec?: RecRequestContext) => {
   const { interactionApi } = useApis();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => interactionApi.toggleLike(contentId),
+    mutationFn: () => interactionApi.toggleLike(contentId, rec),
 
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: interactionKeys.likeStats(contentId) });
@@ -161,12 +162,12 @@ export const useToggleLike = (contentId: number) => {
  * 옵티미스틱 전이는 서버 LikeService.toggleLikeType과 동일:
  * DISLIKE -> NONE(해제), LIKE -> DISLIKE(전환), NONE -> DISLIKE(생성)
  */
-export const useToggleDislike = (contentId: number) => {
+export const useToggleDislike = (contentId: number, rec?: RecRequestContext) => {
   const { interactionApi } = useApis();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => interactionApi.toggleDislike(contentId),
+    mutationFn: () => interactionApi.toggleDislike(contentId, rec),
 
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: interactionKeys.likeStats(contentId) });
@@ -226,12 +227,12 @@ export const useBookmarkStatus = (contentId: number, enabled = true) => {
 /**
  * 북마크 토글
  */
-export const useToggleBookmark = (contentId: number) => {
+export const useToggleBookmark = (contentId: number, rec?: RecRequestContext) => {
   const { interactionApi } = useApis();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => interactionApi.toggleBookmark(contentId),
+    mutationFn: () => interactionApi.toggleBookmark(contentId, rec),
     onMutate: async () => {
       await queryClient.cancelQueries({
         queryKey: interactionKeys.bookmarkStatus(contentId),

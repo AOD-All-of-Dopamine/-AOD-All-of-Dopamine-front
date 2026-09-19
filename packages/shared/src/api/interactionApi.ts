@@ -1,5 +1,7 @@
 import type { AxiosInstance } from "axios";
 import type { PageResponse } from "../types";
+import { recHeaders } from "../tracking/recHeaders";
+import type { RecRequestContext } from "../tracking/types";
 
 export interface ReviewRequest {
   rating: number;
@@ -46,10 +48,12 @@ export function createReviewApi(publicApi: AxiosInstance, privateApi: AxiosInsta
     createReview: async (
       contentId: number,
       reviewData: ReviewRequest,
+      rec?: RecRequestContext,
     ): Promise<Review> => {
       const { data } = await privateApi.post<Review>(
         `/api/works/${contentId}/reviews`,
         reviewData,
+        { headers: recHeaders(rec) },
       );
       return data;
     },
@@ -60,10 +64,12 @@ export function createReviewApi(publicApi: AxiosInstance, privateApi: AxiosInsta
     updateReview: async (
       reviewId: number,
       reviewData: ReviewRequest,
+      rec?: RecRequestContext,
     ): Promise<Review> => {
       const { data } = await privateApi.put<Review>(
         `/api/reviews/${reviewId}`,
         reviewData,
+        { headers: recHeaders(rec) },
       );
       return data;
     },
@@ -108,16 +114,20 @@ export function createInteractionApi(publicApi: AxiosInstance, privateApi: Axios
     /**
      * 좋아요 토글
      */
-    toggleLike: async (contentId: number) => {
-      const { data } = await privateApi.post(`/api/works/${contentId}/like`);
+    toggleLike: async (contentId: number, rec?: RecRequestContext) => {
+      const { data } = await privateApi.post(`/api/works/${contentId}/like`, undefined, {
+        headers: recHeaders(rec),
+      });
       return data;
     },
 
     /**
      * 싫어요 토글
      */
-    toggleDislike: async (contentId: number) => {
-      const { data } = await privateApi.post(`/api/works/${contentId}/dislike`);
+    toggleDislike: async (contentId: number, rec?: RecRequestContext) => {
+      const { data } = await privateApi.post(`/api/works/${contentId}/dislike`, undefined, {
+        headers: recHeaders(rec),
+      });
       return data;
     },
 
@@ -134,8 +144,10 @@ export function createInteractionApi(publicApi: AxiosInstance, privateApi: Axios
     /**
      * 북마크 토글
      */
-    toggleBookmark: async (contentId: number) => {
-      const { data } = await privateApi.post(`/api/works/${contentId}/bookmark`);
+    toggleBookmark: async (contentId: number, rec?: RecRequestContext) => {
+      const { data } = await privateApi.post(`/api/works/${contentId}/bookmark`, undefined, {
+        headers: recHeaders(rec),
+      });
       return data;
     },
 
