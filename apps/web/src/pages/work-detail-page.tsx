@@ -1,5 +1,5 @@
-﻿import { ReactNode, useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+﻿import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { keepPreviousData } from "@tanstack/react-query";
 import {
@@ -18,6 +18,8 @@ import {
   WarningCircle,
 } from "@phosphor-icons/react";
 import { useAuth } from "../contexts/AuthContext";
+import { useDwellTracker } from "../tracking/useDwellTracker";
+import { useTracker } from "../tracking/trackerContext";
 import { useWorkDetail } from "@aod/shared/hooks";
 import {
   useBookmarkStatus,
@@ -268,6 +270,23 @@ export default function WorkDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const contentId = id ? Number(id) : 0;
+  // 추천 탭에서 넘어오면 ?rid=&iid= 가 붙는다(5번 하위 프로젝트). 지금은 항상 없다.
+  const [searchParams] = useSearchParams();
+  const rid = searchParams.get("rid") ?? undefined;
+  const iid = searchParams.get("iid") ?? undefined;
+  const rec = useMemo(() => ({ source: "detail", requestId: rid, impressionId: iid }), [rid, iid]);
+  const tracker = useTracker();
+  const getDetailOpenId = useDwellTracker(
+    contentId > 0 ? { contentId, requestId: rid, impressionId: iid, surface: "detail" } : null,
+  );
+  const trackOutbound = (platform: string) =>
+    tracker.track("outbound_clicked", {
+      contentId,
+      requestId: rid,
+      impressionId: iid,
+      surface: "detail",
+      payload: { platform, detail_open_id: getDetailOpenId() },
+    });
   const { isAuthenticated } = useAuth();
 
   const [reviewSize, setReviewSize] = useState(REVIEW_PAGE_SIZE);
@@ -300,8 +319,8 @@ export default function WorkDetailPage() {
     isAuthenticated,
   );
 
-  const toggleLikeMutation = useToggleLike(contentId);
-  const toggleBookmarkMutation = useToggleBookmark(contentId);
+  const toggleLikeMutation = useToggleLike(contentId, rec);
+  const toggleBookmarkMutation = useToggleBookmark(contentId, rec);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -671,6 +690,7 @@ export default function WorkDetailPage() {
                     href={url}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => trackOutbound(key)}
                     className="inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-surface px-3.5 py-[9px] text-[13.5px] font-semibold text-ink"
                   >
                     {label}
@@ -794,6 +814,7 @@ export default function WorkDetailPage() {
                       href={url}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={() => trackOutbound(key)}
                       className="inline-flex items-center gap-[7px] rounded-input border border-line bg-surface px-4 py-[9px] text-sm font-semibold text-ink transition-colors hover:border-line-strong"
                     >
                       {label}

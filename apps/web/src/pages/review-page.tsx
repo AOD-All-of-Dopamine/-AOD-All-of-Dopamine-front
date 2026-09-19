@@ -6,6 +6,9 @@ import EmptyState from "../components/ui/EmptyState";
 import { useCreateReview } from "@aod/shared/hooks";
 import { useAuth } from "../contexts/AuthContext";
 
+/** 서버의 review_saved 이벤트에 출처를 싣는다 */
+const REVIEW_REC = { source: "review" } as const;
+
 /**
  * /review/:id - 목업 없음. 기존 구조(별점 선택 + 한줄평 + 하단 저장 바) 유지 + 토큰 재스킨.
  * - 구 Header 제거 -> 상단 뒤로가기(work-detail 관례) + 페이지 제목.
@@ -27,7 +30,7 @@ export default function ReviewPage() {
   const isSaveDisabled =
     selectedRating === 0 || reviewForm.content.trim().length === 0;
   const numericContentId = contentId ? Number(contentId) : 0;
-  const createReviewMutation = useCreateReview(numericContentId);
+  const createReviewMutation = useCreateReview(numericContentId, REVIEW_REC);
 
   const handleSubmitReview = () => {
     if (!isAuthenticated) return alert("로그인이 필요합니다.");
