@@ -1,5 +1,6 @@
 import type { WorksQueryParams, ReleasesQueryParams } from "../api/workApi";
 import type { CollectionsQueryParams } from "../api/collectionApi";
+import type { RecTab } from "../types";
 
 // 기존 웹 훅의 인라인 키와 요소·순서·타입·중첩 구조가 동일해야 한다.
 // 파라미터 정규화(기본값 주입) 금지 — 기본값은 API 함수 내부에서만 적용된다.
@@ -62,4 +63,13 @@ export const myKeys = {
   bookmarks: (page: number, size: number) => ["myBookmarks", page, size] as const,
   likesRoot: () => ["myLikes"] as const,
   likes: (page: number, size: number) => ["myLikes", page, size] as const,
+};
+
+/**
+ * 추천 목록. 체인 nonce 가 키에 들어간다 — "새로 보기"·404 는 nonce 를 바꿔
+ * 새 쿼리를 만들고(옛 쿼리는 gcTime 이 지나면 버려진다), 뒤로가기는 같은 nonce 로 캐시를 그대로 쓴다.
+ */
+export const recKeys = {
+  root: () => ["recommendations"] as const,
+  list: (tab: RecTab, chainNonce: string) => ["recommendations", tab, chainNonce] as const,
 };

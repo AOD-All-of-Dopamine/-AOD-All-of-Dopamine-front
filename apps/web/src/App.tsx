@@ -7,6 +7,7 @@ import {
 import { AuthProvider } from "./contexts/AuthContext";
 import PublicLayout from "./layouts/public-layout";
 import HomePage from "./pages/home-page";
+import ForYouPage from "./pages/for-you-page";
 import ExplorePage from "./pages/explore-page";
 import RankingPage from "./pages/ranking-page";
 import NewReleasesPage from "./pages/new-releases-page";
@@ -33,6 +34,7 @@ const publicRoutes: RouteObject[] = [
     children: [
       { index: true, element: <Navigate to="/home" /> },
       { path: "home", element: <HomePage /> },
+      { path: "for-you", element: <ForYouPage /> },
       { path: "login", element: <LoginPage /> },
       { path: "signup", element: <SignupPage /> },
       { path: "explore", element: <ExplorePage /> },

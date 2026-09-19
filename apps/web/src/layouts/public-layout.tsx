@@ -5,7 +5,14 @@ import NavigationBar from "../components/common/NavigationBar";
 
 function PublicLayout() {
   const location = useLocation();
-  const showNav = ["/home", "/explore", "/ranking", "/new", "/profile/*"];
+  const showNav = [
+    "/home",
+    "/for-you",
+    "/explore",
+    "/ranking",
+    "/new",
+    "/profile/*",
+  ];
 
   const showNavBar =
     showNav.some((pattern) =>

@@ -8,6 +8,7 @@
     "./constants": "./src/constants/index.ts",
     "./api": "./src/api/index.ts",
     "./queries": "./src/queries/index.ts",
+    "./rec": "./src/rec/index.ts",
     "./hooks": "./src/hooks/index.ts",
     "./tracking": "./src/tracking/index.ts"
   },

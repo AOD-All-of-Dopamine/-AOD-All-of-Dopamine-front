@@ -1,4 +1,5 @@
 export * from "./domain";
+export * from "./rec";
 export * from "./platforms";
 export * from "./steam";
 export * from "./collections";

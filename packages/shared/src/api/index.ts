@@ -5,3 +5,4 @@ export * from "./workApi";
 export * from "./interactionApi";
 export * from "./rankingApi";
 export * from "./collectionApi";
+export * from "./recApi";

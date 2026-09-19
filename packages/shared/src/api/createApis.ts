@@ -9,6 +9,7 @@ import {
 } from "./interactionApi";
 import { createRankingApi, type RankingApi } from "./rankingApi";
 import { createCollectionApi, type CollectionApi } from "./collectionApi";
+import { createRecApi, type RecApi } from "./recApi";
 
 export interface Apis {
   authApi: AuthApi;
@@ -17,6 +18,7 @@ export interface Apis {
   interactionApi: InteractionApi;
   rankingApi: RankingApi;
   collectionApi: CollectionApi;
+  recApi: RecApi;
 }
 
 export function createApis(clients: ApiClients): Apis {
@@ -28,5 +30,6 @@ export function createApis(clients: ApiClients): Apis {
     interactionApi: createInteractionApi(publicApi, privateApi),
     rankingApi: createRankingApi(publicApi),
     collectionApi: createCollectionApi(privateApi),
+    recApi: createRecApi(privateApi),
   };
 }

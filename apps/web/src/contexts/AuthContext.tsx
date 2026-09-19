@@ -5,8 +5,11 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useApis } from "@aod/shared/hooks";
+import { recKeys } from "@aod/shared/queries";
 import type { AuthResponse, UserInfo } from "@aod/shared/api";
+import { clearRecChains } from "../hooks/useRecChain";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -27,6 +30,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const { authApi } = useApis();
+  const queryClient = useQueryClient();
   const [token, setToken] = useState<string | null>(
     localStorage.getItem(TOKEN_KEY),
   );
@@ -38,7 +42,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.removeItem(TOKEN_KEY);
     setToken(null);
     setUser(null);
-  }, []);
+    // 다른 사용자의 추천 목록·체인이 남지 않게 한다 (추천 탭 설계 §4)
+    queryClient.removeQueries({ queryKey: recKeys.root() });
+    clearRecChains();
+  }, [queryClient]);
 
   // 토큰이 있으면 사용자 정보 로드
   const restoreUser = useCallback(async () => {
@@ -93,6 +100,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         username: responseUsername,
         email: "",
       });
+
+      // 비로그인 대체 목록이 남아 있으면 로그인 직후에도 그대로 보인다 — 버린다
+      queryClient.removeQueries({ queryKey: recKeys.root() });
+      clearRecChains();
 
       // email 등 상세 정보가 꼭 필요하면 여기서 선택적으로 추가 조회
       // try {

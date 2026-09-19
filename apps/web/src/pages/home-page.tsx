@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { CaretRight, WarningCircle } from "@phosphor-icons/react";
 import { ExternalRanking } from "@aod/shared/api";
 import {
@@ -20,6 +20,7 @@ import RankRow from "../components/ui/RankRow";
 import UpcomingCard from "../components/ui/UpcomingCard";
 import DdayPill from "../components/ui/DdayPill";
 import SkeletonCard from "../components/ui/SkeletonCard";
+import SegmentedControl from "../components/ui/SegmentedControl";
 
 /**
  * /home - mockups/home-light-mockup.html 이식.
@@ -182,6 +183,7 @@ const reviewGridClass =
   "mt-4 grid grid-cols-1 gap-4 min-[768px]:grid-cols-2 min-[1024px]:grid-cols-3";
 
 export default function HomePage() {
+  const navigate = useNavigate();
   const reviewed = useRecentReviewedWorks({ size: 6 });
   const releases = useRecentReleases({ size: 8 });
   const upcoming = useUpcomingReleases({ size: 3 });
@@ -235,6 +237,22 @@ export default function HomePage() {
       <h1 className="sr-only">홈</h1>
 
       <div className="mx-auto max-w-[1280px] px-6 pb-[72px] pt-7">
+        {/* 모바일 진입점 — 하단 탭은 늘리지 않는다 (추천 탭 설계 §3) */}
+        <div className="mb-4 lg:hidden">
+          <SegmentedControl
+            ariaLabel="홈·추천 전환"
+            size="sm"
+            value="home"
+            options={[
+              { value: "home", label: "홈" },
+              { value: "for-you", label: "추천" },
+            ]}
+            onChange={(value) => {
+              if (value === "for-you") navigate("/for-you");
+            }}
+          />
+        </div>
+
         {/* 피처드 히어로: 메인 1 + 서브 2 */}
         {heroLoading ? (
           <div

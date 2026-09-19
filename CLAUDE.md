@@ -36,6 +36,7 @@
 @aod/shared/constants   # DOMAIN_LABEL_MAP, DOMAIN_FILTERS, DOMAIN_PLATFORMS, PLATFORM_LABELS
 @aod/shared/api         # createApiClients, createApis, 각 API 팩토리 + DTO 타입
 @aod/shared/queries     # query key 팩토리 (workKeys, reviewKeys …)
+@aod/shared/rec         # 추천 순수 로직 (mergeRecPages, recNotice, recEvents, 체인 저장소)
 @aod/shared/hooks       # ApiProvider, useApis, 데이터 훅 26개 (useWorks, useInteractions …)
 ```
 
@@ -86,6 +87,7 @@ apps/web/
 | 경로 | 페이지 | 설명 |
 |------|--------|------|
 | `/home` | home-page | 최근 리뷰 작품·신작·출시 예정작 |
+| `/for-you` | for-you-page | 칩별 개인화 추천 (추천 탭) |
 | `/explore` | explore-page | 도메인·장르·플랫폼·정렬 필터링 |
 | `/ranking` | ranking-page | 외부 랭킹 (TMDB 등) |
 | `/internal/ranking` | internal-ranking-page | 내부 랭킹 |
@@ -101,7 +103,7 @@ apps/web/
 | `/signup` | signup-page | 회원가입 |
 | `/onboarding` | onboarding-page | 온보딩 |
 
-NavigationBar는 `/home`, `/explore`, `/ranking`, `/new`, `/profile/*` 에서만 표시 (`public-layout.tsx`에서 경로 감지).
+NavigationBar는 `/home`, `/for-you`, `/explore`, `/ranking`, `/new`, `/profile/*` 에서만 표시 (`public-layout.tsx`에서 경로 감지).
 
 ---
 
@@ -145,7 +147,9 @@ PageResponse<T> // content[], page, size, totalElements, totalPages, first, last
 | `usePlatforms(domain)` | 플랫폼 목록 |
 | `useReviews(contentId)` | 리뷰 목록 (+ 작성/수정/삭제 mutation) |
 | `useMyReviews()` / `useMyBookmarks()` / `useMyLikes()` | 내 활동 |
-| `useLikeStats` / `useToggleLike` / `useToggleBookmark` 등 | 상호작용 |
+| `useLikeStats` / `useToggleLike` / `useToggleBookmark` 등 | 상호작용 (목록에서 카드마다 토글할 때는 `useToggleBookmarkById`) |
+| `useRecommendations(tab, chainNonce, opts)` | 추천 무한 쿼리 (이 쿼리만 staleTime 무한·gcTime 30분·재조회/재시도 없음) |
+| `useSetReaction` / `useSetNotInterested` | 반응 상태 지정(LIKE·DISLIKE·NONE)·관심 없음 켜기/끄기 |
 
 query key는 `@aod/shared/queries`의 팩토리(workKeys 등)로만 만든다 (인라인 키 금지).
 React Query 전역 설정: staleTime 5분, 윈도우 포커스 시 refetch 비활성화 (`apps/web/src/main.tsx`)

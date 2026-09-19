@@ -270,6 +270,36 @@ export const useToggleBookmark = (contentId: number, rec?: RecRequestContext) =>
   });
 };
 
+export interface ToggleBookmarkVars {
+  contentId: number;
+  rec?: RecRequestContext;
+}
+
+/** 토글 응답 (BookmarkService.toggleBookmark): 켜졌는지 꺼졌는지는 bookmarked 가 말해 준다. */
+export interface ToggleBookmarkResult {
+  contentId?: number;
+  bookmarked: boolean;
+  message?: string;
+}
+
+/**
+ * 북마크 토글 — contentId 를 호출 시점에 넘긴다.
+ * 목록 화면처럼 카드마다 다른 작품을 토글할 때 쓴다(useToggleBookmark 는 화면 하나당 작품 하나 전용).
+ * 낙관적 갱신은 하지 않는다 — 어느 카드가 켜져 있는지 목록이 모르기 때문에, 응답의 bookmarked 로 알린다.
+ */
+export const useToggleBookmarkById = () => {
+  const { interactionApi } = useApis();
+  const queryClient = useQueryClient();
+
+  return useMutation<ToggleBookmarkResult, Error, ToggleBookmarkVars>({
+    mutationFn: ({ contentId, rec }) => interactionApi.toggleBookmark(contentId, rec),
+    onSuccess: (_result, { contentId }) => {
+      queryClient.invalidateQueries({ queryKey: interactionKeys.bookmarkStatus(contentId) });
+      queryClient.invalidateQueries({ queryKey: myKeys.bookmarksRoot() });
+    },
+  });
+};
+
 /**
  * 내 리뷰 목록
  */
