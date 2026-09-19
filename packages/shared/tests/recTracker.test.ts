@@ -130,11 +130,13 @@ describe("createRecTracker", () => {
     expect(sent).toHaveLength(1);   // 해제된 finalizer 는 돌지 않고, 보낼 것도 없다
   });
 
-  it("언로드 때 50건씩 나눠 보낸다", async () => {
+  it("언로드 때는 최신 100건만 50건씩 보낸다 (비콘 예산)", async () => {
     const { tracker, sent } = setup([], { flushAtCount: 1000 });
     for (let i = 0; i < 120; i++) tracker.track("card_clicked");
     await tracker.flush({ unloading: true });
-    expect(sent.map((s) => s.batch.events.length)).toEqual([50, 50, 20]);
+    expect(sent.map((s) => s.batch.events.length)).toEqual([50, 50]);
+    expect(sent[0].batch.events[0].eventId).toBe("e21");
+    expect(sent[1].batch.events[49].eventId).toBe("e120");
   });
 
   it("큐 상한을 넘으면 오래된 것부터 버린다", async () => {
@@ -151,5 +153,78 @@ describe("createRecTracker", () => {
     tracker.track("card_clicked");
     await vi.advanceTimersByTimeAsync(60_000);
     expect(sent).toHaveLength(0);
+  });
+
+  it("언로드 flush 뒤에도 계속 동작한다 (탭 전환은 종료가 아니다)", async () => {
+    const { tracker, sent } = setup();
+    tracker.track("card_clicked");
+    await tracker.flush({ unloading: true });
+    tracker.track("detail_viewed");
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(sent).toHaveLength(2);
+    expect(sent[1].unloading).toBe(false);
+    expect(ids(sent[1].batch)).toEqual(["e2"]);
+  });
+
+  it("언로드 전송이 비동기로 실패해도 밖으로 새지 않는다", async () => {
+    let id = 0;
+    const tracker = createRecTracker({
+      ids: { anonId: () => "a", sessionId: () => "s" },
+      transport: { send: () => Promise.reject(new Error("beacon fallback failed")) },
+      uuid: () => `e${++id}`,
+    });
+    tracker.track("card_clicked");
+    await tracker.flush({ unloading: true });
+    await vi.advanceTimersByTimeAsync(0);   // 처리되지 않은 rejection 이 있으면 vitest 가 실패시킨다
+    expect(tracker.pending()).toBe(0);
+  });
+
+  it("finalizer 가 flush 를 다시 불러도 재귀하지 않는다", async () => {
+    const { tracker, sent } = setup();
+    tracker.addFinalizer(() => {
+      tracker.track("detail_viewed");
+      void tracker.flush({ unloading: true });
+    });
+    await tracker.flush({ unloading: true });
+    expect(sent).toHaveLength(1);
+    expect(sent[0].batch.events).toHaveLength(1);
+  });
+
+  it("너무 큰 payload 는 빼고 이벤트는 보낸다", async () => {
+    const { tracker, sent } = setup();
+    tracker.track("card_clicked", { contentId: 1, payload: { blob: "x".repeat(5000) } });
+    await tracker.flush({ unloading: true });
+    expect(sent[0].batch.events[0].contentId).toBe(1);
+    expect(sent[0].batch.events[0].payload).toBeUndefined();
+  });
+
+  it("fields 가 eventId·type·clientTs 를 덮지 못한다", async () => {
+    const { tracker, sent } = setup();
+    const wide = { contentId: 1, eventId: "evil", type: "rec_tab_changed", clientTs: "1999-01-01T00:00:00.000Z" };
+    tracker.track("card_clicked", wide);
+    await tracker.flush({ unloading: true });
+    expect(sent[0].batch.events[0]).toMatchObject({ eventId: "e1", type: "card_clicked", clientTs: "2026-09-19T00:00:00.000Z" });
+  });
+
+  it("전송이 끝나지 않으면 제한 시간 뒤 retry 로 친다", async () => {
+    const calls: number[] = [];
+    let id = 0;
+    const tracker = createRecTracker({
+      ids: { anonId: () => "a", sessionId: () => "s" },
+      transport: {
+        send: () => {
+          calls.push(calls.length);
+          return calls.length === 1 ? new Promise<never>(() => undefined) : "ok";
+        },
+      },
+      uuid: () => `e${++id}`,
+      sendTimeoutMs: 3000,
+    });
+    tracker.track("card_clicked");
+    await vi.advanceTimersByTimeAsync(5000);          // 첫 전송 — 영원히 대기
+    expect(calls).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(3000 + 1000);   // 제한 시간 → retry → 1초 뒤 재전송
+    expect(calls).toHaveLength(2);
+    expect(tracker.pending()).toBe(0);
   });
 });

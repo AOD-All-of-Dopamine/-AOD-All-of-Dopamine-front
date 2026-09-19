@@ -8,6 +8,30 @@ import type {
   TrackerTransport,
 } from "./types";
 
+/** 서버가 한 요청에서 받는 최대 이벤트 수 */
+const SERVER_MAX_BATCH = 50;
+/** 서버가 받는 payload 직렬화 길이 상한 — 넘으면 묶음 전체가 400 으로 버려진다 */
+const MAX_PAYLOAD_CHARS = 4096;
+/** 언로드 때 보내는 최대 묶음 수. sendBeacon 은 오리진당 약 64KB 예산이라 넘치면 조용히 실패한다 */
+const MAX_UNLOAD_BATCHES = 2;
+
+/** 전송이 끝나지 않으면(반쯤 끊긴 연결 등) "retry" 로 친다 — sending 이 영원히 잠기지 않게. */
+function withTimeout(sending: Promise<SendResult> | SendResult, ms: number): Promise<SendResult> {
+  return new Promise<SendResult>((resolve) => {
+    const timer = setTimeout(() => resolve("retry"), ms);
+    Promise.resolve(sending).then(
+      (result) => {
+        clearTimeout(timer);
+        resolve(result);
+      },
+      () => {
+        clearTimeout(timer);
+        resolve("retry");
+      },
+    );
+  });
+}
+
 export interface RecTrackerOptions {
   ids: TrackerIds;
   transport: TrackerTransport;
@@ -27,12 +51,14 @@ export interface RecTrackerOptions {
   maxQueue?: number;
   /** 재시도 간격. 기본 [1000, 2000, 4000] */
   retryDelaysMs?: number[];
+  /** 전송 1회의 제한 시간. 기본 10000 */
+  sendTimeoutMs?: number;
   onDebug?: (message: string, data?: unknown) => void;
 }
 
 export interface RecTracker {
   track(type: RecEventType, fields?: RecEventFields): void;
-  /** unloading=true: finalizer 를 돌린 뒤 남은 것을 전부 즉시 보낸다(응답을 기다리지 않는다). */
+  /** unloading=true: finalizer 를 돌린 뒤 남은 것을 전부 즉시 보낸다(응답을 기다리지 않는다). 돌려주는 Promise 는 "전송을 맡겼다"는 뜻이지 서버가 받았다는 뜻이 아니다 — 이미 전송 중이면 곧바로 끝나고, unloading 경로는 응답을 기다리지 않는다. */
   flush(opts?: { unloading?: boolean }): Promise<void>;
   /** 페이지를 떠나기 직전에 불린다 — 체류·노출의 최종값을 track 하는 용도. 돌려주는 함수로 해제. */
   addFinalizer(fn: () => void): () => void;
@@ -54,8 +80,11 @@ export function createRecTracker(options: RecTrackerOptions): RecTracker {
     maxBatch = 50,
     maxQueue = 500,
     retryDelaysMs = [1000, 2000, 4000],
+    sendTimeoutMs = 10_000,
     onDebug,
   } = options;
+
+  const batchSize = Math.min(maxBatch, SERVER_MAX_BATCH);
 
   let queue: RecEvent[] = [];
   /** 전송 중이거나 재시도를 기다리는 묶음 */
@@ -95,7 +124,7 @@ export function createRecTracker(options: RecTrackerOptions): RecTracker {
     for (let attempt = 0; ; attempt++) {
       let result: SendResult;
       try {
-        result = await transport.send(toBatch(events), { unloading: false });
+        result = await withTimeout(transport.send(toBatch(events), { unloading: false }), sendTimeoutMs);
       } catch {
         result = "retry";
       }
@@ -113,6 +142,7 @@ export function createRecTracker(options: RecTrackerOptions): RecTracker {
     if (disposed) return;
 
     if (opts.unloading) {
+      if (runningFinalizers) return;   // finalizer 가 flush 를 다시 부른 경우 — 바깥 호출이 보낸다
       runningFinalizers = true;
       try {
         for (const fn of [...finalizers]) {
@@ -126,14 +156,16 @@ export function createRecTracker(options: RecTrackerOptions): RecTracker {
         runningFinalizers = false;
       }
       clearTimer();
-      const all = [...inflight, ...queue];
+      // 비콘 예산을 넘기지 않도록 최신 것만 보낸다 (오래된 것은 버린다)
+      const all = [...inflight, ...queue].slice(-(batchSize * MAX_UNLOAD_BATCHES));
       inflight = [];
       queue = [];
-      for (let i = 0; i < all.length; i += maxBatch) {
+      for (let i = 0; i < all.length; i += batchSize) {
         try {
-          void transport.send(toBatch(all.slice(i, i + maxBatch)), { unloading: true });
+          const sent = transport.send(toBatch(all.slice(i, i + batchSize)), { unloading: true });
+          Promise.resolve(sent).catch(() => undefined);   // 비동기 실패도 삼킨다 — 닫히는 중이라 할 수 있는 게 없다
         } catch {
-          // 닫히는 중 — 할 수 있는 게 없다
+          // 동기 예외도 마찬가지
         }
       }
       return;
@@ -144,7 +176,7 @@ export function createRecTracker(options: RecTrackerOptions): RecTracker {
     clearTimer();
     try {
       while (queue.length > 0) {
-        inflight = queue.slice(0, maxBatch);
+        inflight = queue.slice(0, batchSize);
         queue = queue.slice(inflight.length);
         await sendWithRetry(inflight);
         inflight = [];
@@ -158,11 +190,26 @@ export function createRecTracker(options: RecTrackerOptions): RecTracker {
 
   function track(type: RecEventType, fields: RecEventFields = {}): void {
     if (disposed) return;
+    let payload = fields.payload;
+    if (payload !== undefined) {
+      let size = Number.POSITIVE_INFINITY;
+      try {
+        size = JSON.stringify(payload).length;
+      } catch {
+        // 순환 참조 등 직렬화할 수 없는 payload
+      }
+      if (size > MAX_PAYLOAD_CHARS) {
+        onDebug?.("payload 가 너무 커서 뺐다 — 이벤트는 보낸다", type);
+        payload = undefined;
+      }
+    }
+    // fields 를 먼저 펼친다 — 넓은 객체가 넘어와도 eventId·type·clientTs 를 덮지 못하게
     const event: RecEvent = {
+      ...fields,
+      payload,
       eventId: uuid(),
       type,
       clientTs: new Date(now()).toISOString(),
-      ...fields,
     };
     queue.push(event);
     if (queue.length > maxQueue) queue = queue.slice(queue.length - maxQueue);

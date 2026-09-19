@@ -52,4 +52,17 @@ describe("DwellMeter", () => {
     m.scroll(0.2, 3000);
     expect(m.snapshot(4000).max_scroll_ratio).toBe(1);
   });
+
+  it("정확히 60초에 멈춘다", () => {
+    const m = new DwellMeter("open-1", 0);
+    expect(m.snapshot(59_999)).toMatchObject({ visible_ms: 59_999, idle_capped: false });
+    expect(m.snapshot(60_000)).toMatchObject({ visible_ms: 60_000, idle_capped: true });
+  });
+
+  it("오래 떠났다 돌아와도 떠나 있던 시간은 세지 않는다", () => {
+    const m = new DwellMeter("open-1", 0);
+    m.setPageVisible(false, 4000);
+    m.setPageVisible(true, 600_000);
+    expect(m.snapshot(601_000).visible_ms).toBe(5000);
+  });
 });

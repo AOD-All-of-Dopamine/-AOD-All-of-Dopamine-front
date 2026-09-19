@@ -43,8 +43,11 @@ export class ImpressionMeter {
     return Math.max(0, IMPRESSION_MIN_MS - soFar);
   }
 
-  /** 카드가 화면을 완전히 벗어났을 때. 기준을 넘긴 뒤라면 최종값을 내고 끝낸다. */
+  /** 카드가 화면을 완전히 벗어났을 때. 시계를 멈추고, 기준을 넘긴 뒤라면 최종값을 내고 끝낸다. */
   leave(nowMs: number): ImpressionSnapshot | null {
+    if (this.finished) return null;
+    this.accumulate(nowMs);
+    this.countingSince = null;   // 화면 밖 — update 없이 leave 만 불려도 더 세지 않는다
     return this.thresholdSent ? this.finish(nowMs) : null;
   }
 

@@ -158,12 +158,15 @@ export function createApiClients(options: ApiClientOptions): ApiClients {
 
   privateApi.interceptors.request.use(async (config) => {
     const token = await getToken();
-    if (token) {
-      config.headers = config.headers ?? {};
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    if (token) config.headers.set("Authorization", `Bearer ${token}`);
     if (getExtraHeaders) {
-      for (const [name, value] of Object.entries(getExtraHeaders())) {
+      let extra: Record<string, string> = {};
+      try {
+        extra = getExtraHeaders() ?? {};
+      } catch {
+        // 로깅용 헤더 때문에 요청이 깨지면 안 된다 (저장소 접근 예외 등)
+      }
+      for (const [name, value] of Object.entries(extra)) {
         if (value && !config.headers.has(name)) config.headers.set(name, value);
       }
     }

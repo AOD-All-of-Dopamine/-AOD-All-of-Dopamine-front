@@ -57,4 +57,18 @@ describe("ImpressionMeter", () => {
     expect(m.finish(400)).toEqual({ max_visible_ratio: 0.7, visible_ms: 400, final: true });
     expect(m.finish(800)).toBeNull();
   });
+
+  it("정확히 50% 도 센다", () => {
+    const m = new ImpressionMeter();
+    m.update(0.5, true, 0);
+    expect(m.tick(1000)).toEqual({ max_visible_ratio: 0.5, visible_ms: 1000, final: false });
+  });
+
+  it("update 없이 leave 만 불려도 화면 밖 시간은 세지 않는다", () => {
+    const m = new ImpressionMeter();
+    m.update(1, true, 0);
+    expect(m.leave(400)).toBeNull();
+    expect(m.tick(10_000)).toBeNull();
+    expect(m.finish(20_000)).toEqual({ max_visible_ratio: 1, visible_ms: 400, final: true });
+  });
 });

@@ -6,6 +6,7 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { createApiClients, createApis } from "../src/api";
 import { ApiProvider, useToggleLike } from "../src/hooks";
+import { REC_HEADER } from "../src/tracking";
 
 const BASE = "http://test.local";
 let seen: Record<string, string | null> = {};
@@ -51,7 +52,7 @@ const makeApis = () =>
     createApiClients({
       baseURL: BASE,
       getToken: () => "tok",
-      getExtraHeaders: () => ({ "X-Anon-Id": "anon-1", "X-Session-Id": "sess-1" }),
+      getExtraHeaders: () => ({ [REC_HEADER.anonId]: "anon-1", [REC_HEADER.sessionId]: "sess-1" }),
     }),
   );
 
@@ -95,5 +96,33 @@ describe("추천 맥락 헤더", () => {
     result.current.mutate();
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(seen.source).toBe("detail");
+  });
+
+  it("getExtraHeaders 가 예외를 던져도 요청은 나간다", async () => {
+    const apis = createApis(
+      createApiClients({
+        baseURL: BASE,
+        getToken: () => "tok",
+        getExtraHeaders: () => {
+          throw new Error("storage blocked");
+        },
+      }),
+    );
+    await expect(apis.interactionApi.toggleLike(1, { source: "detail" })).resolves.toBeDefined();
+    expect(seen.source).toBe("detail");
+    expect(seen.anonId).toBeNull();
+  });
+
+  it("호출별 헤더가 공통 헤더보다 우선한다", async () => {
+    const apis = createApis(
+      createApiClients({
+        baseURL: BASE,
+        getToken: () => "tok",
+        getExtraHeaders: () => ({ [REC_HEADER.source]: "global", [REC_HEADER.anonId]: "anon-1" }),
+      }),
+    );
+    await apis.interactionApi.toggleLike(1, { source: "detail" });
+    expect(seen.source).toBe("detail");
+    expect(seen.anonId).toBe("anon-1");
   });
 });

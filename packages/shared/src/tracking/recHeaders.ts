@@ -1,4 +1,4 @@
-import type { RecRequestContext } from "./types";
+import type { RecRequestContext, TrackerIds } from "./types";
 
 /** 백엔드 RecContextFilter 가 읽는 헤더 이름. */
 export const REC_HEADER = {
@@ -16,4 +16,9 @@ export function recHeaders(ctx?: RecRequestContext): Record<string, string> {
   if (ctx?.requestId) headers[REC_HEADER.requestId] = ctx.requestId;
   if (ctx?.impressionId) headers[REC_HEADER.impressionId] = ctx.impressionId;
   return headers;
+}
+
+/** 익명·세션 식별자 헤더 — createApiClients({ getExtraHeaders }) 에 넘긴다. */
+export function idHeaders(ids: TrackerIds): Record<string, string> {
+  return { [REC_HEADER.anonId]: ids.anonId(), [REC_HEADER.sessionId]: ids.sessionId() };
 }
