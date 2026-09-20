@@ -14,6 +14,8 @@ export interface OnboardingWorkTileProps {
   work: WorkSummary;
   selected: boolean;
   onToggle: (work: WorkSummary) => void;
+  /** 저장이 도는 동안 잠근다 — 날아가는 중인 좋아요를 화면에서 해제하면 서버와 어긋난다. */
+  disabled?: boolean;
 }
 
 /**
@@ -28,7 +30,12 @@ export interface OnboardingWorkTileProps {
  * 테두리 굵기(ring)와 우상단 체크 배지가 함께 바뀐다.
  * 카드 하단 foot 행은 생략한다 — 고르는 화면이라 평점·요일보다 제목·연도·장르가 먼저다.
  */
-const OnboardingWorkTile = ({ work, selected, onToggle }: OnboardingWorkTileProps) => {
+const OnboardingWorkTile = ({
+  work,
+  selected,
+  onToggle,
+  disabled = false,
+}: OnboardingWorkTileProps) => {
   const category = categoryOf(work.domain);
   const meta = workCardMeta(work);
   const tags = workCardTags(work);
@@ -37,9 +44,10 @@ const OnboardingWorkTile = ({ work, selected, onToggle }: OnboardingWorkTileProp
     <button
       type="button"
       onClick={() => onToggle(work)}
+      disabled={disabled}
       aria-pressed={selected}
       aria-label={work.title}
-      className={`relative flex flex-col bg-surface text-left transition active:scale-[0.99] ${cardBase} ${
+      className={`relative flex flex-col bg-surface text-left transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 ${cardBase} ${
         selected ? "border-accent-ink ring-2 ring-accent-ink" : "hover:border-line-strong"
       }`}
     >

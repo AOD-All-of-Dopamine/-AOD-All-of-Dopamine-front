@@ -19,13 +19,17 @@ export function markPendingOnboarding(username: string): void {
   }
 }
 
-/** 이 아이디로 온보딩이 예약돼 있었는지. **읽으면서 지운다** — 한 번만 쓴다. */
+/**
+ * 이 아이디로 온보딩이 예약돼 있었는지. 맞을 때만 **읽으면서 지운다**(한 번만 쓴다).
+ * 아이디가 다르면 표시를 그대로 둔다 — 가입한 사람보다 다른 계정이 먼저 로그인했다고 해서
+ * 그 사람의 온보딩 진입을 태워 없앨 이유가 없다(표시는 계정마다 하나뿐이라 새지도 않는다).
+ */
 export function takePendingOnboarding(username: string): boolean {
   try {
     const stored = sessionStorage.getItem(PENDING_ONBOARDING_KEY);
-    if (stored === null) return false;
+    if (stored === null || stored !== username) return false;
     sessionStorage.removeItem(PENDING_ONBOARDING_KEY);
-    return stored === username;
+    return true;
   } catch {
     return false;
   }

@@ -8,10 +8,12 @@ import {
   domainsBelowHint,
   isPicked,
   isSaved,
+  onboardingLandingPath,
   onboardingReducer,
   onboardingStatusText,
   pendingPicks,
   picksByDomain,
+  savedPicks,
   toOnboardingPick,
   type OnboardingPick,
   type OnboardingSelection,
@@ -81,7 +83,7 @@ describe("onboardingReducer - toggle", () => {
   it("이미 저장된 작품은 해제되지 않는다 (서버에 진짜 좋아요가 남아 있다)", () => {
     const saved = onboardingReducer(pickAll(pick(1, "GAME"), pick(2, "MOVIE")), {
       type: "saved",
-      contentIds: [1],
+      picks: [pick(1, "GAME")],
     });
     const after = onboardingReducer(saved, { type: "toggle", pick: pick(1, "GAME") });
     expect(after).toBe(saved); // 같은 참조 — 아무 일도 일어나지 않는다
@@ -93,24 +95,65 @@ describe("onboardingReducer - toggle", () => {
 describe("onboardingReducer - saved", () => {
   it("성공분을 쌓고 중복은 한 번만 남긴다", () => {
     const base = pickAll(pick(1, "GAME"), pick(2, "MOVIE"), pick(3, "TV"));
-    const first = onboardingReducer(base, { type: "saved", contentIds: [1, 2] });
-    const second = onboardingReducer(first, { type: "saved", contentIds: [2, 3] });
+    const first = onboardingReducer(base, { type: "saved", picks: [pick(1, "GAME"), pick(2, "MOVIE")] });
+    const second = onboardingReducer(first, { type: "saved", picks: [pick(2, "MOVIE"), pick(3, "TV")] });
     expect([...second.saved]).toEqual([1, 2, 3]);
+    expect(second.picks.map((p) => p.contentId)).toEqual([1, 2, 3]);
   });
 
   it("더할 것이 없으면 상태를 그대로 둔다", () => {
-    const base = onboardingReducer(pickAll(pick(1, "GAME")), { type: "saved", contentIds: [1] });
-    expect(onboardingReducer(base, { type: "saved", contentIds: [1] })).toBe(base);
+    const base = onboardingReducer(pickAll(pick(1, "GAME")), {
+      type: "saved",
+      picks: [pick(1, "GAME")],
+    });
+    expect(onboardingReducer(base, { type: "saved", picks: [pick(1, "GAME")] })).toBe(base);
+  });
+
+  it("저장 도중에 해제된 작품도 성공했으면 다시 담긴다 (saved ⊆ picks)", () => {
+    // 5개 고르고 `완료` → 저장이 도는 사이에 5번을 해제했는데 그 요청은 이미 성공했다.
+    const picked = pickAll(pick(1, "GAME"), pick(2, "GAME"), pick(3, "MOVIE"), pick(5, "TV"));
+    const deselected = onboardingReducer(picked, { type: "toggle", pick: pick(5, "TV") });
+    expect(deselected.picks.map((p) => p.contentId)).toEqual([1, 2, 3]);
+
+    const saved = onboardingReducer(deselected, {
+      type: "saved",
+      picks: [pick(1, "GAME"), pick(2, "GAME"), pick(3, "MOVIE"), pick(5, "TV")],
+    });
+    // 서버에 좋아요가 남았으니 화면에서도 다시 선택 상태여야 한다 — 뒤에 붙는다.
+    expect(saved.picks.map((p) => p.contentId)).toEqual([1, 2, 3, 5]);
+    expect(isPicked(saved, 5)).toBe(true);
+    expect(isSaved(saved, 5)).toBe(true);
+    expect(saved.saved.every((id) => isPicked(saved, id))).toBe(true);
   });
 });
 
-describe("pendingPicks", () => {
+describe("pendingPicks · savedPicks", () => {
   it("아직 저장하지 않은 것만, 고른 순서로 돌려준다", () => {
     const state = onboardingReducer(pickAll(pick(1, "GAME"), pick(2, "MOVIE"), pick(3, "TV")), {
       type: "saved",
-      contentIds: [2],
+      picks: [pick(2, "MOVIE")],
     });
     expect(pendingPicks(state).map((p) => p.contentId)).toEqual([1, 3]);
+    expect(savedPicks(state).map((p) => p.contentId)).toEqual([2]);
+    expect(savedPicks(EMPTY_ONBOARDING_SELECTION)).toEqual([]);
+  });
+});
+
+describe("onboardingLandingPath", () => {
+  it("전체 칩이 읽어 주는 분야가 하나라도 있으면 /for-you 다", () => {
+    expect(onboardingLandingPath(["WEBTOON", "MOVIE"])).toBe("/for-you");
+    expect(onboardingLandingPath(["GAME"])).toBe("/for-you");
+    expect(onboardingLandingPath(["WEBNOVEL", "WEBTOON"])).toBe("/for-you");
+  });
+
+  it("웹툰만 골랐으면 웹툰 칩으로 보낸다 (전체 칩은 웹툰을 섞지 않는다)", () => {
+    expect(onboardingLandingPath(["WEBTOON"])).toBe("/for-you?tab=webtoon");
+    expect(onboardingLandingPath(["WEBTOON", "WEBTOON"])).toBe("/for-you?tab=webtoon");
+  });
+
+  it("고른 것이 없거나 모르는 분야면 기본값으로 둔다", () => {
+    expect(onboardingLandingPath([])).toBe("/for-you");
+    expect(onboardingLandingPath(["WEBTOON", "모르는도메인"])).toBe("/for-you");
   });
 });
 
@@ -135,13 +178,27 @@ describe("canFinishOnboarding · picksByDomain · domainsBelowHint", () => {
 });
 
 describe("onboardingStatusText", () => {
-  it("남은 개수를 알려 주고, 채우면 완료 가능하다고 말한다", () => {
+  it("남은 개수를 알려 준다 (최소 개수를 못 채웠으면 분야 얘기는 꺼내지 않는다)", () => {
     expect(onboardingStatusText(EMPTY_ONBOARDING_SELECTION)).toBe(
       "아직 고른 작품이 없어요. 최소 3개를 골라 주세요.",
     );
     expect(onboardingStatusText(pickAll(pick(1, "GAME")))).toBe("1개 선택 — 2개 더 고르면 완료할 수 있어요.");
+    expect(onboardingStatusText(pickAll(pick(1, "GAME"), pick(2, "MOVIE")))).toBe(
+      "2개 선택 — 1개 더 고르면 완료할 수 있어요.",
+    );
+  });
+
+  it("분야마다 권장치를 채웠으면 완료 가능하다고만 말한다", () => {
+    const state = pickAll(pick(1, "GAME"), pick(2, "GAME"), pick(3, "TV"), pick(4, "TV"));
+    expect(onboardingStatusText(state)).toBe("4개 선택 — 완료할 수 있어요.");
+  });
+
+  it("완료할 수 있게 된 뒤에는 1개뿐인 분야를 귀띔한다 (막지는 않는다)", () => {
     expect(onboardingStatusText(pickAll(pick(1, "GAME"), pick(2, "GAME"), pick(3, "TV")))).toBe(
-      "3개 선택 — 완료할 수 있어요.",
+      "3개 선택 — 완료할 수 있어요. 시리즈에서 1개 더 고르면 추천이 넓어져요.",
+    );
+    expect(onboardingStatusText(pickAll(pick(1, "GAME"), pick(2, "MOVIE"), pick(3, "TV")))).toBe(
+      "3개 선택 — 완료할 수 있어요. 게임·영화·시리즈에서 1개 더 고르면 추천이 넓어져요.",
     );
   });
 });
