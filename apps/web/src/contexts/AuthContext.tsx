@@ -10,13 +10,20 @@ import { useApis } from "@aod/shared/hooks";
 import { recKeys } from "@aod/shared/queries";
 import type { AuthResponse, UserInfo } from "@aod/shared/api";
 import { clearRecChains } from "../hooks/useRecChain";
+import { clearPendingOnboarding, markPendingOnboarding } from "../hooks/pendingOnboarding";
+
+/** 가입 결과. 가입은 로그인이 아니므로 토큰이 아니라 "다음에 무엇을 할지"만 돌려준다. */
+export interface SignupResult {
+  username: string;
+  needsOnboarding: boolean;
+}
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: UserInfo | null;
   token: string | null;
   login: (username: string, password: string) => Promise<void>;
-  signup: (username: string, email: string, password: string) => Promise<void>;
+  signup: (username: string, email: string, password: string) => Promise<SignupResult>;
   logout: () => void;
   loading: boolean;
   authReady: boolean;
@@ -119,10 +126,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const signup = async (username: string, email: string, password: string) => {
+  const signup = async (
+    username: string,
+    email: string,
+    password: string,
+  ): Promise<SignupResult> => {
     setLoading(true);
     try {
-      await authApi.signup({ username, email, password });
+      const response = await authApi.signup({ username, email, password });
+      const result: SignupResult = {
+        username: response.username || username,
+        needsOnboarding: response.needsOnboarding === true,
+      };
+      // 가입은 로그인을 시키지 않는다(응답에 토큰이 없다) — 다음 로그인 때 온보딩으로
+      // 보내려고 아이디를 표시해 둔다 (추천 탭 설계 §2-5·§6-3).
+      if (result.needsOnboarding) markPendingOnboarding(result.username);
+      else clearPendingOnboarding();
+      return result;
     } catch (error: any) {
       throw new Error(
         error?.response?.data?.error || "회원가입에 실패했습니다.",

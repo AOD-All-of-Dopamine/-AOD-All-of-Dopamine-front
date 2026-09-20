@@ -35,18 +35,24 @@ export interface DuplicateCheckResponse {
   message?: string;
 }
 
+/**
+ * POST /api/auth/signup 200 본문.
+ * 가입은 **로그인이 아니다** — 토큰을 주지 않는다(AuthController.registerUser).
+ * needsOnboarding 은 6번 백엔드부터 내려오는 추가 필드라 선택으로 둔다(옛 서버 호환).
+ */
+export interface SignupResponse {
+  message: string;
+  username: string;
+  needsOnboarding?: boolean;
+}
+
 export function createAuthApi(publicApi: AxiosInstance, privateApi: AxiosInstance) {
   return {
     /**
      * 회원가입
      */
-    signup: async (
-      payload: SignupRequest,
-    ): Promise<{ message: string; username: string }> => {
-      const { data } = await publicApi.post<{
-        message: string;
-        username: string;
-      }>("/api/auth/signup", payload);
+    signup: async (payload: SignupRequest): Promise<SignupResponse> => {
+      const { data } = await publicApi.post<SignupResponse>("/api/auth/signup", payload);
       return data;
     },
 

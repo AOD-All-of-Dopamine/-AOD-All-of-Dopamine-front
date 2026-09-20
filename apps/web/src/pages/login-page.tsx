@@ -2,6 +2,7 @@
 import { useNavigate, Link } from "react-router-dom";
 import { ArrowLeft } from "@phosphor-icons/react";
 import { useAuth } from "../contexts/AuthContext";
+import { takePendingOnboarding } from "../hooks/pendingOnboarding";
 
 /**
  * /login - 목업 없음. 기존 구조(중앙 정렬 폼) 유지 + 토큰 재스킨.
@@ -38,7 +39,8 @@ export default function LoginPage() {
 
     try {
       await login(formData.username, formData.password);
-      navigate("/profile");
+      // 방금 가입한 사람만 온보딩으로 보낸다 — 기존 사용자의 로그인 흐름은 그대로다(설계 §4-3)
+      navigate(takePendingOnboarding(formData.username) ? "/onboarding" : "/profile");
     } catch (err: any) {
       setError(err.message || "로그인에 실패했습니다.");
     } finally {
