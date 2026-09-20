@@ -15,9 +15,28 @@ export interface ToastProps {
   focusAction?: boolean;
   /** focusAction 토스트가 포커스를 쥔 채 사라질 때 부른다 (목록 등 안정된 자리로 돌려보낸다). */
   onFocusRelease?: () => void;
+  /**
+   * 띄울 높이. 기본은 <lg 하단 탭(64px) 위 · lg 는 바닥 가까이다.
+   * "above-bar" 는 화면 하단에 **고정 액션 바**가 있는 라우트(온보딩)용 — lg 에서도 bottom-24 로
+   * 올려 70px 짜리 바를 덮지 않게 한다(토스트 알약은 pointer-events-auto 라 덮으면 클릭을 먹는다).
+   */
+  placement?: "default" | "above-bar";
 }
 
-const Toast = ({ message, actionLabel, onAction, focusAction, onFocusRelease }: ToastProps) => {
+/** 두 값 다 기존에 쓰던 유틸이라 빌드된 CSS 에 이미 들어 있다(새 클래스 아님). */
+const PLACEMENT_CLASS: Record<NonNullable<ToastProps["placement"]>, string> = {
+  default: "bottom-24 lg:bottom-8",
+  "above-bar": "bottom-24",
+};
+
+const Toast = ({
+  message,
+  actionLabel,
+  onAction,
+  focusAction,
+  onFocusRelease,
+  placement = "default",
+}: ToastProps) => {
   const actionRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -37,7 +56,7 @@ const Toast = ({ message, actionLabel, onAction, focusAction, onFocusRelease }: 
   return (
     <div
       role="status"
-      className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-4 lg:bottom-8"
+      className={`pointer-events-none fixed inset-x-0 z-50 flex justify-center px-4 ${PLACEMENT_CLASS[placement]}`}
     >
       <span className="pointer-events-auto flex min-w-0 items-center gap-2 rounded-full bg-ink px-[18px] py-2.5 text-[13.5px] font-semibold text-surface shadow-lift">
         <span className="truncate">{message}</span>

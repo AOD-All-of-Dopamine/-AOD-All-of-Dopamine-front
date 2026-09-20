@@ -68,8 +68,17 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      await signup(formData.username, formData.email, formData.password);
-      alert("회원가입이 완료되었습니다. 로그인해주세요.");
+      const result = await signup(
+        formData.username,
+        formData.email,
+        formData.password,
+      );
+      // 가입 응답에는 토큰이 없다 — 로그인을 거쳐야 온보딩으로 갈 수 있다(AuthContext 가 기억해 둔다)
+      alert(
+        result.needsOnboarding
+          ? "회원가입이 완료되었습니다. 로그인하면 좋아하는 작품을 고를 수 있어요."
+          : "회원가입이 완료되었습니다. 로그인해주세요.",
+      );
       navigate("/login");
     } catch (err: any) {
       setError(err.message || "회원가입에 실패했습니다.");

@@ -25,13 +25,16 @@ const LOGIN_NOTICE: RecNotice = {
   actionTo: "/login",
 };
 
-/** 온보딩(6번)이 나오기 전까지는 탐색으로 보낸다 (설계 §7). */
+/**
+ * 시드 0 → 온보딩 "좋아하는 작품 고르기"로 보낸다 (REC_TAB_DESIGN §2-5·§2-7).
+ * 아래 SEED_PLATFORM_NOTICE 는 탐색 그대로다 — 그 사용자는 시드가 있고 이 분야에만 없다.
+ */
 const SEED_NOTICE: RecNotice = {
   kind: "seed",
   title: "좋아하는 작품을 담으면 추천이 시작돼요",
-  description: "마음에 든 작품에 좋아요를 눌러 보세요.",
-  actionLabel: "작품 둘러보기",
-  actionTo: "/explore",
+  description: "좋아하는 작품 3개만 골라 주세요.",
+  actionLabel: "작품 고르기",
+  actionTo: "/onboarding",
 };
 
 const SEED_PLATFORM_NOTICE: RecNotice = {

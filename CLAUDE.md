@@ -36,7 +36,7 @@
 @aod/shared/constants   # DOMAIN_LABEL_MAP, DOMAIN_FILTERS, DOMAIN_PLATFORMS, PLATFORM_LABELS
 @aod/shared/api         # createApiClients, createApis, 각 API 팩토리 + DTO 타입
 @aod/shared/queries     # query key 팩토리 (workKeys, reviewKeys …)
-@aod/shared/rec         # 추천 순수 로직 (mergeRecPages, recNotice, recEvents, 체인 저장소)
+@aod/shared/rec         # 추천 순수 로직 (mergeRecPages, recNotice, recEvents, 체인 저장소, 온보딩 선택·저장 큐)
 @aod/shared/hooks       # ApiProvider, useApis, 데이터 훅 26개 (useWorks, useInteractions …)
 ```
 
@@ -101,7 +101,7 @@ apps/web/
 | `/profile/likes` | my-likes-page | 내 좋아요 |
 | `/login` | login-page | 로그인 |
 | `/signup` | signup-page | 회원가입 |
-| `/onboarding` | onboarding-page | 온보딩 |
+| `/onboarding` | onboarding-page | 온보딩 — 좋아하는 작품 고르기 (로그인 필요, 비로그인은 `/login`) |
 
 NavigationBar는 `/home`, `/for-you`, `/explore`, `/ranking`, `/new`, `/profile/*` 에서만 표시 (`public-layout.tsx`에서 경로 감지).
 
@@ -163,3 +163,4 @@ React Query 전역 설정: staleTime 5분, 윈도우 포커스 시 refetch 비�
 - 인증 보호는 라우터 레벨이 아닌 각 페이지에서 처리
 - `useAuth()` 훅으로 `{ isAuthenticated, user, token, login, signup, logout }` 사용
 - 백엔드는 refresh token 미사용(단일 JWT) — 도입 시 스펙 §5 정책 참조
+- 가입은 로그인이 아니다 — `POST /api/auth/signup`은 토큰을 주지 않는다. 응답의 `needsOnboarding`을 `sessionStorage`(`apps/web/src/hooks/pendingOnboarding.ts`)에 표시해 두고, 이어지는 첫 로그인에서 `/onboarding`으로 보낸다
