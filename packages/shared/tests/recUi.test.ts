@@ -35,10 +35,20 @@ describe("recNotice", () => {
     expect(recNotice({ fallback: false, fallbackReason: null })).toBeNull();
   });
 
-  it("비로그인은 로그인 배너, 시드 없음은 탐색으로 보낸다", () => {
+  it("비로그인은 로그인 배너, 시드 0 은 온보딩으로 보낸다", () => {
     expect(recNotice({ fallback: true, fallbackReason: "anonymous" })).toMatchObject({ kind: "login", actionTo: "/login" });
-    expect(recNotice({ fallback: true, fallbackReason: "no_seed" })).toMatchObject({ kind: "seed", actionTo: "/explore" });
-    expect(recNotice({ fallback: true, fallbackReason: "no_seed_platform" })).toMatchObject({ kind: "seed_platform", actionTo: "/explore" });
+    expect(recNotice({ fallback: true, fallbackReason: "no_seed" })).toMatchObject({
+      kind: "seed",
+      actionTo: "/onboarding",
+      actionLabel: "작품 고르기",
+    });
+  });
+
+  it("이 분야에만 시드가 없으면 온보딩이 아니라 탐색으로 보낸다 (시드 자체는 있다)", () => {
+    expect(recNotice({ fallback: true, fallbackReason: "no_seed_platform" })).toMatchObject({
+      kind: "seed_platform",
+      actionTo: "/explore",
+    });
   });
 
   it("서버 사정(실패·타임아웃·차단기·꺼짐·0건)은 조용히 대체 목록만 보여 준다", () => {
