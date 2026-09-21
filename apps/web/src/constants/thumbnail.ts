@@ -31,6 +31,21 @@ export const thumbFitMap: Record<Category, ThumbFit> = {
   webnovel: "contain",
 };
 
+/**
+ * 썸네일 원본의 모양 - 가로로 긴 틀(홈 히어로 FeatureCard)에 넣을 때 쓴다.
+ * landscape 는 틀을 그대로 채우고, portrait 는 자르지 않고 세워 둔다.
+ * (thumbFitMap 은 세로 2:3 틀 기준이라 축이 다르다 - 영화 포스터는 2:3 틀은 채우지만 가로 틀은 못 채운다.)
+ */
+export type ThumbShape = "portrait" | "landscape";
+
+export const thumbShapeMap: Record<Category, ThumbShape> = {
+  movie: "portrait",
+  tv: "portrait",
+  game: "landscape",
+  webtoon: "portrait",
+  webnovel: "portrait",
+};
+
 /** 백엔드 도메인 문자열("GAME" 등, 대소문자 무관) -> Category. 모르는 값은 movie */
 export const categoryOf = (domain?: string | null): Category => {
   const key = domain?.toLowerCase() as Category;

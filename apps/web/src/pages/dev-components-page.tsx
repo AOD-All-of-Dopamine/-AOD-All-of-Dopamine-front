@@ -245,6 +245,7 @@ export default function DevComponentsPage() {
           <FeatureCard
             variant="main"
             kicker="오늘의 추천 · 게임"
+            domain="GAME"
             title="검은 신화: 오공"
             sub="2024 · 평점 4.5"
             imageUrl={BLACK_MYTH}
@@ -254,6 +255,7 @@ export default function DevComponentsPage() {
             <FeatureCard
               variant="side"
               kicker="웹툰"
+              domain="WEBTOON"
               title="화산귀환"
               imageUrl={HWASAN}
               to="/work/webtoon-hwasan"
@@ -263,7 +265,7 @@ export default function DevComponentsPage() {
               kicker="영화"
               title="이미지 누락 폴백"
               imageUrl={null}
-              fallbackIconUrl={thumbnailFallbackMap.movie}
+              domain="MOVIE"
               to="/work/movie-fallback"
             />
           </div>
