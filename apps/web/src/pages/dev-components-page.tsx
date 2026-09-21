@@ -23,6 +23,9 @@ import EmptyState from "../components/ui/EmptyState";
 import SkeletonCard from "../components/ui/SkeletonCard";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
 import { thumbnailFallbackMap } from "../constants/thumbnail";
+import ShelfPlayground, {
+  BookcasePlayground,
+} from "../components/shelf/ShelfPlayground";
 
 /**
  * /dev/components - Phase 2 공용 컴포넌트 시각 게이트용 갤러리.
@@ -76,6 +79,15 @@ export default function DevComponentsPage() {
         라이트 리디자인 공용 컴포넌트(src/components/ui) 22종을 mockups/*.html
         기준 실물 샘플로 렌더합니다.
       </p>
+
+      {/* 0. 컬렉션 책장 - 로컬 상태 플레이그라운드 (로그인 불필요) */}
+      <Section title="Shelf · 컬렉션 책장 (플레이그라운드)">
+        <ShelfPlayground />
+      </Section>
+
+      <Section title="Bookcase · 내 책장 / 발견 카드 / 담기 띠">
+        <BookcasePlayground />
+      </Section>
 
       {/* 1. WorkCard */}
       <Section title="WorkCard">
