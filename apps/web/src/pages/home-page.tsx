@@ -2,17 +2,16 @@ import { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { CaretRight, WarningCircle } from "@phosphor-icons/react";
 import { ExternalRanking } from "@aod/shared/api";
-import {
-  useRecentReleases,
-  useRecentReviewedWorks,
-  useUpcomingReleases,
-} from "@aod/shared/hooks";
+import { useRecentReviewedWorks, useReleasesByDomain } from "@aod/shared/hooks";
 import { useAllRankings } from "@aod/shared/hooks";
 import { WorkSummary } from "@aod/shared/types";
-import { DOMAIN_LABEL_MAP } from "@aod/shared/constants";
+import { DOMAIN_LABEL_MAP, platformLabel } from "@aod/shared/constants";
 import { watchPlatformLabels } from "../constants/platforms";
 import { categoryOf, thumbnailFallbackMap } from "../constants/thumbnail";
 import { daysUntil, dDayOf, parseYmd } from "../utils/releaseDate";
+import DomainRotator, {
+  type RotatorSlide,
+} from "../components/ui/DomainRotator";
 import FeatureCard from "../components/ui/FeatureCard";
 import RailCard from "../components/ui/RailCard";
 import ReviewQuoteCard from "../components/ui/ReviewQuoteCard";
@@ -44,6 +43,10 @@ import SegmentedControl from "../components/ui/SegmentedControl";
  * - 출시 예정: D-day는 releaseDate로 클라 계산 (당일=D-DAY, 날짜 없음=미정 tba).
  *   이미 지난 날짜 항목은 섹션 성격상 제외.
  * - 히어로에 쓰인 작품은 중복 노출 방지 - 리뷰 섹션은 메인, 신작 릴은 서브 2건 제외.
+ * - 새로 나온 작품 · 이번 주 인기 · 출시 예정은 **도메인별 슬라이드**(DomainRotator)다 - 시간이 지나면
+ *   다음 도메인이 밀고 들어온다. 전 도메인 한 번 조회로는 매일 올라오는 도메인(웹소설·웹툰)이 목록을
+ *   다 차지해서, 신작·출시 예정은 도메인마다 따로 받는다(useReleasesByDomain). 작품이 없는 도메인은
+ *   슬라이드에서 빠지고, 하나만 남으면 회전 없이 그대로 보인다. 인기는 플랫폼별 실제 순위 상위 6.
  */
 
 /** 홈 인기 섹션에서 교차 배치할 외부 랭킹 플랫폼 (도메인 순서 고정) */
@@ -64,6 +67,14 @@ const RANK_PLATFORM_DOMAIN: Record<string, string> = {
 };
 
 const HOME_RANK_SIZE = 6;
+
+/** 도메인별 슬라이드의 순서 (인기 섹션의 플랫폼 순서와 같다) */
+const HOME_DOMAINS = ["MOVIE", "TV", "GAME", "WEBTOON", "WEBNOVEL"] as const;
+const HOME_RAIL_SIZE = 10;
+const HOME_UPCOMING_SIZE = 3;
+/** 슬라이드 하나가 머무는 시간 · 섹션끼리 동시에 넘어가지 않게 엇갈리는 간격 */
+const ROTATE_MS = 7000;
+const ROTATE_STAGGER_MS = 2300;
 
 const domainLabel = (domain?: string) =>
   DOMAIN_LABEL_MAP[domain ?? ""] ?? domain ?? "";
@@ -180,52 +191,151 @@ const reviewGridClass =
 export default function HomePage() {
   const navigate = useNavigate();
   const reviewed = useRecentReviewedWorks({ size: 6 });
-  const releases = useRecentReleases({ size: 8 });
-  const upcoming = useUpcomingReleases({ size: 3 });
+  // 신작은 도메인마다 따로 받는다 - 릴의 도메인별 슬라이드와 히어로 서브 2건이 같이 쓴다
+  // (전 도메인 조회를 따로 한 번 더 하지 않는다 - 서버는 같은 3개월치를 두 번 읽게 된다)
+  const releasesByDomain = useReleasesByDomain("recent", HOME_DOMAINS, HOME_RAIL_SIZE);
+  const upcomingByDomain = useReleasesByDomain("upcoming", HOME_DOMAINS, HOME_UPCOMING_SIZE);
   const rankings = useAllRankings();
 
+  // 도메인 5개가 다 도착한 뒤에 고른다 - 먼저 온 도메인만 보고 골랐다가 나중에 바뀌면 화면이 튄다
+  const releasesSettled = releasesByDomain.every((r) => !r.isLoading);
+  const newestReleases = releasesSettled
+    ? releasesByDomain
+        .flatMap((r) => r.items)
+        .sort((x, y) => (y.releaseDate ?? "").localeCompare(x.releaseDate ?? ""))
+    : [];
+
   // TODO: 추천 엔진 연동 시 교체 - 현재는 최근 리뷰작 1건(메인) + 신작 상위 2건(서브) 임시 선정
-  const heroMain =
-    reviewed.data?.content?.[0] ?? releases.data?.content?.[0];
-  const heroSides = (releases.data?.content ?? [])
-    .filter((w) => w.id !== heroMain?.id)
-    .slice(0, 2);
-  const heroLoading = reviewed.isLoading || releases.isLoading;
-  const heroError = reviewed.isError && releases.isError;
+  const reviewedMain = reviewed.data?.content?.[0];
+  const heroMain = reviewedMain ?? newestReleases[0];
+  const heroSides = newestReleases.filter((w) => w.id !== heroMain?.id).slice(0, 2);
+  const heroLoading = reviewed.isLoading || (!reviewedMain && !releasesSettled);
+  const heroError = reviewed.isError && releasesByDomain.every((r) => r.isError);
+  /** 서브 칸 - 신작이 아직 오는 중이면 자리(스켈레톤)를 잡아 둔다 */
+  const heroSidesPending = !releasesSettled;
 
   // 히어로 중복 노출 방지 - 릴은 히어로 서브 2건(+reviewed 실패 폴백 시 메인), 리뷰 섹션은 히어로 메인 제외
   const heroSideIds = new Set(heroSides.map((w) => w.id));
-  const railItems = (releases.data?.content ?? []).filter(
-    (w) => !heroSideIds.has(w.id) && w.id !== heroMain?.id,
-  );
   const reviewItems = (reviewed.data?.content ?? [])
     .filter((w) => w.id !== heroMain?.id)
     .slice(0, 3);
-  // 출시 예정 섹션 성격상 이미 지난 날짜는 제외 (날짜 미정은 유지)
-  const upcomingItems = (upcoming.data?.content ?? []).filter((w) => {
-    const diff = daysUntil(w.releaseDate);
-    return diff === null || diff >= 0;
-  });
 
-  // 플랫폼별 상위 랭킹을 도메인 순서로 라운드 로빈 교차 배치 (contentId 보유분만)
-  const rankItems = useMemo(() => {
-    const data = rankings.data ?? [];
-    const lists = HOME_RANK_PLATFORMS.map((platform) =>
-      data
-        .filter((item) => item.platform === platform && item.contentId)
-        .sort((a, b) => a.ranking - b.ranking),
+  // 새로 나온 작품 - 도메인마다 한 슬라이드 (작품이 없는 도메인은 빠진다)
+  const railSlides: RotatorSlide[] = (
+    releasesSettled ? releasesByDomain : []
+  ).flatMap(({ domain, items }) => {
+    const works = items.filter(
+      (w) => !heroSideIds.has(w.id) && w.id !== heroMain?.id,
     );
-    const maxLen = Math.max(0, ...lists.map((list) => list.length));
-    const picked: ExternalRanking[] = [];
-    for (let round = 0; round < maxLen; round++) {
-      for (const list of lists) {
-        if (picked.length >= HOME_RANK_SIZE) return picked;
-        const item = list[round];
-        if (item) picked.push(item);
-      }
-    }
-    return picked;
+    if (works.length === 0) return [];
+    const label = domainLabel(domain);
+    return [
+      {
+        id: domain,
+        label,
+        preload: works.map((w) => w.thumbnail),
+        content: (
+          <div
+            role="region"
+            aria-label={`새로 나온 ${label}`}
+            tabIndex={0}
+            className="scrollbar-rail flex snap-x snap-mandatory gap-3.5 overflow-x-auto pb-1.5"
+          >
+            {works.map((work) => (
+              <RailCard
+                key={work.id}
+                title={work.title}
+                meta={railMeta(work)}
+                imageUrl={work.thumbnail}
+                domain={work.domain}
+                to={`/work/${work.id}`}
+              />
+            ))}
+          </div>
+        ),
+      },
+    ];
+  });
+  const railLoading = !releasesSettled;
+  const railError =
+    railSlides.length === 0 &&
+    !railLoading &&
+    releasesByDomain.every((r) => r.isError);
+
+  // 이번 주 인기 - 플랫폼(=도메인)마다 실제 순위 상위 6 (contentId 보유분만)
+  const rankSlides: RotatorSlide[] = useMemo(() => {
+    const data = rankings.data ?? [];
+    return HOME_RANK_PLATFORMS.flatMap((platform) => {
+      const items: ExternalRanking[] = data
+        .filter((item) => item.platform === platform && item.contentId)
+        .sort((x, y) => x.ranking - y.ranking)
+        .slice(0, HOME_RANK_SIZE);
+      if (items.length === 0) return [];
+      return [
+        {
+          id: platform,
+          label: RANK_PLATFORM_DOMAIN[platform],
+          preload: items.map((item) => item.thumbnailUrl),
+          content: (
+            <div className="grid grid-cols-1 gap-x-10 min-[1024px]:grid-cols-2">
+              {items.map((item, index) => (
+                <RankRow
+                  key={item.id}
+                  variant="feature"
+                  accent={index < 2}
+                  no={item.ranking}
+                  title={item.title}
+                  meta={platformLabel(item.platform)}
+                  imageUrl={item.thumbnailUrl}
+                  to={`/work/${item.contentId}`}
+                />
+              ))}
+            </div>
+          ),
+        },
+      ];
+    });
   }, [rankings.data]);
+
+  // 출시 예정 - 도메인마다 3건. 섹션 성격상 이미 지난 날짜는 제외 (날짜 미정은 유지)
+  const upcomingSlides: RotatorSlide[] = upcomingByDomain.flatMap(({ domain, items }) => {
+    const works = items.filter((w) => {
+      const diff = daysUntil(w.releaseDate);
+      return diff === null || diff >= 0;
+    });
+    if (works.length === 0) return [];
+    return [
+      {
+        id: domain,
+        label: domainLabel(domain),
+        preload: works.map((w) => w.thumbnail),
+        content: (
+          <div className="grid grid-cols-1 gap-4 min-[768px]:grid-cols-2 min-[1024px]:grid-cols-3">
+            {works.map((work) => {
+              const dday = dDayOf(work.releaseDate);
+              return (
+                <UpcomingCard
+                  key={work.id}
+                  title={work.title}
+                  meta={upcomingMeta(work)}
+                  imageUrl={work.thumbnail}
+                  fallbackIconUrl={thumbnailFallbackMap[categoryOf(work.domain)]}
+                  to={`/work/${work.id}`}
+                  slot={<DdayPill variant={dday.variant}>{dday.label}</DdayPill>}
+                />
+              );
+            })}
+          </div>
+        ),
+      },
+    ];
+  });
+  const upcomingLoading =
+    upcomingSlides.length === 0 && upcomingByDomain.some((r) => r.isLoading);
+  const upcomingError =
+    upcomingSlides.length === 0 &&
+    !upcomingLoading &&
+    upcomingByDomain.every((r) => r.isError);
 
   return (
     <>
@@ -265,13 +375,15 @@ export default function HomePage() {
             message="추천 작품을 불러오지 못했어요."
             onRetry={() => {
               reviewed.refetch();
-              releases.refetch();
+              releasesByDomain.forEach((r) => r.refetch());
             }}
           />
         ) : heroMain ? (
           <div
             className={`grid gap-4 ${
-              heroSides.length > 0 ? "min-[1024px]:grid-cols-[2fr_1fr]" : ""
+              heroSidesPending || heroSides.length > 0
+                ? "min-[1024px]:grid-cols-[2fr_1fr]"
+                : ""
             }`}
           >
             <FeatureCard
@@ -283,6 +395,15 @@ export default function HomePage() {
               domain={heroMain.domain}
               to={`/work/${heroMain.id}`}
             />
+            {heroSidesPending && (
+              <div
+                aria-hidden="true"
+                className="grid gap-4 min-[768px]:grid-cols-2 min-[1024px]:grid-cols-1 min-[1024px]:grid-rows-2"
+              >
+                <div className="min-h-[160px] animate-pulse rounded-panel border border-line bg-line" />
+                <div className="min-h-[160px] animate-pulse rounded-panel border border-line bg-line" />
+              </div>
+            )}
             {heroSides.length > 0 && (
               <div className="grid gap-4 min-[768px]:grid-cols-2 min-[1024px]:grid-cols-1 min-[1024px]:grid-rows-2">
                 {heroSides.map((work) => (
@@ -301,49 +422,37 @@ export default function HomePage() {
           </div>
         ) : null}
 
-        {/* 신작 릴 */}
-        {(releases.isLoading || releases.isError || railItems.length > 0) && (
-          <section className="mt-14">
-            <SectionHead
-              title="새로 나온 작품"
-              moreLabel="전체 보기"
-              moreTo="/new"
-            />
-            {releases.isLoading ? (
-              <div aria-hidden="true" className="mt-4 flex gap-3.5 overflow-hidden pb-1.5">
-                {Array.from({ length: 6 }, (_, i) => (
-                  <div key={i} className="w-[168px] flex-none animate-pulse">
-                    <div className="aspect-[2/3] rounded-panel border border-line bg-line" />
-                    <div className="mt-[9px] h-4 w-4/5 rounded-input bg-line" />
-                    <div className="mt-1.5 h-3 w-3/5 rounded-input bg-canvas" />
-                  </div>
-                ))}
-              </div>
-            ) : releases.isError ? (
-              <SectionError
-                message="신작을 불러오지 못했어요."
-                onRetry={() => releases.refetch()}
-              />
-            ) : (
-              <div
-                role="region"
-                aria-label="새로 나온 작품"
-                tabIndex={0}
-                className="scrollbar-rail mt-4 flex snap-x snap-mandatory gap-3.5 overflow-x-auto pb-1.5"
-              >
-                {railItems.map((work) => (
-                  <RailCard
-                    key={work.id}
-                    title={work.title}
-                    meta={railMeta(work)}
-                    imageUrl={work.thumbnail}
-                    domain={work.domain}
-                    to={`/work/${work.id}`}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
+        {/* 신작 릴 - 도메인별 슬라이드 */}
+        {railSlides.length > 0 ? (
+          <DomainRotator
+            title="새로 나온 작품"
+            moreLabel="전체 보기"
+            moreTo="/new"
+            slides={railSlides}
+            intervalMs={ROTATE_MS}
+          />
+        ) : (
+          (railLoading || railError) && (
+            <section className="mt-14">
+              <SectionHead title="새로 나온 작품" moreLabel="전체 보기" moreTo="/new" />
+              {railLoading ? (
+                <div aria-hidden="true" className="mt-4 flex gap-3.5 overflow-hidden pb-1.5">
+                  {Array.from({ length: 6 }, (_, i) => (
+                    <div key={i} className="w-[168px] flex-none animate-pulse">
+                      <div className="aspect-[2/3] rounded-panel border border-line bg-line" />
+                      <div className="mt-[9px] h-4 w-4/5 rounded-input bg-line" />
+                      <div className="mt-1.5 h-3 w-3/5 rounded-input bg-canvas" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <SectionError
+                  message="신작을 불러오지 못했어요."
+                  onRetry={() => releasesByDomain.forEach((r) => r.refetch())}
+                />
+              )}
+            </section>
+          )
         )}
 
         {/* 방금 올라온 리뷰 */}
@@ -381,89 +490,67 @@ export default function HomePage() {
           </section>
         )}
 
-        {/* 이번 주 인기 */}
-        {(rankings.isLoading || rankings.isError || rankItems.length > 0) && (
-          <section className="mt-14">
-            <SectionHead
-              title="이번 주 인기"
-              moreLabel="랭킹 전체"
-              moreTo="/ranking"
-            />
-            {rankings.isLoading ? (
-              <div
-                aria-hidden="true"
-                className="mt-4 grid grid-cols-1 gap-x-10 min-[1024px]:grid-cols-2"
-              >
-                {Array.from({ length: HOME_RANK_SIZE }, (_, i) => (
-                  <SkeletonCard key={i} variant="row" />
-                ))}
-              </div>
-            ) : rankings.isError ? (
-              <SectionError
-                message="랭킹을 불러오지 못했어요."
-                onRetry={() => rankings.refetch()}
-              />
-            ) : (
-              <div className="mt-4 grid grid-cols-1 gap-x-10 min-[1024px]:grid-cols-2">
-                {rankItems.map((item, index) => (
-                  <RankRow
-                    key={item.id}
-                    variant="feature"
-                    accent={index < 2}
-                    no={index + 1}
-                    title={item.title}
-                    meta={RANK_PLATFORM_DOMAIN[item.platform] ?? item.platform}
-                    imageUrl={item.thumbnailUrl}
-                    to={`/work/${item.contentId}`}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
+        {/* 이번 주 인기 - 플랫폼(도메인)별 슬라이드 */}
+        {rankSlides.length > 0 ? (
+          <DomainRotator
+            title="이번 주 인기"
+            moreLabel="랭킹 전체"
+            moreTo="/ranking"
+            slides={rankSlides}
+            intervalMs={ROTATE_MS}
+            startDelayMs={ROTATE_STAGGER_MS}
+          />
+        ) : (
+          (rankings.isLoading || rankings.isError) && (
+            <section className="mt-14">
+              <SectionHead title="이번 주 인기" moreLabel="랭킹 전체" moreTo="/ranking" />
+              {rankings.isLoading ? (
+                <div
+                  aria-hidden="true"
+                  className="mt-4 grid grid-cols-1 gap-x-10 min-[1024px]:grid-cols-2"
+                >
+                  {Array.from({ length: HOME_RANK_SIZE }, (_, i) => (
+                    <SkeletonCard key={i} variant="row" />
+                  ))}
+                </div>
+              ) : (
+                <SectionError
+                  message="랭킹을 불러오지 못했어요."
+                  onRetry={() => rankings.refetch()}
+                />
+              )}
+            </section>
+          )
         )}
 
-        {/* 출시 예정 */}
-        {(upcoming.isLoading || upcoming.isError || upcomingItems.length > 0) && (
-          <section className="mt-14">
-            <SectionHead
-              title="출시 예정"
-              moreLabel="전체 보기"
-              moreTo="/new"
-            />
-            {upcoming.isLoading ? (
-              <div aria-hidden="true" className={reviewGridClass}>
-                {Array.from({ length: 3 }, (_, i) => (
-                  <RowCardSkeleton key={i} thumbWidth="w-14" />
-                ))}
-              </div>
-            ) : upcoming.isError ? (
-              <SectionError
-                message="출시 예정작을 불러오지 못했어요."
-                onRetry={() => upcoming.refetch()}
-              />
-            ) : (
-              <div className={reviewGridClass}>
-                {upcomingItems.map((work) => {
-                  const dday = dDayOf(work.releaseDate);
-                  return (
-                    <UpcomingCard
-                      key={work.id}
-                      title={work.title}
-                      meta={upcomingMeta(work)}
-                      imageUrl={work.thumbnail}
-                      fallbackIconUrl={
-                        thumbnailFallbackMap[categoryOf(work.domain)]
-                      }
-                      to={`/work/${work.id}`}
-                      slot={
-                        <DdayPill variant={dday.variant}>{dday.label}</DdayPill>
-                      }
-                    />
-                  );
-                })}
-              </div>
-            )}
-          </section>
+        {/* 출시 예정 - 도메인별 슬라이드 */}
+        {upcomingSlides.length > 0 ? (
+          <DomainRotator
+            title="출시 예정"
+            moreLabel="전체 보기"
+            moreTo="/new"
+            slides={upcomingSlides}
+            intervalMs={ROTATE_MS}
+            startDelayMs={ROTATE_STAGGER_MS * 2}
+          />
+        ) : (
+          (upcomingLoading || upcomingError) && (
+            <section className="mt-14">
+              <SectionHead title="출시 예정" moreLabel="전체 보기" moreTo="/new" />
+              {upcomingLoading ? (
+                <div aria-hidden="true" className={reviewGridClass}>
+                  {Array.from({ length: 3 }, (_, i) => (
+                    <RowCardSkeleton key={i} thumbWidth="w-14" />
+                  ))}
+                </div>
+              ) : (
+                <SectionError
+                  message="출시 예정작을 불러오지 못했어요."
+                  onRetry={() => upcomingByDomain.forEach((r) => r.refetch())}
+                />
+              )}
+            </section>
+          )
         )}
       </div>
     </>
