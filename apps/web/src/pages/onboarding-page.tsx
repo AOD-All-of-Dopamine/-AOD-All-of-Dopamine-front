@@ -303,7 +303,7 @@ function OnboardingPicker() {
       {isLoading ? (
         <div className={GRID_CLASS} aria-hidden="true">
           {Array.from({ length: 8 }, (_, index) => (
-            <SkeletonCard key={index} variant={domain === "GAME" ? "landscape" : "portrait"} />
+            <SkeletonCard key={index} variant="portrait" />
           ))}
         </div>
       ) : showErrorPanel ? (

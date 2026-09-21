@@ -62,7 +62,7 @@ export const workCardMeta = (
 
 /**
  * 게임 Steam 평가 파생 - desc(한글 매핑)와 긍정 %. 값이 없는 축은 undefined.
- * 포스터 카드 foot과 GameCompactCard(혼합 목록 가로 행)가 공유한다.
+ * 포스터 카드 foot(workCardFooter)이 쓴다.
  */
 export const steamRating = (
   work: WorkSummary,
