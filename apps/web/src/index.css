@@ -285,6 +285,17 @@ button.shelf-ghost:hover {
   }
 }
 
+/* 새 컬렉션 미리보기(ShelfPreview)의 빈 책등 - 분야의 책등 규격을 그대로 따른다.
+   분야를 바꾸면 규격이, 색을 바꾸면 뒷벽이 부드럽게 넘어간다 */
+.shelf-ghost-spine {
+  width: calc(var(--w) * var(--k));
+  height: calc(var(--h) * var(--k));
+  transition: width 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.shelf-preview .shelf-tier {
+  transition: background-color 0.28s;
+}
+
 /* 꽂히는 모션 - 위에서 떨어져 들어오고 옆 책이 살짝 밀린다 */
 .shelf-dropping {
   animation: shelf-drop 0.62s cubic-bezier(0.2, 0.9, 0.3, 1) both;
@@ -472,7 +483,9 @@ a:hover > .shelf-tier {
 @media (prefers-reduced-motion: reduce) {
   .shelf-spine,
   .shelf-face,
-  .shelf-tip {
+  .shelf-tip,
+  .shelf-ghost-spine,
+  .shelf-preview .shelf-tier {
     transition: none;
   }
   .shelf-dropping,

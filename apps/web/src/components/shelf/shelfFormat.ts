@@ -20,6 +20,9 @@ const BASE: Record<Category, SpineFormat> = {
   webnovel: { w: 36, h: 188 },
 };
 
+/** 컬렉션을 만들 수 있는 분야 (새 컬렉션 화면의 선택 순서). 서버 domain 은 단수라 영화·시리즈가 따로다 */
+export const SHELF_DOMAINS = ["GAME", "WEBTOON", "MOVIE", "TV", "WEBNOVEL"] as const;
+
 /** 32비트 정수 섞기 (murmur3 finalizer) - 연속된 id 도 고르게 흩어진다 */
 const mix = (n: number): number => {
   let x = (n ^ 0x9e3779b9) >>> 0;
