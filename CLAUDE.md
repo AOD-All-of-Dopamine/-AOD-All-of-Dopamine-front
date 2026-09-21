@@ -150,6 +150,7 @@ PageResponse<T> // content[], page, size, totalElements, totalPages, first, last
 | `useLikeStats` / `useToggleLike` / `useToggleBookmark` 등 | 상호작용 (목록에서 카드마다 토글할 때는 `useToggleBookmarkById`) |
 | `useRecommendations(tab, chainNonce, opts)` | 추천 무한 쿼리 (이 쿼리만 staleTime 무한·gcTime 30분·재조회/재시도 없음) |
 | `useSetReaction` / `useSetNotInterested` | 반응 상태 지정(LIKE·DISLIKE·NONE)·관심 없음 켜기/끄기 |
+| `useShelfItemMutations(collectionId)` | 컬렉션 책장(상세)에서 바로 꽂기·빼기·되돌리기·메모·한 칸 옮기기. 상세 캐시를 `shelfOps` 로 직접 고친다 — 상세를 invalidate 하면 재조회가 조회수를 +1 시킨다 |
 
 query key는 `@aod/shared/queries`의 팩토리(workKeys 등)로만 만든다 (인라인 키 금지).
 React Query 전역 설정: staleTime 5분, 윈도우 포커스 시 refetch 비활성화 (`apps/web/src/main.tsx`)
