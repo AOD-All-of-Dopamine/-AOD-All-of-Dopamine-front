@@ -18,6 +18,7 @@ import {
 } from "@aod/shared/hooks";
 import { collectionTintBg } from "@aod/shared/constants";
 import { DOMAIN_LABEL_MAP } from "@aod/shared/constants";
+import ShelfStrip from "../shelf/ShelfStrip";
 
 /**
  * "컬렉션에 담기" 메뉴 (목업 4 팝오버 · 5d 바텀시트).
@@ -30,8 +31,9 @@ import { DOMAIN_LABEL_MAP } from "@aod/shared/constants";
  * 목록, 클릭 = 담기/빼기 토글, 하단 "새 컬렉션 만들기"(도메인 프리필).
  *
  * 목업·계약 대비 편차:
- * - 행 썸네일은 포스터 2장 대신 틴트 스와치 + Stack 아이콘 - mine/summary
- *   계약(MyCollectionSummaryDTO)에 커버 포스터가 없다.
+ * - 행 썸네일은 미니 책장(ShelfStrip) - 끝 자리의 빈 칸이 "여기 꽂힌다"를 보여 주고,
+ *   담으면 그 자리에 책등이 떨어져 들어온다. mine/summary 응답에 spines 가 없으면
+ *   (그 필드 이전의 백엔드) 틴트 스와치 + Stack 아이콘으로 떨어진다.
  * - 빼기 토글은 상세 조회로 itemId를 해석(useRemoveCollectionItem 주석 참고).
  */
 
@@ -98,7 +100,7 @@ const RowSkeleton = () => (
     aria-hidden="true"
     className="flex animate-pulse items-center gap-[11px] px-2.5 py-[9px]"
   >
-    <div className="h-10 w-10 flex-none rounded-input bg-line" />
+    <div className="h-[50px] w-24 flex-none rounded-input bg-line" />
     <div className="min-w-0 flex-1">
       <div className="h-3.5 w-3/5 rounded-input bg-line" />
       <div className="mt-1.5 h-3 w-2/5 rounded-input bg-canvas" />
@@ -133,6 +135,8 @@ const PickList = ({
   );
   const addItem = useAddCollectionItem(contentId);
   const removeItem = useRemoveCollectionItem(contentId);
+  /** 이번에 담은 컬렉션 - 그 행의 미니 책장에 책등이 떨어져 들어온다 */
+  const [justAddedId, setJustAddedId] = useState<number | null>(null);
 
   const busy = addItem.isPending || removeItem.isPending;
   const pendingId = addItem.isPending
@@ -158,11 +162,13 @@ const PickList = ({
     addItem.mutate(
       { collectionId: summary.id },
       {
-        onSuccess: () =>
+        onSuccess: () => {
+          setJustAddedId(summary.id);
           showToast({
             message: `"${summary.title}"에 담았어요`,
             collectionId: summary.id,
-          }),
+          });
+        },
         onError: (error) => {
           if (isAlreadyInCollectionError(error)) {
             // 서버 기준 이미 담김 (다른 탭 등) - 포함 표시를 재조회로 동기화
@@ -231,7 +237,18 @@ const PickList = ({
               aria-pressed={summary.containsContent}
               className="flex w-full items-center gap-[11px] rounded-input px-2.5 py-[9px] text-left transition-colors hover:bg-ink/5 disabled:cursor-not-allowed"
             >
-              <TintThumb tint={summary.tint} />
+              {summary.spines ? (
+                <ShelfStrip
+                  spines={summary.spines}
+                  domain={summary.domain}
+                  tint={summary.tint}
+                  contentId={contentId}
+                  contains={summary.containsContent}
+                  justAdded={justAddedId === summary.id}
+                />
+              ) : (
+                <TintThumb tint={summary.tint} />
+              )}
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[13.5px] font-bold text-ink">
                   {summary.title}

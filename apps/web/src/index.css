@@ -1,3 +1,5 @@
+/* 컬렉션 책장의 손글씨 메모 전용 (font-memo) - 외부 @import 는 맨 앞이어야 한다 */
+@import url("https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap");
 @import "tailwindcss";
 
 /* ============================================================
@@ -33,6 +35,13 @@
   --color-tint-mocha: #6b5a4e;
   --color-tint-plum: #5f4e6b;
 
+  /* 컬렉션 책장 - 선반 판 3색 + 메모 카드. 웜 뉴트럴의 연장이고 책장 표면 전용
+     (docs/superpowers/specs/2026-09-21-collection-shelf-design.md) */
+  --color-plank-top: #f3efe7;
+  --color-plank-face: #ddd7cb;
+  --color-plank-edge: #c6bfb1;
+  --color-memo: #fffdf5;
+
   /* 라운드: 카드·패널 12 / 입력 8 / 칩·버튼은 rounded-full */
   --radius-panel: 12px;
   --radius-input: 8px;
@@ -42,6 +51,8 @@
   --shadow-lift: 0 2px 4px rgb(58 48 40 / 0.06), 0 10px 28px rgb(58 48 40 / 0.1);
 
   --font-sans: "Pretendard Variable", Pretendard, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* 큐레이터 메모(손글씨) 전용 - 책장의 메모 카드·뽑아든 작품의 메모에만 쓴다 */
+  --font-memo: "Nanum Pen Script", "Pretendard Variable", cursive;
 }
 
 @font-face {
@@ -92,4 +103,381 @@ body {
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none; /* Chrome, Safari */
+}
+
+/* ============================================================
+   컬렉션 책장 (components/shelf) - 다층 배경·키프레임은 유틸로 쓰면 읽을 수 없어
+   여기에 둔다 (.scrollbar-rail 선례). 색은 전부 토큰, 크기는 --k 배율 하나로 줄인다.
+   뒷벽 색은 같은 요소의 bg-tint-* 유틸(background-color)이 맡고, 선반 판은
+   행 높이(--tile)마다 반복되는 background-image 다 - 폭이 바뀌어 단 수가 달라져도
+   JS 없이 판이 따라온다.
+   ============================================================ */
+.shelf-wall {
+  --k: 1;
+  --row: 204px;
+  --plank: 12px;
+  --under: 20px;
+  --pad: 20px;
+  --tile: calc(var(--row) + var(--plank) + var(--under));
+  padding: var(--pad) 22px 0;
+  background-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent var(--row),
+    var(--color-plank-top) var(--row),
+    var(--color-plank-top) calc(var(--row) + 2px),
+    var(--color-plank-face) calc(var(--row) + 2px),
+    var(--color-plank-face) calc(var(--row) + var(--plank) - 1px),
+    var(--color-plank-edge) calc(var(--row) + var(--plank) - 1px),
+    var(--color-plank-edge) calc(var(--row) + var(--plank)),
+    rgb(0 0 0 / 0.26) calc(var(--row) + var(--plank)),
+    transparent calc(var(--row) + var(--plank) + 14px),
+    transparent var(--tile)
+  );
+  background-position: 0 var(--pad);
+  background-size: 100% var(--tile);
+  background-repeat: repeat-y;
+  box-shadow: inset 0 2px 12px rgb(0 0 0 / 0.3), var(--shadow-card);
+}
+@media (max-width: 1023px) {
+  .shelf-wall {
+    --k: 0.84;
+    --row: 172px;
+    --plank: 10px;
+    --under: 16px;
+    --pad: 14px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+.shelf-rows {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  column-gap: 3px;
+}
+.shelf-slot {
+  display: flex;
+  align-items: flex-end;
+  height: var(--row);
+  margin-bottom: calc(var(--plank) + var(--under));
+}
+
+/* 책등 - --w/--h(규격) --img(포스터 조각)는 인라인 스타일로 받는다 */
+.shelf-spine {
+  position: relative;
+  display: block;
+  flex: none;
+  width: calc(var(--w) * var(--k));
+  height: calc(var(--h) * var(--k));
+  border-radius: 2px 2px 1px 1px;
+  background-color: rgb(0 0 0 / 0.3);
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.3) 0, rgb(255 255 255 / 0) 16%, rgb(0 0 0 / 0) 68%, rgb(0 0 0 / 0.38) 100%),
+    linear-gradient(rgb(22 18 14 / 0.28), rgb(22 18 14 / 0.64)),
+    var(--img, none);
+  background-size: 100% 100%, 100% 100%, cover;
+  background-position: center;
+  box-shadow: 1px 0 0 rgb(0 0 0 / 0.28), 0 1px 0 rgb(0 0 0 / 0.3);
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s;
+}
+@media (hover: hover) {
+  .shelf-spine:hover {
+    transform: translateY(-12px);
+    box-shadow: 1px 0 0 rgb(0 0 0 / 0.28), 0 14px 14px -6px rgb(0 0 0 / 0.45);
+  }
+  .shelf-face:hover {
+    transform: translateY(-8px);
+  }
+}
+.shelf-spine:focus-visible {
+  transform: translateY(-12px);
+}
+.shelf-spine[aria-pressed="true"] {
+  transform: translateY(-22px);
+  box-shadow: 0 0 0 2px var(--color-surface), 0 18px 18px -6px rgb(0 0 0 / 0.5);
+}
+.shelf-spine-title {
+  position: absolute;
+  inset: 10px 0 26px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #fff;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.5);
+  -webkit-mask-image: linear-gradient(to bottom, #000 86%, transparent);
+  mask-image: linear-gradient(to bottom, #000 86%, transparent);
+}
+.shelf-spine-icon {
+  position: absolute;
+  inset: auto 0 7px;
+  display: grid;
+  place-items: center;
+  color: rgb(255 255 255 / 0.85);
+}
+
+/* 표지 세우기 (코멘트를 단 앞 3개) + 메모 카드 */
+.shelf-face {
+  position: relative;
+  display: block;
+  flex: none;
+  overflow: hidden;
+  height: calc(188px * var(--k));
+  aspect-ratio: 2 / 3;
+  margin: 0 calc(7px * var(--k)) 0 calc(9px * var(--k));
+  border-radius: 3px;
+  background-color: rgb(0 0 0 / 0.3);
+  box-shadow: 0 10px 16px -6px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(0 0 0 / 0.18);
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s;
+}
+.shelf-face:focus-visible {
+  transform: translateY(-8px);
+}
+.shelf-face[aria-pressed="true"] {
+  transform: translateY(-14px);
+  box-shadow: 0 0 0 2px var(--color-surface), 0 18px 18px -6px rgb(0 0 0 / 0.5);
+}
+.shelf-memo {
+  flex: none;
+  align-self: flex-end;
+  width: calc(108px * var(--k));
+  min-height: calc(118px * var(--k));
+  max-height: calc(176px * var(--k));
+  overflow: hidden;
+  margin-right: calc(12px * var(--k));
+  padding: 9px 10px 10px;
+  border-radius: 3px;
+  background: var(--color-memo);
+  box-shadow: 0 8px 12px -6px rgb(0 0 0 / 0.45), 0 0 0 1px rgb(0 0 0 / 0.08);
+  transform: rotate(-2.2deg);
+  transform-origin: 50% 100%;
+}
+
+/* 빈 칸 (소유자만) */
+.shelf-ghost {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: calc(27px * var(--k));
+  height: calc(172px * var(--k));
+  border: 1.5px dashed rgb(255 255 255 / 0.36);
+  border-radius: 3px;
+  color: rgb(255 255 255 / 0.6);
+}
+button.shelf-ghost {
+  border-color: rgb(255 255 255 / 0.9);
+  background: rgb(255 255 255 / 0.1);
+  color: #fff;
+  animation: shelf-breathe 2.6s ease-in-out infinite;
+}
+button.shelf-ghost:hover {
+  background: rgb(255 255 255 / 0.22);
+}
+@keyframes shelf-breathe {
+  50% {
+    background: rgb(255 255 255 / 0.22);
+  }
+}
+
+/* 꽂히는 모션 - 위에서 떨어져 들어오고 옆 책이 살짝 밀린다 */
+.shelf-dropping {
+  animation: shelf-drop 0.62s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+  animation-delay: var(--drop-delay, 0ms);
+}
+@keyframes shelf-drop {
+  0% {
+    transform: translateY(-260px) rotate(-5deg);
+    opacity: 0;
+  }
+  55% {
+    transform: translateY(7px) rotate(0);
+    opacity: 1;
+  }
+  75% {
+    transform: translateY(-3px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+.shelf-nudge {
+  animation: shelf-nudge 0.4s 0.3s ease-out both;
+}
+@keyframes shelf-nudge {
+  40% {
+    transform: translateX(-3px) rotate(-1.2deg);
+  }
+}
+
+/* 내 책장 (Bookcase) - 컬렉션 하나가 선반 한 단. 줄바꿈 없는 한 줄이라 판은 실제 요소다 */
+.shelf-bookcase {
+  overflow: hidden;
+  border: 10px solid var(--color-plank-face);
+  border-radius: 16px;
+  background: var(--color-plank-face);
+  box-shadow: var(--shadow-card), inset 0 0 0 1px var(--color-plank-edge);
+}
+.shelf-tier {
+  --k: 0.75;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 172px;
+  padding: 0 18px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 12px rgb(0 0 0 / 0.3);
+  transition: filter 0.15s;
+}
+a:hover > .shelf-tier {
+  filter: brightness(1.07);
+}
+/* 작은 책등(MiniSpine)은 도메인 아이콘이 없다 - 제목이 아래까지 쓴다 */
+.shelf-tier .shelf-spine-title {
+  inset: 7px 0 10px;
+  font-size: 10.5px;
+}
+.shelf-tier-plank {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--color-plank-edge);
+  background: linear-gradient(var(--color-plank-top) 0 2px, var(--color-plank-face) 2px);
+}
+@media (max-width: 1023px) {
+  .shelf-bookcase {
+    border-width: 6px;
+    border-radius: var(--radius-panel);
+  }
+  .shelf-tier {
+    --k: 0.62;
+    gap: 2px;
+    height: 140px;
+    padding: 0 12px;
+  }
+  .shelf-tier-plank {
+    padding: 0 10px;
+  }
+}
+
+/* 선반 한 토막 (ShelfScene) - 발견 카드의 커버. 폭을 넘는 책등은 잘린 채로 둔다.
+   카드 폭은 열 수에 따라 크게 달라진다(16:9 라 높이도 같이) - 책등을 고정 배율로 두면 넓은
+   카드에서 장면 위쪽이 빈다. 그래서 장면 높이에 비례시킨다: 가장 큰 책등(188)이 높이의 ~86%. */
+.shelf-scene {
+  container-type: size;
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  gap: 2px;
+  min-height: 0;
+  padding: 0 14px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 10px rgb(0 0 0 / 0.3);
+}
+.shelf-scene .shelf-spine {
+  width: calc(var(--wn) * 0.46cqh);
+  height: calc(var(--hn) * 0.46cqh);
+}
+.shelf-scene .shelf-spine-title {
+  inset: 5cqh 0 6cqh;
+  font-size: max(10px, 6.2cqh);
+}
+.shelf-scene-plank {
+  flex: none;
+  height: 9px;
+  border-bottom: 1px solid var(--color-plank-edge);
+  background: linear-gradient(var(--color-plank-top) 0 2px, var(--color-plank-face) 2px);
+}
+
+/* 담기 목록의 미니 책장 (ShelfStrip) - 끝 자리가 빈 칸이고, 담으면 액센트 책등이 꽂힌다 */
+.shelf-strip {
+  --k: 0.24;
+  display: flex;
+  flex: none;
+  align-items: flex-end;
+  gap: 1px;
+  width: 96px;
+  height: 50px;
+  padding: 0 5px;
+  overflow: hidden;
+  border-bottom: 4px solid var(--color-plank-face);
+  border-radius: 5px;
+  box-shadow: inset 0 1px 5px rgb(0 0 0 / 0.3);
+}
+.shelf-strip .shelf-spine {
+  border-radius: 1px;
+  box-shadow: none;
+  transform: none;
+  transition: none;
+}
+.shelf-strip-gap,
+.shelf-strip-mine {
+  flex: none;
+  width: 7px;
+  border-radius: 1px;
+}
+.shelf-strip-gap {
+  height: 38px;
+  border: 1px dashed rgb(255 255 255 / 0.85);
+}
+.shelf-strip-mine {
+  height: 40px;
+  background: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-surface);
+}
+.shelf-strip .shelf-dropping {
+  animation-name: shelf-drop-mini;
+  animation-duration: 0.45s;
+}
+@keyframes shelf-drop-mini {
+  0% {
+    transform: translateY(-48px);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(2px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+/* 책등 위 말풍선 - Shelf 가 위치를 직접 잡는다 (세로 제목이 잘려도 전체 제목이 읽히게) */
+.shelf-tip {
+  position: fixed;
+  z-index: 30;
+  max-width: min(280px, calc(100vw - 16px));
+  overflow: hidden;
+  padding: 5px 10px;
+  border-radius: var(--radius-input);
+  background: var(--color-ink);
+  color: var(--color-surface);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shelf-spine,
+  .shelf-face,
+  .shelf-tip {
+    transition: none;
+  }
+  .shelf-dropping,
+  .shelf-nudge,
+  button.shelf-ghost {
+    animation: none;
+  }
 }

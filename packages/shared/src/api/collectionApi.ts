@@ -21,6 +21,14 @@ export type CollectionTint =
   | "PLUM";
 export type CollectionVisibility = "PUBLIC" | "PRIVATE";
 
+/** 목록 카드의 미니 책장용 책등 한 권 - CollectionSpineDTO (도메인은 컬렉션의 domain 과 같다) */
+export interface CollectionSpine {
+  contentId: number;
+  title: string;
+  /** 포스터 없는 작품은 null - 단색 책등 */
+  posterUrl: string | null;
+}
+
 /** 목록 카드 (발견 페이지 / 내 컬렉션 공용) - CollectionSummaryDTO */
 export interface CollectionSummary {
   id: number;
@@ -36,6 +44,11 @@ export interface CollectionSummary {
   curatorNickname: string;
   /** 상위 3개 포스터 URL (조회 시 파생, 빈 배열 가능) */
   coverPosters: string[];
+  /**
+   * 상위 20권 (position 순, 조회 시 파생) - 상세를 부르지 않고 목록에서 책등을 그린다
+   * (상세 GET 은 조회수를 +1 한다). 이 필드가 생기기 전 백엔드에서는 undefined.
+   */
+  spines?: CollectionSpine[];
   /** 비로그인 시 항상 false */
   likedByMe: boolean;
   /** 편차(C-BE): LocalDateTime ISO 문자열 */
@@ -99,6 +112,8 @@ export interface MyCollectionSummary {
   itemCount: number;
   /** 조회한 contentId가 이미 담겨 있는지 */
   containsContent: boolean;
+  /** 상위 20권 - 담기 목록의 미니 책장용. 이 필드가 생기기 전 백엔드에서는 undefined */
+  spines?: CollectionSpine[];
 }
 
 /** 생성 요청 - CollectionCreateRequest */

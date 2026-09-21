@@ -7,10 +7,12 @@ import {
 } from "@aod/shared/constants";
 import { cardLift } from "./cardStyles";
 import CollectionCollage from "./CollectionCollage";
+import ShelfScene from "../shelf/ShelfScene";
 
 /**
  * 컬렉션 발견 카드 (목업 .col-card).
- * 콜라주 커버(16:9, 포스터 3장 + 틴트 veil + N작품 pill) / 도메인 라벨 /
+ * 커버(16:9)는 선반 한 토막(ShelfScene - 책등이 꽂힌 미니 책장 + N작품 pill).
+ * 응답에 spines 가 없으면(그 필드 이전의 백엔드) 포스터 3장 콜라주로 떨어진다. / 도메인 라벨 /
  * 제목 / 설명 1줄 / foot(큐레이터 아바타·닉네임 + 좋아요·조회수).
  * PRIVATE 컬렉션(내 컬렉션 탭)은 도메인 라벨 옆에 "나만 보기" 배지.
  */
@@ -46,17 +48,28 @@ const CollectionCard = ({ collection }: { collection: CollectionSummary }) => {
     itemCount,
     curatorNickname,
     coverPosters,
+    spines,
   } = collection;
 
   return (
     <Link to={`/collections/${id}`} className={`block bg-surface ${cardLift}`}>
-      <CollectionCollage
-        posters={coverPosters}
-        tint={tint}
-        domain={domain}
-        itemCount={itemCount}
-        className="aspect-video"
-      />
+      {spines ? (
+        <ShelfScene
+          spines={spines}
+          domain={domain}
+          tint={tint}
+          itemCount={itemCount}
+          className="aspect-video"
+        />
+      ) : (
+        <CollectionCollage
+          posters={coverPosters}
+          tint={tint}
+          domain={domain}
+          itemCount={itemCount}
+          className="aspect-video"
+        />
+      )}
       <div className="px-[15px] pb-3.5 pt-[13px]">
         <div className="flex items-center gap-1.5 text-xs font-bold text-accent-ink">
           {collectionDomainLabel(domain)}

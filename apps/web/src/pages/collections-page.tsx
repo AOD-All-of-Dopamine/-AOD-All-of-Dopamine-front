@@ -7,6 +7,7 @@ import { CollectionSummary } from "@aod/shared/api";
 import CollectionCard, {
   CollectionCardSkeleton,
 } from "../components/ui/CollectionCard";
+import Bookcase, { BookcaseSkeleton } from "../components/shelf/Bookcase";
 import DomainChip from "../components/ui/DomainChip";
 import EmptyState from "../components/ui/EmptyState";
 import Pagination from "../components/ui/Pagination";
@@ -23,6 +24,9 @@ import Pagination from "../components/ui/Pagination";
  *   같은 페이지 번호로 병합한다. 페이지 내 정렬은 클라이언트에서 재정렬하지만
  *   페이지 경계를 넘는 전역 정렬은 근사치 (컬렉션 수가 적은 초기에 수용).
  * - 도메인 탭의 정렬은 인기순 고정 (탭이 단일 선택이라 정렬 축과 조합 불가).
+ * - "내 컬렉션" 탭은 카드 그리드 대신 **내 책장**(Bookcase - 컬렉션 하나가 선반 한 단).
+ *   책등은 목록 응답의 spines 로 그린다. spines 가 없는 응답(그 필드 이전의 백엔드)이면
+ *   카드 그리드로 떨어진다.
  */
 
 const PAGE_SIZE = 20;
@@ -185,6 +189,8 @@ export default function CollectionsPage() {
     "grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 lg:gap-5 min-[1200px]:grid-cols-4";
 
   const needLogin = isMine && !isAuthenticated;
+  // 내 책장은 spines 가 있어야 그린다 - 없으면(구 백엔드) 카드 그리드 그대로
+  const asBookcase = isMine && items.some((c) => c.spines !== undefined);
 
   return (
     <div className="mx-auto max-w-[1440px] px-4 pb-16 pt-4 lg:px-6 lg:pb-[64px] lg:pt-6">
@@ -237,11 +243,15 @@ export default function CollectionsPage() {
             }
           />
         ) : isLoading ? (
-          <div className={gridClass} aria-hidden="true">
-            {Array.from({ length: 8 }, (_, i) => (
-              <CollectionCardSkeleton key={i} />
-            ))}
-          </div>
+          isMine ? (
+            <BookcaseSkeleton />
+          ) : (
+            <div className={gridClass} aria-hidden="true">
+              {Array.from({ length: 8 }, (_, i) => (
+                <CollectionCardSkeleton key={i} />
+              ))}
+            </div>
+          )
         ) : isError ? (
           <EmptyState
             icon={<WarningCircle size={44} />}
@@ -278,11 +288,18 @@ export default function CollectionsPage() {
           />
         ) : (
           <>
-            <div className={gridClass}>
-              {items.map((collection) => (
-                <CollectionCard key={collection.id} collection={collection} />
-              ))}
-            </div>
+            {asBookcase ? (
+              <Bookcase
+                collections={items}
+                onCreate={() => navigate("/collections/new")}
+              />
+            ) : (
+              <div className={gridClass}>
+                {items.map((collection) => (
+                  <CollectionCard key={collection.id} collection={collection} />
+                ))}
+              </div>
+            )}
             {totalPages > 1 && (
               <div className="mt-10">
                 <Pagination
