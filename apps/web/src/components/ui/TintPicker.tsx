@@ -16,6 +16,8 @@ export interface TintPickerProps {
   /** md = 데스크톱 34px, sm = 모바일 30px (목업 수치) */
   size?: "md" | "sm";
   className?: string;
+  /** radiogroup 접근성 이름 (기본 "커버 틴트" - 새 컬렉션 화면은 "뒷벽 색") */
+  ariaLabel?: string;
 }
 
 const TintPicker = ({
@@ -23,12 +25,13 @@ const TintPicker = ({
   onChange,
   size = "md",
   className = "",
+  ariaLabel = "커버 틴트",
 }: TintPickerProps) => {
   const sizeClass = size === "sm" ? "h-[30px] w-[30px]" : "h-[34px] w-[34px]";
   return (
     <div
       role="radiogroup"
-      aria-label="커버 틴트"
+      aria-label={ariaLabel}
       className={`flex gap-2.5 ${className}`}
     >
       {COLLECTION_TINTS.map((tint) => {

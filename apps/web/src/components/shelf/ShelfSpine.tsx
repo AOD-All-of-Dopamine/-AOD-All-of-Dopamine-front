@@ -1,29 +1,10 @@
 import { CSSProperties, memo } from "react";
-import {
-  BookOpen,
-  FilmSlate,
-  GameController,
-  PushPin,
-  Scroll,
-  TelevisionSimple,
-  type Icon,
-} from "@phosphor-icons/react";
+import { PushPin } from "@phosphor-icons/react";
 import type { CollectionItem } from "@aod/shared/api";
-import {
-  categoryOf,
-  thumbFitMap,
-  type Category,
-} from "../../constants/thumbnail";
+import { categoryOf, thumbFitMap } from "../../constants/thumbnail";
+import { DOMAIN_ICON } from "./domainIcon";
 import { spineFormat, spineTextureUrl } from "./shelfFormat";
 import { useNearViewport } from "./useNearViewport";
-
-const DOMAIN_ICON: Record<Category, Icon> = {
-  movie: FilmSlate,
-  tv: TelevisionSimple,
-  game: GameController,
-  webtoon: Scroll,
-  webnovel: BookOpen,
-};
 
 export interface ShelfSpineProps {
   item: CollectionItem;

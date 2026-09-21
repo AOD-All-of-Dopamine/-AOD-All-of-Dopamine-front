@@ -30,7 +30,7 @@ import {
   CollectionVisibility,
 } from "@aod/shared/api";
 import { thumbnailFallbackMap, type Category } from "../constants/thumbnail";
-import CollectionCollage from "../components/ui/CollectionCollage";
+import ShelfScene from "../components/shelf/ShelfScene";
 import TintPicker from "../components/ui/TintPicker";
 import VisibilityOption from "../components/ui/VisibilityOption";
 import EmptyState from "../components/ui/EmptyState";
@@ -527,10 +527,12 @@ function CollectionEditor({
     </div>
   );
 
-  const coverPreviewPosters = items
-    .map((i) => i.posterUrl)
-    .filter((p): p is string => !!p)
-    .slice(0, 3);
+  // 커버 미리보기 = 선반 한 토막 - 드래프트 순서 그대로의 책등 (제거·재정렬이 곧바로 비친다)
+  const coverPreviewSpines = items.slice(0, 20).map((item) => ({
+    contentId: item.contentId,
+    title: item.title,
+    posterUrl: item.posterUrl,
+  }));
 
   // <lg·lg+ 두 곳에 렌더되므로 id는 접두사로 충돌 방지 (숨은 쪽은 display:none)
   const renderIntroFields = (idPrefix: string) => (
@@ -715,8 +717,8 @@ function CollectionEditor({
           <div>
             {/* <lg 커버 미리보기 (목업 .m-edit-cover) - 틴트 즉시 반영 */}
             <div className="lg:hidden">
-              <CollectionCollage
-                posters={coverPreviewPosters}
+              <ShelfScene
+                spines={coverPreviewSpines}
                 tint={tint}
                 domain={collection.domain}
                 className="aspect-video rounded-panel shadow-card"
@@ -734,17 +736,21 @@ function CollectionEditor({
             {/* lg+ 꾸미기 패널 2장 + 삭제 */}
             <div className="hidden lg:block">
               <section className="rounded-panel border border-line bg-surface p-[18px] shadow-card">
-                <h2 className="text-sm font-extrabold text-ink">커버 틴트</h2>
-                <CollectionCollage
-                  posters={coverPreviewPosters}
+                <h2 className="text-sm font-extrabold text-ink">뒷벽 색</h2>
+                <ShelfScene
+                  spines={coverPreviewSpines}
                   tint={tint}
                   domain={collection.domain}
                   className="mt-3 aspect-video rounded-input"
                 />
-                <TintPicker value={tint} onChange={setTint} className="mt-3.5" />
+                <TintPicker
+                  value={tint}
+                  onChange={setTint}
+                  ariaLabel="뒷벽 색"
+                  className="mt-3.5"
+                />
                 <p className="mt-2.5 text-xs leading-relaxed text-ink-3">
-                  커버는 담긴 작품 포스터로 자동 구성되고, 틴트가 살짝 덮여
-                  컬렉션의 분위기를 만듭니다.
+                  책장의 뒷벽 색이에요. 컬렉션 카드와 내 책장에서 이 색으로 보여요.
                 </p>
               </section>
               <section className="mt-4 rounded-panel border border-line bg-surface p-[18px] shadow-card">
