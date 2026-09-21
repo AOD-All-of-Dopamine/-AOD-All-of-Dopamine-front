@@ -494,3 +494,78 @@ a:hover > .shelf-tier {
     animation: none;
   }
 }
+
+/* ============================================================
+   홈 도메인 로테이터 (components/ui/DomainRotator) - 시간이 지나면 다음 도메인이 옆에서 밀고 들어온다.
+   뷰포트는 넘침을 자르되 카드의 호버 그림자가 잘리지 않게 12px 여백을 둔다(그래서 슬라이드는
+   100% + 24px 를 이동해야 여백 밖으로 완전히 나간다). 위쪽 margin 4px + padding 12px = 제목과 16px.
+   ============================================================ */
+.rotator-viewport {
+  position: relative;
+  overflow: hidden;
+  margin: 4px -12px -12px;
+  padding: 12px;
+}
+.rotator-leaving {
+  position: absolute;
+  inset: 12px;
+  pointer-events: none;
+}
+.rotator-in-right {
+  animation: rotator-in-right 0.5s cubic-bezier(0.22, 0.8, 0.22, 1) both;
+}
+.rotator-in-left {
+  animation: rotator-in-left 0.5s cubic-bezier(0.22, 0.8, 0.22, 1) both;
+}
+.rotator-out-left {
+  animation: rotator-out-left 0.5s cubic-bezier(0.22, 0.8, 0.22, 1) both;
+}
+.rotator-out-right {
+  animation: rotator-out-right 0.5s cubic-bezier(0.22, 0.8, 0.22, 1) both;
+}
+@keyframes rotator-in-right {
+  from {
+    transform: translateX(calc(100% + 24px));
+  }
+}
+@keyframes rotator-in-left {
+  from {
+    transform: translateX(calc(-100% - 24px));
+  }
+}
+@keyframes rotator-out-left {
+  to {
+    transform: translateX(calc(-100% - 24px));
+  }
+}
+@keyframes rotator-out-right {
+  to {
+    transform: translateX(calc(100% + 24px));
+  }
+}
+/* 활성 칩 아래의 진행 막대 - 남은 시간 */
+.rotator-progress {
+  position: absolute;
+  inset: auto 0 0;
+  height: 2.5px;
+  transform-origin: left;
+  background: var(--color-accent);
+  animation: rotator-progress var(--rotator-ms, 7000ms) linear both;
+}
+@keyframes rotator-progress {
+  from {
+    transform: scaleX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rotator-in-right,
+  .rotator-in-left,
+  .rotator-out-left,
+  .rotator-out-right,
+  .rotator-progress {
+    animation: none;
+  }
+  .rotator-leaving {
+    display: none;
+  }
+}

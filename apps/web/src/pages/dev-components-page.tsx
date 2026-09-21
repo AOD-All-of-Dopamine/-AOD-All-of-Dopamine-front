@@ -27,6 +27,7 @@ import ShelfPlayground, {
   BookcasePlayground,
 } from "../components/shelf/ShelfPlayground";
 import NewShelfForm from "../components/shelf/NewShelfForm";
+import DomainRotatorDemo from "../components/ui/DomainRotatorDemo";
 
 /**
  * /dev/components - Phase 2 공용 컴포넌트 시각 게이트용 갤러리.
@@ -84,6 +85,10 @@ export default function DevComponentsPage() {
       {/* 0. 컬렉션 책장 - 로컬 상태 플레이그라운드 (로그인 불필요) */}
       <Section title="Shelf · 컬렉션 책장 (플레이그라운드)">
         <ShelfPlayground />
+      </Section>
+
+      <Section title="DomainRotator · 홈 도메인별 슬라이드 (3.5초 간격 시연)">
+        <DomainRotatorDemo />
       </Section>
 
       <Section title="NewShelfForm · 새 컬렉션 (미리보기가 입력을 비춘다)">

@@ -1,5 +1,6 @@
 import {
   useQuery,
+  useQueries,
   UseQueryOptions,
   keepPreviousData,
   useInfiniteQuery,
@@ -99,6 +100,52 @@ export const useUpcomingReleases = (
     queryFn: () => workApi.getUpcomingReleases(params),
     ...options,
   });
+};
+
+/** useReleasesByDomain 의 도메인 한 칸 */
+export interface DomainReleases {
+  domain: string;
+  /** 실패·로딩 중에는 빈 배열 */
+  items: WorkSummary[];
+  isLoading: boolean;
+  isError: boolean;
+  refetch: () => void;
+}
+
+/**
+ * 신작(recent)·출시 예정(upcoming)을 **도메인마다 따로** 조회한다 - 홈의 도메인별 슬라이드용.
+ * 전 도메인 한 번 조회로는 안 된다: 출시일 순이라 매일 올라오는 도메인(웹소설·웹툰)이 목록을 다 차지한다.
+ * 결과는 넘긴 domains 순서 그대로. 한 도메인이 실패해도 나머지는 그대로 온다.
+ * 쿼리 키는 단건 훅(useRecentReleases·useUpcomingReleases)과 같아 캐시를 공유한다.
+ */
+export const useReleasesByDomain = (
+  kind: "recent" | "upcoming",
+  domains: readonly string[],
+  size: number,
+): DomainReleases[] => {
+  const { workApi } = useApis();
+  const results = useQueries({
+    queries: domains.map((domain) => {
+      const params: ReleasesQueryParams = { domain, size };
+      return {
+        queryKey:
+          kind === "recent"
+            ? releaseKeys.recent(params)
+            : releaseKeys.upcoming(params),
+        queryFn: () =>
+          kind === "recent"
+            ? workApi.getRecentReleases(params)
+            : workApi.getUpcomingReleases(params),
+      };
+    }),
+  });
+  return results.map((result, i) => ({
+    domain: domains[i],
+    items: result.data?.content ?? [],
+    isLoading: result.isLoading,
+    isError: result.isError,
+    refetch: () => void result.refetch(),
+  }));
 };
 
 /**
