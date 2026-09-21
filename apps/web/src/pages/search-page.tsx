@@ -7,15 +7,12 @@ import {
 } from "@phosphor-icons/react";
 import { useSearchWorks } from "@aod/shared/hooks";
 import { DOMAIN_LABEL_MAP, DOMAIN_FILTERS } from "@aod/shared/constants";
-import { thumbnailFallbackMap, type Category } from "../constants/thumbnail";
 import WorkCard from "../components/ui/WorkCard";
-import GameCompactCard from "../components/ui/GameCompactCard";
 import {
   workCardFooter,
   workCardMeta,
   workCardTags,
 } from "../components/ui/workCardInfo";
-import { gamePairCellClass, groupMixedGrid } from "../utils/mixedGrid";
 import DomainChip from "../components/ui/DomainChip";
 import Pagination from "../components/ui/Pagination";
 import EmptyState from "../components/ui/EmptyState";
@@ -28,18 +25,13 @@ import SkeletonCard from "../components/ui/SkeletonCard";
  *   (전 폭 노출 - 데스크톱 SiteHeader의 검색 링크가 이 페이지로 오므로 lg에서도 필요).
  * - 도메인 언더라인 탭 -> DomainChip(1차 칩 위계), 결과 카드 -> WorkCard(portrait),
  *   인라인 페이지네이션 -> ui/Pagination.
- * - 게임 결과는 세로 크롭 대신 혼합 그리드 1-C(GameCompactCard 가로 행) -
- *   mixed-grid-mockup.html 확정안. 연속 게임 2개를 한 셀에 스택, <lg는 풀폭.
+ * - 게임 결과도 같은 WorkCard - 썸네일 틀(2:3)은 통일하고 이미지 맞춤만
+ *   도메인이 정한다 (WorkThumb). 혼합 그리드 1-C는 2026-09-21 폐기.
  */
 
 type Domain = keyof typeof DOMAIN_LABEL_MAP;
 
 const PAGE_SIZE = 20;
-
-const categoryOf = (domain?: string): Category => {
-  const key = domain?.toLowerCase() as Category;
-  return key in thumbnailFallbackMap ? key : "movie";
-};
 
 const gridClass =
   "mt-6 grid grid-cols-2 gap-x-3 gap-y-3.5 min-[480px]:grid-cols-3 min-[768px]:gap-x-[18px] min-[768px]:gap-y-5";
@@ -120,16 +112,9 @@ export default function SearchPage() {
       {/* 결과 영역: 로딩 / 에러 / 결과 / 결과 없음 / 검색 전 */}
       {isLoading ? (
         <div className={gridClass} aria-hidden="true">
-          {/* 혼합 결과의 최종 형상(1-C)대로 게임 페어 형상을 섞어
-              로드 후 레이아웃 시프트를 줄인다 */}
-          <SkeletonCard variant="portrait" />
-          <SkeletonCard variant="portrait" />
-          <div className={gamePairCellClass}>
-            <SkeletonCard variant="game-row" />
-            <SkeletonCard variant="game-row" />
-          </div>
-          <SkeletonCard variant="portrait" />
-          <SkeletonCard variant="portrait" />
+          {Array.from({ length: 6 }, (_, i) => (
+            <SkeletonCard key={i} variant="portrait" />
+          ))}
         </div>
       ) : isError ? (
         <div className="mt-6">
@@ -151,39 +136,19 @@ export default function SearchPage() {
       ) : data && data.content.length > 0 ? (
         <>
           <div className={gridClass}>
-            {/* 혼합 그리드 1-C - 게임은 컴팩트 가로 행(연속 게임 2개 스택),
-                나머지는 포스터 카드. meta 앞에 도메인 라벨, foot은 도메인별 구성 */}
-            {groupMixedGrid(data.content).map((item) =>
-              item.type === "poster" ? (
-                <WorkCard
-                  key={item.work.id}
-                  variant="portrait"
-                  title={item.work.title}
-                  meta={workCardMeta(item.work, { withDomain: true })}
-                  tags={workCardTags(item.work)}
-                  imageUrl={item.work.thumbnail || null}
-                  fallbackIconUrl={
-                    thumbnailFallbackMap[categoryOf(item.work.domain)]
-                  }
-                  to={`/work/${item.work.id}`}
-                  footer={workCardFooter(item.work)}
-                />
-              ) : (
-                <div
-                  key={`games-${item.works[0].id}`}
-                  className={gamePairCellClass}
-                >
-                  {item.works.map((game) => (
-                    <GameCompactCard
-                      key={game.id}
-                      work={game}
-                      to={`/work/${game.id}`}
-                      fallbackIconUrl={thumbnailFallbackMap.game}
-                    />
-                  ))}
-                </div>
-              ),
-            )}
+            {/* 혼합 도메인 목록 - meta 앞에 도메인 라벨, foot은 도메인별 구성 */}
+            {data.content.map((work) => (
+              <WorkCard
+                key={work.id}
+                title={work.title}
+                meta={workCardMeta(work, { withDomain: true })}
+                tags={workCardTags(work)}
+                imageUrl={work.thumbnail || null}
+                domain={work.domain}
+                to={`/work/${work.id}`}
+                footer={workCardFooter(work)}
+              />
+            ))}
           </div>
 
           {data.totalPages > 1 && (

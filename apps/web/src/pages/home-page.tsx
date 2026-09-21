@@ -11,7 +11,7 @@ import { useAllRankings } from "@aod/shared/hooks";
 import { WorkSummary } from "@aod/shared/types";
 import { DOMAIN_LABEL_MAP } from "@aod/shared/constants";
 import { watchPlatformLabels } from "../constants/platforms";
-import { thumbnailFallbackMap, type Category } from "../constants/thumbnail";
+import { categoryOf, thumbnailFallbackMap } from "../constants/thumbnail";
 import { daysUntil, dDayOf, parseYmd } from "../utils/releaseDate";
 import FeatureCard from "../components/ui/FeatureCard";
 import RailCard from "../components/ui/RailCard";
@@ -64,11 +64,6 @@ const RANK_PLATFORM_DOMAIN: Record<string, string> = {
 };
 
 const HOME_RANK_SIZE = 6;
-
-const categoryOf = (domain?: string): Category => {
-  const key = domain?.toLowerCase() as Category;
-  return key in thumbnailFallbackMap ? key : "movie";
-};
 
 const domainLabel = (domain?: string) =>
   DOMAIN_LABEL_MAP[domain ?? ""] ?? domain ?? "";
@@ -344,9 +339,7 @@ export default function HomePage() {
                     title={work.title}
                     meta={railMeta(work)}
                     imageUrl={work.thumbnail}
-                    fallbackIconUrl={
-                      thumbnailFallbackMap[categoryOf(work.domain)]
-                    }
+                    domain={work.domain}
                     to={`/work/${work.id}`}
                   />
                 ))}

@@ -8,7 +8,6 @@ import {
   useMyLikes,
 } from "@aod/shared/hooks";
 import { DOMAIN_LABEL_MAP } from "@aod/shared/constants";
-import { thumbnailFallbackMap, type Category } from "../constants/thumbnail";
 import RailCard from "../components/ui/RailCard";
 import EmptyState from "../components/ui/EmptyState";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
@@ -25,11 +24,6 @@ import ConfirmDialog from "../components/ui/ConfirmDialog";
 
 const primaryBtnClass =
   "rounded-full bg-ink px-[22px] py-2.5 text-sm font-semibold text-surface transition-opacity hover:opacity-85 active:scale-[0.98]";
-
-const categoryOf = (domain?: string): Category => {
-  const key = domain?.toLowerCase() as Category;
-  return key in thumbnailFallbackMap ? key : "movie";
-};
 
 interface RailWorkItem {
   id: number | string;
@@ -93,7 +87,7 @@ function WorkRailSection({
                 title={item.title}
                 meta={meta || undefined}
                 imageUrl={item.thumbnail}
-                fallbackIconUrl={thumbnailFallbackMap[categoryOf(item.domain)]}
+                domain={item.domain}
                 to={`/work/${item.id}`}
               />
             );

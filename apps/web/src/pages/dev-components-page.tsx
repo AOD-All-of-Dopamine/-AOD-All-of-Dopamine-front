@@ -78,14 +78,14 @@ export default function DevComponentsPage() {
       </p>
 
       {/* 1. WorkCard */}
-      <Section title="WorkCard · portrait">
+      <Section title="WorkCard">
         <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4">
           <WorkCard
-            variant="portrait"
             title="화산귀환"
             meta="비가 / LICO"
             tags={["무협", "회귀", "판타지"]}
             imageUrl={HWASAN}
+            domain="WEBTOON"
             to="/work/webtoon-hwasan"
             footer={
               <>
@@ -95,11 +95,11 @@ export default function DevComponentsPage() {
             }
           />
           <WorkCard
-            variant="portrait"
             title="전지적 독자 시점"
             meta="슬리피-C / UMI"
             tags={["판타지", "액션", "회귀"]}
             imageUrl={ORV}
+            domain="WEBTOON"
             to="/work/webtoon-orv"
             footer={
               <>
@@ -109,11 +109,11 @@ export default function DevComponentsPage() {
             }
           />
           <WorkCard
-            variant="portrait"
             title="기생충"
             meta="2019 · 봉준호"
             tags={["드라마", "스릴러"]}
             imageUrl={PARASITE}
+            domain="MOVIE"
             to="/work/movie-parasite"
             footer={
               <>
@@ -126,11 +126,11 @@ export default function DevComponentsPage() {
             }
           />
           <WorkCard
-            variant="portrait"
             title="서울의 봄"
             meta="2023 · 김성수"
             tags={["드라마", "역사"]}
             imageUrl={SEOUL}
+            domain="MOVIE"
             to="/work/movie-seoul"
             footer={
               <>
@@ -145,14 +145,14 @@ export default function DevComponentsPage() {
         </div>
       </Section>
 
-      <Section title="WorkCard · landscape">
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3">
+      <Section title="WorkCard · 게임 (contain + 블러 배경)">
+        <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4">
           <WorkCard
-            variant="landscape"
             title="엘든 링"
             meta="2022 · FromSoftware"
             tags={["RPG", "소울라이크", "오픈월드"]}
             imageUrl={ELDEN_RING}
+            domain="GAME"
             to="/work/game-eldenring"
             footer={
               <>
@@ -162,11 +162,11 @@ export default function DevComponentsPage() {
             }
           />
           <WorkCard
-            variant="landscape"
             title="검은 신화: 오공"
             meta="2024 · Game Science"
             tags={["액션", "RPG", "소울라이크"]}
             imageUrl={BLACK_MYTH}
+            domain="GAME"
             to="/work/game-blackmyth"
             footer={
               <>
@@ -176,18 +176,12 @@ export default function DevComponentsPage() {
             }
           />
           <WorkCard
-            variant="landscape"
-            title="Balatro"
+            title="썸네일 누락 폴백"
             meta="2024 · LocalThunk"
             tags={["로그라이크", "전략", "인디"]}
-            imageUrl={BALATRO}
+            imageUrl={null}
+            domain="GAME"
             to="/work/game-balatro"
-            footer={
-              <>
-                <span>압도적으로 긍정적</span>
-                <span className="ml-auto font-bold text-ink">98%</span>
-              </>
-            }
           />
         </div>
       </Section>
@@ -199,31 +193,35 @@ export default function DevComponentsPage() {
             title="검은 신화: 오공"
             meta="게임 · Steam"
             imageUrl={BLACK_MYTH}
+            domain="GAME"
             to="/work/game-blackmyth"
           />
           <RailCard
             title="Balatro"
             meta="게임 · Steam"
             imageUrl={BALATRO}
+            domain="GAME"
             to="/work/game-balatro"
           />
           <RailCard
             title="화산귀환"
             meta="웹툰 · 네이버웹툰"
             imageUrl={HWASAN}
+            domain="WEBTOON"
             to="/work/webtoon-hwasan"
           />
           <RailCard
             title="서울의 봄"
             meta="영화 · 넷플릭스"
             imageUrl={SEOUL}
+            domain="MOVIE"
             to="/work/movie-seoul"
           />
           <RailCard
             title="썸네일 누락 폴백"
             meta="웹툰 · 2026"
             imageUrl={null}
-            fallbackIconUrl={thumbnailFallbackMap.webtoon}
+            domain="WEBTOON"
             to="/work/webtoon-fallback"
           />
         </div>
@@ -676,9 +674,6 @@ export default function DevComponentsPage() {
           <div className="grid grid-cols-2 gap-5 sm:grid-cols-4">
             <SkeletonCard variant="portrait" />
             <SkeletonCard variant="portrait" />
-          </div>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <SkeletonCard variant="landscape" />
           </div>
           {/* row = 홈 인기(feature) 리스트, panel-row = 랭킹 패널 리스트 */}
           <div>
