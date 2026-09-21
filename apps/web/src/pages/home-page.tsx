@@ -280,7 +280,7 @@ export default function HomePage() {
               title={heroMain.title}
               sub={heroSub(heroMain)}
               imageUrl={heroMain.thumbnail}
-              fallbackIconUrl={thumbnailFallbackMap[categoryOf(heroMain.domain)]}
+              domain={heroMain.domain}
               to={`/work/${heroMain.id}`}
             />
             {heroSides.length > 0 && (
@@ -292,9 +292,7 @@ export default function HomePage() {
                     kicker={domainLabel(work.domain)}
                     title={work.title}
                     imageUrl={work.thumbnail}
-                    fallbackIconUrl={
-                      thumbnailFallbackMap[categoryOf(work.domain)]
-                    }
+                    domain={work.domain}
                     to={`/work/${work.id}`}
                   />
                 ))}
