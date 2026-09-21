@@ -8,6 +8,7 @@ import axios from "axios";
 import type {
   CollectionCreateBody,
   CollectionDetail,
+  CollectionItem,
   CollectionSummary,
   CollectionsQueryParams,
   MyCollectionSummary,
@@ -15,6 +16,13 @@ import type {
 import type { PageResponse } from "../types";
 import { useApis } from "./ApiProvider";
 import { collectionKeys } from "../queries/keys";
+import {
+  shelfAppend,
+  shelfInsertAt,
+  shelfMove,
+  shelfRemove,
+  shelfSetComment,
+} from "./shelfOps";
 
 /**
  * 공개 컬렉션 목록 조회 (발견 페이지)
@@ -307,4 +315,139 @@ export const useRemoveCollectionItem = (contentId: number) => {
       );
     },
   });
+};
+
+// ========== 책장 (상세 화면에서 바로 꽂고·빼고·메모하고·옮기기) ==========
+
+/**
+ * 컬렉션 책장의 아이템 변경 5종. 담기 팝오버용 useAdd/RemoveCollectionItem 은 작품 하나에
+ * 묶여 있지만(contentId 고정), 책장은 한 컬렉션에 여러 작품을 연달아 다루므로
+ * collectionId 에 묶는다.
+ *
+ * 상세 캐시는 shelfOps 로 직접 고친다 - 상세를 invalidate 하면 재조회가 조회수를 +1 시킨다.
+ * 빼기·메모·옮기기는 낙관적으로 먼저 반영하고 실패하면 되돌린다(안내는 호출부의 onError).
+ * 꽂기는 서버가 만든 itemId 가 있어야 하므로 응답을 받고 나서 꽂는다.
+ * 옮기기는 같은 scope 로 직렬 실행 - 연타해도 마지막 PUT 이 최종 순서를 싣는다.
+ */
+export const useShelfItemMutations = (collectionId: number) => {
+  const { collectionApi } = useApis();
+  const queryClient = useQueryClient();
+  const key = collectionKeys.detail(collectionId);
+
+  const read = () => queryClient.getQueryData<CollectionDetail>(key);
+  const write = (fn: (detail: CollectionDetail) => CollectionDetail) =>
+    queryClient.setQueryData<CollectionDetail>(key, (old) =>
+      old ? fn(old) : old,
+    );
+  /** 낙관적 반영 공용 - 진행 중 조회를 멈추고 스냅샷을 남긴다 */
+  const optimistic = async (
+    fn: (detail: CollectionDetail) => CollectionDetail,
+  ) => {
+    await queryClient.cancelQueries({ queryKey: key });
+    const previous = read();
+    write(fn);
+    return { previous };
+  };
+  const rollback = (context?: { previous?: CollectionDetail }) => {
+    if (context?.previous) queryClient.setQueryData(key, context.previous);
+  };
+  /** 목록 카드(itemCount·커버)와 그 작품의 담기 팝오버 상태만 다시 받는다 */
+  const touchLists = (contentId: number) => {
+    queryClient.invalidateQueries({ queryKey: collectionKeys.publicRoot() });
+    queryClient.invalidateQueries({ queryKey: collectionKeys.mineRoot() });
+    queryClient.invalidateQueries({
+      queryKey: collectionKeys.mineSummary(contentId),
+    });
+  };
+
+  const add = useMutation({
+    mutationFn: ({
+      contentId,
+      comment,
+    }: {
+      contentId: number;
+      comment?: string;
+    }) => collectionApi.addItem(collectionId, { contentId, comment }),
+    onSuccess: (item) => {
+      write((detail) => shelfAppend(detail, item));
+      touchLists(item.contentId);
+    },
+  });
+
+  const remove = useMutation({
+    mutationFn: async ({ itemId }: { itemId: number; contentId: number }) => {
+      try {
+        await collectionApi.deleteItem(collectionId, itemId);
+      } catch (error) {
+        // 이미 빠져 있으면(404) 멱등 성공
+        if (!(axios.isAxiosError(error) && error.response?.status === 404)) {
+          throw error;
+        }
+      }
+    },
+    onMutate: ({ itemId }) =>
+      optimistic((detail) => shelfRemove(detail, itemId)),
+    onError: (_error, _vars, context) => rollback(context),
+    onSuccess: (_res, { contentId }) => touchLists(contentId),
+  });
+
+  /**
+   * 빼기 되돌리기 - 같은 코멘트로 다시 담고 원래 자리로 옮긴다.
+   * 순서 복원이 실패해도(다른 탭의 변경으로 집합 불일치 400 등) 작품은 말미에 남는다.
+   */
+  const restore = useMutation({
+    mutationFn: async ({
+      item,
+      index,
+    }: {
+      item: CollectionItem;
+      index: number;
+    }) => {
+      const created = await collectionApi.addItem(collectionId, {
+        contentId: item.contentId,
+        comment: item.comment ?? undefined,
+      });
+      const order = (read()?.items ?? [])
+        .map((i) => i.itemId)
+        .filter((id) => id !== created.itemId);
+      const at = Math.max(0, Math.min(index, order.length));
+      if (at === order.length) return { created, at };
+      order.splice(at, 0, created.itemId);
+      try {
+        await collectionApi.reorderItems(collectionId, order);
+        return { created, at };
+      } catch {
+        return { created, at: order.length };
+      }
+    },
+    onSuccess: ({ created, at }) => {
+      write((detail) => shelfInsertAt(detail, created, at));
+      touchLists(created.contentId);
+    },
+  });
+
+  const setComment = useMutation({
+    mutationFn: ({ itemId, comment }: { itemId: number; comment: string }) =>
+      collectionApi.updateItem(collectionId, itemId, {
+        comment: comment.trim(),
+      }),
+    onMutate: ({ itemId, comment }) =>
+      optimistic((detail) => shelfSetComment(detail, itemId, comment)),
+    onError: (_error, _vars, context) => rollback(context),
+  });
+
+  const move = useMutation({
+    scope: { id: `shelf-order-${collectionId}` },
+    // 보낼 순서는 인자가 아니라 실행 시점의 캐시에서 읽는다 - 직렬 실행이라 앞선 낙관적
+    // 이동이 다 반영돼 있다. 인자(itemId·delta)는 onMutate 의 낙관적 이동에만 쓰인다.
+    mutationFn: async () => {
+      const order = read()?.items.map((i) => i.itemId);
+      if (order) await collectionApi.reorderItems(collectionId, order);
+    },
+    onMutate: ({ itemId, delta }: { itemId: number; delta: -1 | 1 }) =>
+      optimistic((detail) => shelfMove(detail, itemId, delta)),
+    onError: (_error, _vars, context) => rollback(context),
+  });
+
+  return { add, remove, restore, setComment, move };
 };
