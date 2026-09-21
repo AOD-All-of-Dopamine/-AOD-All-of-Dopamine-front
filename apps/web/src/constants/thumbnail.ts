@@ -6,14 +6,6 @@ import WebnovelIcon from "../assets/thumbnail-icon/null_webnovel.svg";
 
 export type Category = "movie" | "tv" | "game" | "webtoon" | "webnovel";
 
-export const imageAspectMap: Record<Category, string> = {
-  movie: "aspect-[2/3]",
-  tv: "aspect-[2/3]",
-  game: "aspect-[21.5/10]",
-  webtoon: "aspect-[19/25]",
-  webnovel: "aspect-[17/25]",
-};
-
 export const thumbnailFallbackMap: Record<Category, string> = {
   movie: MovieIcon,
   tv: TvIcon,
@@ -22,10 +14,25 @@ export const thumbnailFallbackMap: Record<Category, string> = {
   webnovel: WebnovelIcon,
 };
 
-export const thumbnailIconSizeMap: Record<Category, string> = {
-  movie: "w-10 h-10",
-  tv: "w-10 h-10",
-  game: "w-11 h-11",
-  webtoon: "w-10 h-10",
-  webnovel: "w-9 h-9",
+/**
+ * 통일 2:3 썸네일 틀(WorkThumb) 안에 이미지를 넣는 방식.
+ * - cover: 원본이 2:3(TMDB 포스터)이라 틀을 그대로 채운다.
+ * - contain: 원본 비율이 다르다(Steam 460:215, 네이버웹툰 480:623, 웹소설 ~0.7) -
+ *   자르지 않고 원본 비율로 넣고, 남는 자리는 같은 이미지의 블러 배경이 채운다.
+ * 새 도메인을 Category에 추가하면 이 맵의 누락이 컴파일 에러로 잡힌다.
+ */
+export type ThumbFit = "cover" | "contain";
+
+export const thumbFitMap: Record<Category, ThumbFit> = {
+  movie: "cover",
+  tv: "cover",
+  game: "contain",
+  webtoon: "contain",
+  webnovel: "contain",
+};
+
+/** 백엔드 도메인 문자열("GAME" 등, 대소문자 무관) -> Category. 모르는 값은 movie */
+export const categoryOf = (domain?: string | null): Category => {
+  const key = domain?.toLowerCase() as Category;
+  return key in thumbnailFallbackMap ? key : "movie";
 };

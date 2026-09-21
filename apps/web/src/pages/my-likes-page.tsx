@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, MagnifyingGlass, ThumbsUp } from "@phosphor-icons/react";
 import { useMyLikes } from "@aod/shared/hooks";
-import { thumbnailFallbackMap, type Category } from "../constants/thumbnail";
 import WorkCard from "../components/ui/WorkCard";
 import {
   workCardFooter,
@@ -19,11 +18,6 @@ import SkeletonCard from "../components/ui/SkeletonCard";
  *   (work-detail 관례) + 전 폭 공용 검색 필(로컬 제목 필터, 입력 즉시 반영).
  * - 카드 마크업은 WorkCard(portrait)로 대체, 빈 상태는 EmptyState.
  */
-
-const categoryOf = (domain?: string): Category => {
-  const key = domain?.toLowerCase() as Category;
-  return key in thumbnailFallbackMap ? key : "movie";
-};
 
 const gridClass =
   "mt-5 grid grid-cols-2 gap-x-3 gap-y-3.5 min-[480px]:grid-cols-3 min-[768px]:gap-x-[18px] min-[768px]:gap-y-5";
@@ -78,12 +72,11 @@ export default function MyLikesPage() {
               // (상호작용 API가 신규 필드를 아직 안 주면 기존 "도메인 · 연도"와 동일)
               <WorkCard
                 key={work.id}
-                variant="portrait"
                 title={work.title}
                 meta={workCardMeta(work, { withDomain: true })}
                 tags={workCardTags(work)}
                 imageUrl={work.thumbnail || null}
-                fallbackIconUrl={thumbnailFallbackMap[categoryOf(work.domain)]}
+                domain={work.domain}
                 to={`/work/${work.id}`}
                 footer={workCardFooter(work)}
               />

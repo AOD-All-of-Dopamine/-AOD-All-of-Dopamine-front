@@ -16,7 +16,6 @@ import {
 import { useGenresWithCount, usePlatforms, useWorks } from "@aod/shared/hooks";
 import { DOMAIN_FILTERS, DOMAIN_LABEL_MAP } from "@aod/shared/constants";
 import { COLLECTION_SOURCES, platformLabel } from "../constants/platforms";
-import { thumbnailFallbackMap, type Category } from "../constants/thumbnail";
 import WorkCard from "../components/ui/WorkCard";
 import {
   workCardFooter,
@@ -154,11 +153,6 @@ const AGE_OPTIONS = ["전체이용가", "12세이용가", "15세이용가", "19�
 
 /** 장르 접기 기본 노출 개수 - 웹툰 장르(네이버 태그 원천)가 수십 개라 접기 필요 */
 const GENRE_COLLAPSE_LIMIT = 12;
-
-const categoryOf = (domain: string): Category => {
-  const key = domain?.toLowerCase() as Category;
-  return key in thumbnailFallbackMap ? key : "movie";
-};
 
 const eraLabel = (value: string) =>
   ERA_OPTIONS.find((o) => o.value === value)?.label ?? value;
@@ -628,7 +622,6 @@ export default function ExplorePage() {
   }, [isLoading, isError, data, page, totalPages]);
 
   const title = DOMAIN_LABEL_MAP[domainKey] ?? domainId;
-  const variant = domainId === "game" ? "landscape" : "portrait";
   const activeFilterCount =
     genres.length +
     platforms.length +
@@ -733,11 +726,9 @@ export default function ExplorePage() {
   );
 
   // 모바일 2열 기본(목업 프레임 2 .grid2), 이후 목업 반응형 그대로 -
-  // landscape 4/3/2열, portrait 5/4/3/2열 (1200/1023/767px)
+  // 5/4/3/2열 (1200/1023/767px). 카드 크기는 도메인과 무관하게 같다 (WorkThumb)
   const gridClass =
-    variant === "landscape"
-      ? "mt-[22px] grid grid-cols-2 gap-y-3.5 gap-x-3 min-[768px]:grid-cols-3 min-[768px]:gap-y-5 min-[768px]:gap-x-[18px] min-[1201px]:grid-cols-4"
-      : "mt-[22px] grid grid-cols-2 gap-y-3.5 gap-x-3 min-[768px]:grid-cols-3 min-[768px]:gap-y-5 min-[768px]:gap-x-[18px] min-[1024px]:grid-cols-4 min-[1201px]:grid-cols-5";
+    "mt-[22px] grid grid-cols-2 gap-y-3.5 gap-x-3 min-[768px]:grid-cols-3 min-[768px]:gap-y-5 min-[768px]:gap-x-[18px] min-[1024px]:grid-cols-4 min-[1201px]:grid-cols-5";
 
   // <lg 필터 바텀시트 - ConfirmDialog와 같은 네이티브 dialog.showModal() 기반.
   // top-layer + 배경 inert(포커스 트랩) + Escape(cancel)를 브라우저가 제공하고,
@@ -1029,7 +1020,7 @@ export default function ExplorePage() {
           {isLoading ? (
             <div className={gridClass} aria-hidden="true">
               {Array.from({ length: PAGE_SIZE }, (_, i) => (
-                <SkeletonCard key={i} variant={variant} />
+                <SkeletonCard key={i} variant="portrait" />
               ))}
             </div>
           ) : isError ? (
@@ -1068,14 +1059,11 @@ export default function ExplorePage() {
                   // 목업 카드 구성 그대로 - meta(연도·제작자)/장르 태그/도메인별 foot
                   <WorkCard
                     key={work.id}
-                    variant={variant}
                     title={work.title}
                     meta={workCardMeta(work)}
                     tags={workCardTags(work)}
                     imageUrl={work.thumbnail}
-                    fallbackIconUrl={
-                      thumbnailFallbackMap[categoryOf(work.domain)]
-                    }
+                    domain={work.domain}
                     to={`/work/${work.id}`}
                     footer={workCardFooter(work)}
                   />

@@ -2,17 +2,12 @@ import { Link } from "react-router-dom";
 import { Heart } from "@phosphor-icons/react";
 import { recCardFields, recWorkPath } from "@aod/shared/rec";
 import type { RecCard } from "@aod/shared/types";
-import { thumbnailFallbackMap, type Category } from "../../constants/thumbnail";
 import { useImpressionTracker } from "../../tracking/useImpressionTracker";
 import Tag from "../ui/Tag";
+import WorkThumb from "../ui/WorkThumb";
 import { cardLiftOpen } from "../ui/cardStyles";
 import { workCardFooter, workCardMeta, workCardTags } from "../ui/workCardInfo";
 import RecFeedbackMenu from "./RecFeedbackMenu";
-
-const categoryOf = (domain?: string): Category => {
-  const key = domain?.toLowerCase() as Category;
-  return key in thumbnailFallbackMap ? key : "movie";
-};
 
 export interface RecCardTileProps {
   card: RecCard;
@@ -27,7 +22,7 @@ export interface RecCardTileProps {
 }
 
 /**
- * 추천 카드 1장 = 기존 WorkCard(portrait) + 이유 한 줄 + 피드백 행.
+ * 추천 카드 1장 = 기존 WorkCard + 이유 한 줄 + 피드백 행.
  * WorkCard 는 카드 전체가 <Link> 라 안에 버튼을 넣을 수 없다(a 안의 button 은 잘못된 마크업).
  * 그래서 같은 조각(cardLift·workCardMeta·workCardTags·workCardFooter)으로 다시 조립하고
  * 링크 영역과 버튼 행을 형제로 둔다.
@@ -55,20 +50,7 @@ const RecCardTile = ({
   return (
     <article ref={setImpressionRef} className={`flex flex-col bg-surface ${cardLiftOpen}`}>
       <Link to={recWorkPath(card)} onClick={() => onOpen(card)} className="flex flex-1 flex-col">
-        <div className="aspect-[2/3] overflow-hidden rounded-t-panel bg-canvas">
-          {work.thumbnail ? (
-            <img src={work.thumbnail} alt="" loading="lazy" className="h-full w-full object-cover" />
-          ) : (
-            <div className="grid h-full w-full place-items-center">
-              <img
-                src={thumbnailFallbackMap[categoryOf(work.domain)]}
-                alt=""
-                loading="lazy"
-                className="w-[clamp(32px,30%,64px)] opacity-80"
-              />
-            </div>
-          )}
-        </div>
+        <WorkThumb imageUrl={work.thumbnail} domain={work.domain} className="rounded-t-panel" />
         <div className="flex flex-1 flex-col gap-[7px] px-[15px] pb-[14px] pt-[13px]">
           <div className="truncate text-[15.5px] font-bold tracking-[-0.01em] text-ink">{work.title}</div>
           {card.reason && (
