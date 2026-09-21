@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import {
   ArrowLeft,
@@ -256,6 +256,10 @@ function CollectionItemRow({
 export default function CollectionDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  /** 방금 만든 컬렉션 (collection-new-page 가 실어 보낸다) - 폭과 무관하게 "작품 꽂기"부터 연다 */
+  const justCreated =
+    (location.state as { justCreated?: boolean } | null)?.justCreated === true;
   const collectionId = id ? Number(id) : 0;
   const { isAuthenticated } = useAuth();
   const isLg = useIsLg();
@@ -293,14 +297,17 @@ export default function CollectionDetailPage() {
   useEffect(() => () => window.clearTimeout(dropTimerRef.current), []);
 
   // 첫 진입: lg+ 는 첫 작품을 뽑아 둔다(옆 패널이 비어 보이지 않게). 소유자의 빈 책장은
-  // "작품 꽂기"를 열어 둔다. <lg 는 하단 카드·시트가 화면을 가리므로 아무것도 하지 않는다.
+  // "작품 꽂기"를 열어 둔다. <lg 는 하단 카드·시트가 화면을 가리므로 아무것도 하지 않는다 -
+  // 단, 방금 만든 책장은 <lg 에서도 시트를 연다(만들기에서 채우기로 끊기지 않게).
   useEffect(() => {
     if (!data || primedForRef.current === data.id) return;
     primedForRef.current = data.id;
-    if (!isLg) return;
-    if (data.items.length > 0) setSelectedItemId(data.items[0].itemId);
-    else if (data.owner) setAdding(true);
-  }, [data, isLg]);
+    if (data.owner && data.items.length === 0 && (isLg || justCreated)) {
+      setAdding(true);
+      return;
+    }
+    if (isLg && data.items.length > 0) setSelectedItemId(data.items[0].itemId);
+  }, [data, isLg, justCreated]);
 
   const items = useMemo(() => data?.items ?? [], [data]);
   const shelvedContentIds = useMemo(
