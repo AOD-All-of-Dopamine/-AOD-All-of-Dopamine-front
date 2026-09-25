@@ -77,6 +77,11 @@ describe("이벤트 필드", () => {
     expect(recCardContext(card)).toEqual({ source: "rec_tab", requestId: "req-1", impressionId: "imp-1" });
   });
 
+  it("홈 추천 릴은 surface 를 넘겨 노출·클릭·반응을 추천 탭과 갈라 적는다", () => {
+    expect(recCardFields(card, "home_rec").surface).toBe("home_rec");
+    expect(recCardContext(card, "home_rec")).toEqual({ source: "home_rec", requestId: "req-1", impressionId: "imp-1" });
+  });
+
   it("더 보기는 직전 쪽의 requestId 와 page_depth·tab 을 싣는다", () => {
     expect(recLoadedMoreFields({ requestId: "req-9", pageDepth: 2, tab: "game" })).toEqual({
       requestId: "req-9", surface: "rec_tab", payload: { page_depth: 2, tab: "game" },

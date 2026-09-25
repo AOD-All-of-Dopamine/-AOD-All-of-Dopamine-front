@@ -81,12 +81,19 @@ export interface RecHiddenEntry {
   impressionId: string;
   /** 싫어요를 되돌릴 때 돌려놓을 상태. 서버 응답 전에는 NONE. */
   previousState: ReactionState;
+  /**
+   * true 면 목록에서 빼지 않고 **그 자리에 흐리게 남긴다**(홈 추천 릴). 자리를 닫으면(collapse) false.
+   * 없으면 지금처럼 곧바로 목록에서 빠진다(추천 탭) — 선택 필드라 기존 동작은 그대로다.
+   */
+  slotVisible?: boolean;
 }
 
 export type RecHiddenAction =
   | { type: "hide"; entry: RecHiddenEntry }
   | { type: "confirm"; contentId: number; previousState: ReactionState }
   | { type: "restore"; contentId: number }
+  /** 흐리게 남겨 둔 자리를 모두 닫는다 — 그 작품들은 이제 목록에서 빠진다(화면을 다시 열 때). */
+  | { type: "collapse" }
   | { type: "clear" };
 
 /** 카드 제거는 서버 재요청이 아니라 화면 상태다 (설계 §4). 체인 nonce 단위로 비운다. */
@@ -103,6 +110,10 @@ export function recHiddenReducer(
       );
     case "restore":
       return state.filter((e) => e.contentId !== action.contentId);
+    case "collapse":
+      return state.some((e) => e.slotVisible === true)
+        ? state.map((e) => (e.slotVisible === true ? { ...e, slotVisible: false } : e))
+        : state;
     case "clear":
       return state.length === 0 ? state : [];
   }
@@ -110,4 +121,12 @@ export function recHiddenReducer(
 
 export function hiddenIds(state: readonly RecHiddenEntry[]): Set<number> {
   return new Set(state.map((e) => e.contentId));
+}
+
+/**
+ * 목록에서 뺄 id — 자리를 유지하는 항목(slotVisible)은 빼지 않는다. mergeRecPages 에 넘긴다.
+ * slotVisible 이 없는 항목(추천 탭)은 hiddenIds 와 같다.
+ */
+export function collapsedIds(state: readonly RecHiddenEntry[]): Set<number> {
+  return new Set(state.filter((e) => e.slotVisible !== true).map((e) => e.contentId));
 }

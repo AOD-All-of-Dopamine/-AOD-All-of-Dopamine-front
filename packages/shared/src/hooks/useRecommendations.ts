@@ -19,6 +19,8 @@ export interface UseRecommendationsOptions {
   initialChainId?: string | null;
   size?: number;
   enabled?: boolean;
+  /** 요청을 보낸 화면 (RecListParams.surface). 추천 탭은 넘기지 않는다. */
+  surface?: string;
 }
 
 /**
@@ -33,11 +35,11 @@ export function useRecommendations(
   options: UseRecommendationsOptions = {},
 ) {
   const { recApi } = useApis();
-  const { initialChainId = null, size, enabled = true } = options;
+  const { initialChainId = null, size, enabled = true, surface } = options;
 
   return useInfiniteQuery({
     queryKey: recKeys.list(tab, chainNonce),
-    queryFn: ({ pageParam }) => recApi.list({ tab, chainId: pageParam, size }),
+    queryFn: ({ pageParam }) => recApi.list({ tab, chainId: pageParam, size, surface }),
     initialPageParam: initialChainId,
     getNextPageParam: (lastPage: RecResponse) => nextChainParam(lastPage),
     enabled,

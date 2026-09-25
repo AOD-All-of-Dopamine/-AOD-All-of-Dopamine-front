@@ -79,6 +79,14 @@ describe("recApi", () => {
     expect(data.items[0].work.id).toBe(7);
   });
 
+  it("surface 를 주면 쿼리에 싣고, 없으면 파라미터 자체를 뺀다 (추천 탭 요청 불변)", async () => {
+    await makeApis().recApi.list({ tab: "all", size: 12, surface: "home_rec" });
+    expect(lastUrl?.searchParams.get("surface")).toBe("home_rec");
+    expect(lastUrl?.searchParams.get("size")).toBe("12");
+    await makeApis().recApi.list({ tab: "all" });
+    expect(lastUrl?.searchParams.has("surface")).toBe(false);
+  });
+
   it("chainId·size 를 주면 그대로 싣는다", async () => {
     await makeApis().recApi.list({ tab: "all", chainId: "chain-9", size: 5 });
     expect(lastUrl?.searchParams.get("chainId")).toBe("chain-9");

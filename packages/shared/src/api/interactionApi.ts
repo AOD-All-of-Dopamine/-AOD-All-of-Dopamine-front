@@ -1,5 +1,5 @@
 import type { AxiosInstance } from "axios";
-import type { PageResponse } from "../types";
+import type { PageResponse, WorkSummary } from "../types";
 import { recHeaders } from "../tracking/recHeaders";
 import type { RecRequestContext } from "../tracking/types";
 
@@ -172,8 +172,8 @@ export function createInteractionApi(publicApi: AxiosInstance, privateApi: Axios
     /**
      * 내가 좋아요한 작품 목록
      */
-    getMyLikes: async (page = 0, size = 20) => {
-      const { data } = await privateApi.get("/api/my/likes", {
+    getMyLikes: async (page = 0, size = 20): Promise<PageResponse<WorkSummary>> => {
+      const { data } = await privateApi.get<PageResponse<WorkSummary>>("/api/my/likes", {
         params: { page, size },
       });
       return data;
