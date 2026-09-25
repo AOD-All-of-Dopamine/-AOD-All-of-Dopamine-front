@@ -6,6 +6,7 @@ import { ApiProvider } from "@aod/shared/hooks";
 import { idHeaders, type RecTracker } from "@aod/shared/tracking";
 import { createBrowserIds } from "./tracking/browserIds";
 import { createWebTracker } from "./tracking/createWebTracker";
+import { emitSessionExpired } from "./hooks/sessionExpired";
 import { TrackerProvider } from "./tracking/TrackerProvider";
 import { NOOP_TRACKER } from "./tracking/trackerContext";
 import App from "./App.tsx";
@@ -51,6 +52,8 @@ const clients = createApiClients({
   isDev: import.meta.env.DEV,
   // 서버 이벤트(reaction_changed 등)에 익명·세션 식별자를 싣는다 — privateApi 에만 붙는다
   getExtraHeaders: () => idHeaders(trackerIds),
+  // privateApi 가 401 을 받으면 AuthProvider 에 알린다 — 토큰을 지우고 로그아웃 상태로 바꾸는 것은 그쪽 몫이다
+  onSessionExpired: emitSessionExpired,
 });
 const apis = createApis(clients);
 
