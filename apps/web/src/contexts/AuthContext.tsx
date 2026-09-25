@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useApis } from "@aod/shared/hooks";
-import { recKeys } from "@aod/shared/queries";
+import { myKeys, recKeys } from "@aod/shared/queries";
 import type { AuthResponse, UserInfo } from "@aod/shared/api";
 import { clearRecChains } from "../hooks/useRecChain";
 import { clearPendingOnboarding, markPendingOnboarding } from "../hooks/pendingOnboarding";
@@ -54,8 +54,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.removeItem(TOKEN_KEY);
     setToken(null);
     setUser(null);
-    // 다른 사용자의 추천 목록·체인이 남지 않게 한다 (추천 탭 설계 §4)
+    // 다른 사용자의 추천 목록·체인이 남지 않게 한다 (추천 탭 설계 §4).
+    // 좋아요 목록도 — 사용자 구분 없는 키라, 남기면 다음 계정의 홈·프로필에 이전 계정의 좋아요가 보인다.
     queryClient.removeQueries({ queryKey: recKeys.root() });
+    queryClient.removeQueries({ queryKey: myKeys.likesRoot() });
     clearRecChains();
   }, [queryClient]);
 
@@ -129,8 +131,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         email: "",
       });
 
-      // 비로그인 대체 목록이 남아 있으면 로그인 직후에도 그대로 보인다 — 버린다
+      // 비로그인 대체 목록이 남아 있으면 로그인 직후에도 그대로 보인다 — 버린다 (좋아요 목록도 같은 이유)
       queryClient.removeQueries({ queryKey: recKeys.root() });
+      queryClient.removeQueries({ queryKey: myKeys.likesRoot() });
       clearRecChains();
 
       // email 등 상세 정보가 꼭 필요하면 여기서 선택적으로 추가 조회

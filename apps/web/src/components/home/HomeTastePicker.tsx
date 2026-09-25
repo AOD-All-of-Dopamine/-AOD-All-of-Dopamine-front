@@ -84,10 +84,15 @@ const HomeTastePicker = ({ candidates, onSaved, notify }: HomeTastePickerProps) 
       { isAuthError },
     );
     savingRef.current = false;
-    if (!aliveRef.current) return;
-    setSaving(false);
-
     const savedNow = pending.filter((pick) => result.saved.includes(pick.contentId));
+
+    // 저장 도중 홈을 떠났으면 이 화면 상태는 건드리지 않되, 한 건이라도 담겼으면 추천 캐시는 비운다 —
+    // 캐시는 이 화면 것이 아니다. 비우지 않으면 돌아왔을 때 옛 no_seed 목록으로 또 고르라고 한다(온보딩과 같은 규칙).
+    if (!aliveRef.current) {
+      if (savedNow.length > 0) onSaved();
+      return;
+    }
+    setSaving(false);
     if (savedNow.length > 0) dispatch({ type: "saved", picks: savedNow });
 
     // 인증 만료: 전역 로그아웃(#49)이 "로그인이 만료됐어요"를 띄우고 추천 캐시를 지운다 —

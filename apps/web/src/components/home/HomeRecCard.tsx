@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { HOME_REC_SURFACE } from "@aod/shared/constants";
 import { recCardFields, recWorkPath } from "@aod/shared/rec";
@@ -15,6 +16,8 @@ export interface HomeRecCardProps {
   /** 👍/👎. 비로그인이면 null(저장되지 않는다). */
   feedback: { liked: boolean; onLike: () => void; onDislike: () => void } | null;
   onOpen: (card: RecCard) => void;
+  /** 가린 자리에서 되돌려 이 카드가 다시 생겼으면 카드(링크)로 포커스를 옮긴다. */
+  autoFocus?: boolean;
 }
 
 /**
@@ -24,14 +27,20 @@ export interface HomeRecCardProps {
  * 카드 폭이 고정이라 포스터 오른쪽 아래에 정확히 앉는다.
  * 카드 전체가 노출 계측 대상이다(홈 surface). 대체 목록 카드도 impressionId 가 있어 똑같이 잰다(분모).
  */
-const HomeRecCard = ({ card, showReason, feedback, onOpen }: HomeRecCardProps) => {
+const HomeRecCard = ({ card, showReason, feedback, onOpen, autoFocus = false }: HomeRecCardProps) => {
   const setImpressionRef = useImpressionTracker(recCardFields(card, HOME_REC_SURFACE));
+  const linkRef = useRef<HTMLAnchorElement>(null);
+  useEffect(() => {
+    if (autoFocus) linkRef.current?.focus({ preventScroll: true });
+    // 마운트될 때 한 번만
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const work = card.work;
   const meta = workCardMeta(work, { withDomain: true });
 
   return (
     <article ref={setImpressionRef} className="group relative w-[168px] flex-none snap-start">
-      <Link to={recWorkPath(card)} onClick={() => onOpen(card)} className="block">
+      <Link ref={linkRef} to={recWorkPath(card)} onClick={() => onOpen(card)} className="block">
         <div
           className={`bg-canvas ${cardLift} group-hover:-translate-y-[3px] group-hover:shadow-lift motion-reduce:group-hover:translate-y-0`}
         >

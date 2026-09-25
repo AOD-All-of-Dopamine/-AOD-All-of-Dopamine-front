@@ -15,6 +15,7 @@ import {
   mergeRecPages,
   recCardContext,
   recCardFields,
+  recErrorStatus,
   recHiddenReducer,
   type RecHiddenEntry,
 } from "@aod/shared/rec";
@@ -48,6 +49,8 @@ const LIKE_MINIS = 3;
 interface HideOutcome {
   ok: boolean;
   previousState: ReactionState;
+  /** 실패 원인 — 401 이면 토스트를 전역 안내에 맡긴다. */
+  error?: unknown;
 }
 
 /** 상세에서 돌아와 다시 그릴 때는 흐린 자리를 닫는다 — "그 자리 되돌리기"는 홈에 머무는 동안만이다. */
@@ -62,6 +65,13 @@ const RAIL_CLASS = "scrollbar-rail mt-4 flex snap-x snap-mandatory gap-3.5 overf
  * 제목과 "추천 더 보기"는 모든 모드에서 그린다 — 모바일에서 추천 탭으로 가는 길이 이 섹션뿐이다.
  */
 export default function HomeRecRail() {
+  const { token } = useAuth();
+  // 로그인 상태가 바뀌면(로그아웃·401·다른 계정) 몸통을 새로 띄운다 — 숨김·👍 상태는 마운트 때만 저장소에서
+  // 읽으므로, 그대로 두면 이전 세션의 흐린 자리·👍 가 새 목록에 남는다. 저장소는 clearRecChains 가 이미 비웠다.
+  return <HomeRecRailBody key={token ?? "anon"} />;
+}
+
+function HomeRecRailBody() {
   const { isAuthenticated } = useAuth();
   const tracker = useTracker();
   const queryClient = useQueryClient();
@@ -93,7 +103,7 @@ export default function HomeRecRail() {
   });
   const title = homeRecTitle(mode, isAuthenticated);
   const showReason = homeRecShowsReason(mode);
-  const feedbackEnabled = homeRecFeedbackEnabled(mode);
+  const feedbackEnabled = isAuthenticated && homeRecFeedbackEnabled(mode);
 
   // 좋아요 미니 포스터 — 개인화일 때만 부른다(비로그인 호출은 400).
   const likes = useMyLikes(0, LIKE_MINIS, isAuthenticated && mode === "personal");
@@ -105,12 +115,40 @@ export default function HomeRecRail() {
 
   /** contentId → 날아가는 중인 싫어요 쓰기. 되돌리기는 이 약속이 끝난 뒤에 반대 요청을 보낸다. */
   const pendingHideRef = useRef(new Map<number, Promise<HideOutcome>>());
-  /** 반응 쓰기가 날아가는 중인 카드 — 👍 연타로 요청 순서가 뒤집히지 않게 한다. */
+  /** 반응 쓰기가 날아가는 중인 카드 — 👍 연타로 요청이 쌓이지 않게 한다. */
   const likeBusyRef = useRef(new Set<number>());
+  /**
+   * 작품마다 쓰기를 한 줄로 세운다(👍·👎·되돌리기). 자리에서 바로 되돌리고 다시 👎 할 수 있어서,
+   * 앞 요청이 끝나기 전에 뒤 요청을 보내면 서버가 받은 순서와 화면이 어긋난다
+   * (예: 👎 → 되돌리기 → 👎 가 서버에서 DISLIKE·DISLIKE·NONE 으로 끝나 화면은 가렸는데 기록은 없음).
+   */
+  const writeChainRef = useRef(new Map<number, Promise<unknown>>());
+  const enqueueWrite = useCallback(<T,>(contentId: number, task: () => Promise<T>): Promise<T> => {
+    const previous = writeChainRef.current.get(contentId) ?? Promise.resolve();
+    const next = previous.then(task, task);
+    const settled = next.catch(() => undefined);
+    writeChainRef.current.set(contentId, settled);
+    void settled.then(() => {
+      if (writeChainRef.current.get(contentId) === settled) writeChainRef.current.delete(contentId);
+    });
+    return next;
+  }, []);
+  /** 다음 렌더에서 포커스를 옮길 곳 — 👎 뒤에는 되돌리기, 되돌린 뒤에는 카드. 버튼이 사라지면 포커스가 body 로 빠진다. */
+  const focusRequestRef = useRef<{ contentId: number; target: "undo" | "card" } | null>(null);
+  useEffect(() => {
+    focusRequestRef.current = null; // 자식이 마운트되며 한 번 쓰고 나면 비운다 (부모 effect 는 자식 뒤에 돈다)
+  });
 
   const showError = useCallback(() => {
     showToast({ message: "잠시 후 다시 시도해 주세요" }, 2500);
   }, [showToast]);
+  /** 401 은 전역 안내(#49 "로그인이 만료됐어요")가 맡는다 — 같이 띄우면 같은 자리에 두 장이 겹친다. */
+  const reportError = useCallback(
+    (error: unknown) => {
+      if (recErrorStatus(error) !== 401) showError();
+    },
+    [showError],
+  );
 
   const notify = useCallback((message: string) => showToast({ message }, 4000), [showToast]);
 
@@ -126,34 +164,30 @@ export default function HomeRecRail() {
       const nextLiked = !likedIds[contentId];
       likeBusyRef.current.add(contentId);
       setLikedIds((prev) => ({ ...prev, [contentId]: nextLiked }));
-      void setReactionAsync({
-        contentId,
-        state: nextLiked ? "LIKE" : "NONE",
-        rec: recCardContext(card, HOME_REC_SURFACE),
-      })
-        .catch(() => {
+      void enqueueWrite(contentId, () =>
+        setReactionAsync({
+          contentId,
+          state: nextLiked ? "LIKE" : "NONE",
+          rec: recCardContext(card, HOME_REC_SURFACE),
+        }),
+      )
+        .catch((error: unknown) => {
           setLikedIds((prev) => ({ ...prev, [contentId]: !nextLiked }));
-          showError();
+          reportError(error);
         })
         .finally(() => {
           likeBusyRef.current.delete(contentId);
         });
     },
-    [likedIds, setReactionAsync, showError],
+    [enqueueWrite, likedIds, reportError, setReactionAsync],
   );
 
   const undo = useCallback(
     async (contentId: number) => {
       const entry = hiddenRef.current.find((item) => item.contentId === contentId);
       if (!entry) return;
+      focusRequestRef.current = { contentId, target: "card" };
       dispatchHidden({ type: "restore", contentId });
-
-      // 원래 쓰기가 아직 날아가는 중이면 먼저 끝나기를 기다린다 — 두 요청이 뒤집히면
-      // 서버에는 "싫어요"가 남은 채 화면만 되돌아간다.
-      const pending = pendingHideRef.current.get(contentId);
-      const { ok, previousState } = await (pending ??
-        Promise.resolve<HideOutcome>({ ok: true, previousState: entry.previousState }));
-      if (!ok) return;
 
       const rec: RecRequestContext = {
         source: HOME_REC_SURFACE,
@@ -161,14 +195,22 @@ export default function HomeRecRail() {
         impressionId: entry.impressionId,
       };
       try {
-        // 돌려놓을 상태는 서버가 알려 준 previousState 다 — 좋아요였던 작품은 좋아요로 돌아간다.
-        await setReactionAsync({ contentId, state: previousState, rec });
-      } catch {
+        // 👎 쓰기 뒤에 줄을 선다 — 그 결과(previousState)를 보고 돌려놓는다.
+        await enqueueWrite(contentId, async () => {
+          const pending = pendingHideRef.current.get(contentId);
+          const { ok, previousState } = await (pending ??
+            Promise.resolve<HideOutcome>({ ok: true, previousState: entry.previousState }));
+          // 서버가 👎 를 기록하지 못했으면 되돌릴 것도 없다 (카드는 이미 되살렸다).
+          if (!ok) return;
+          // 돌려놓을 상태는 서버가 알려 준 previousState 다 — 좋아요였던 작품은 좋아요로 돌아간다.
+          await setReactionAsync({ contentId, state: previousState, rec });
+        });
+      } catch (error) {
         dispatchHidden({ type: "hide", entry });
-        showError();
+        reportError(error);
       }
     },
-    [setReactionAsync, showError],
+    [enqueueWrite, reportError, setReactionAsync],
   );
 
   const dislike = useCallback(
@@ -183,10 +225,11 @@ export default function HomeRecRail() {
         previousState: "NONE",
         slotVisible: true,
       };
+      focusRequestRef.current = { contentId, target: "undo" };
       dispatchHidden({ type: "hide", entry });
 
       // 이 약속은 절대 거부되지 않는다 — 되돌리기가 그대로 await 할 수 있어야 한다.
-      const write: Promise<HideOutcome> = (async () => {
+      const write: Promise<HideOutcome> = enqueueWrite(contentId, async () => {
         try {
           const result = await setReactionAsync({
             contentId,
@@ -194,10 +237,10 @@ export default function HomeRecRail() {
             rec: recCardContext(card, HOME_REC_SURFACE),
           });
           return { ok: true, previousState: result.previousState };
-        } catch {
-          return { ok: false, previousState: "NONE" };
+        } catch (error) {
+          return { ok: false, previousState: "NONE", error };
         }
-      })();
+      });
       pendingHideRef.current.set(contentId, write);
 
       const outcome = await write;
@@ -205,11 +248,11 @@ export default function HomeRecRail() {
         dispatchHidden({ type: "confirm", contentId, previousState: outcome.previousState });
       } else if (hiddenRef.current.some((item) => item.contentId === contentId)) {
         dispatchHidden({ type: "restore", contentId });
-        showError();
+        reportError(outcome.error);
       }
       if (pendingHideRef.current.get(contentId) === write) pendingHideRef.current.delete(contentId);
     },
-    [setReactionAsync, showError],
+    [enqueueWrite, reportError, setReactionAsync],
   );
 
   /**
@@ -226,7 +269,7 @@ export default function HomeRecRail() {
   const hiddenById = useMemo(() => new Map(hidden.map((entry) => [entry.contentId, entry])), [hidden]);
 
   let body: ReactNode;
-  if (query.isLoading || (query.isFetching && !query.data)) {
+  if (query.isPending || (query.isFetching && !query.data)) {
     body = (
       <div aria-hidden="true" className="mt-4 flex gap-3.5 overflow-hidden pb-1.5">
         {Array.from({ length: 6 }, (_, i) => (
@@ -291,13 +334,15 @@ export default function HomeRecRail() {
           <div role="region" aria-label={title} tabIndex={0} className={RAIL_CLASS}>
             {cards.map((card) => {
               const entry = hiddenById.get(card.work.id);
-              if (entry?.slotVisible === true) {
+              const focus = focusRequestRef.current;
+              if (feedbackEnabled && entry?.slotVisible === true) {
                 return (
                   <HiddenCardSlot
                     key={card.work.id}
                     work={card.work}
                     message="덜 보여드릴게요"
                     onUndo={() => void undo(card.work.id)}
+                    autoFocusUndo={focus?.contentId === card.work.id && focus.target === "undo"}
                     className="w-[168px] flex-none snap-start"
                   />
                 );
@@ -308,6 +353,7 @@ export default function HomeRecRail() {
                   card={card}
                   showReason={showReason}
                   onOpen={openCard}
+                  autoFocus={focus?.contentId === card.work.id && focus.target === "card"}
                   feedback={
                     feedbackEnabled
                       ? {
