@@ -11,6 +11,7 @@ import { recKeys } from "@aod/shared/queries";
 import type { AuthResponse, UserInfo } from "@aod/shared/api";
 import { clearRecChains } from "../hooks/useRecChain";
 import { clearPendingOnboarding, markPendingOnboarding } from "../hooks/pendingOnboarding";
+import { subscribeSessionExpired } from "../hooks/sessionExpired";
 
 /** 가입 결과. 가입은 로그인이 아니므로 토큰이 아니라 "다음에 무엇을 할지"만 돌려준다. */
 export interface SignupResult {
@@ -27,6 +28,9 @@ interface AuthContextType {
   logout: () => void;
   loading: boolean;
   authReady: boolean;
+  /** 로그인이 만료돼 로그아웃된 시각. 화면이 한 번 알리고 `dismissSessionExpired` 로 지운다. */
+  sessionExpiredAt: number | null;
+  dismissSessionExpired: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -44,6 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [authReady, setAuthReady] = useState(false);
+  const [sessionExpiredAt, setSessionExpiredAt] = useState<number | null>(null);
 
   const clearAuth = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
@@ -88,6 +93,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     restoreUser();
   }, [restoreUser]);
 
+  // 요청 중 401 — 토큰이 있었던 경우만 로그아웃으로 본다. 토큰이 없는데 401 이면(비로그인으로
+  // 로그인 필요 API 를 부른 경우) 만료가 아니므로 알리지 않는다. 동시 401 여러 개는 클라이언트가
+  // 한 번으로 합치고, 첫 처리에서 토큰이 지워지므로 두 번째부터는 여기서 걸러진다.
+  useEffect(
+    () =>
+      subscribeSessionExpired(() => {
+        if (!localStorage.getItem(TOKEN_KEY)) return;
+        clearAuth();
+        setSessionExpiredAt(Date.now());
+      }),
+    [clearAuth],
+  );
+
+  const dismissSessionExpired = useCallback(() => setSessionExpiredAt(null), []);
+
   const login = async (username: string, password: string) => {
     setLoading(true);
     try {
@@ -100,6 +120,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       localStorage.setItem(TOKEN_KEY, newToken);
       setToken(newToken);
+      setSessionExpiredAt(null);
 
       // 로그인 응답 기준으로 즉시 인증 상태 확정
       setUser({
@@ -165,6 +186,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     logout,
     loading,
     authReady,
+    sessionExpiredAt,
+    dismissSessionExpired,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

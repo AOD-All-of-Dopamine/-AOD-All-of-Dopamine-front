@@ -2,6 +2,7 @@ import { matchPath, Outlet, useLocation } from "react-router-dom";
 import SiteHeader from "../components/common/SiteHeader";
 import SiteFooter from "../components/common/SiteFooter";
 import NavigationBar from "../components/common/NavigationBar";
+import SessionExpiredToast from "../components/common/SessionExpiredToast";
 
 function PublicLayout() {
   const location = useLocation();
@@ -71,6 +72,8 @@ function PublicLayout() {
         <SiteFooter />
       )}
       {showNavBar && <NavigationBar />}
+      {/* 요청 중 로그인이 만료되면 어느 화면에서든 한 번 알린다 */}
+      <SessionExpiredToast />
     </div>
   );
 }
