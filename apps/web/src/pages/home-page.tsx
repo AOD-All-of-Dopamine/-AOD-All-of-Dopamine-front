@@ -20,6 +20,7 @@ import UpcomingCard from "../components/ui/UpcomingCard";
 import DdayPill from "../components/ui/DdayPill";
 import SkeletonCard from "../components/ui/SkeletonCard";
 import SegmentedControl from "../components/ui/SegmentedControl";
+import HomeRecRail from "../components/home/HomeRecRail";
 
 /**
  * /home - mockups/home-light-mockup.html 이식.
@@ -43,6 +44,10 @@ import SegmentedControl from "../components/ui/SegmentedControl";
  * - 출시 예정: D-day는 releaseDate로 클라 계산 (당일=D-DAY, 날짜 없음=미정 tba).
  *   이미 지난 날짜 항목은 섹션 성격상 제외.
  * - 히어로에 쓰인 작품은 중복 노출 방지 - 리뷰 섹션은 메인, 신작 릴은 서브 2건 제외.
+ * - **추천 릴 플래그**(VITE_HOME_REC=1, 홈 설계 2026-09-25): 히어로 아래에 추천 한 줄(HomeRecRail)을 넣고
+ *   "방금 올라온 리뷰" 섹션·모바일 홈/추천 전환을 뺀다. 히어로 머리말은 "오늘의 작품" - 개인화가 아닌
+ *   목록에 "추천"을 쓰면 바로 아래 진짜 추천과 뜻이 겹친다. 리뷰 쿼리는 히어로 메인이 쓰므로 남긴다.
+ *   플래그가 꺼지면 지금 홈 그대로다(추천·좋아요 요청도 나가지 않는다 - 훅은 HomeRecRail 안에만 있다).
  * - 새로 나온 작품 · 이번 주 인기 · 출시 예정은 **도메인별 슬라이드**(DomainRotator)다 - 시간이 지나면
  *   다음 도메인이 밀고 들어온다. 전 도메인 한 번 조회로는 매일 올라오는 도메인(웹소설·웹툰)이 목록을
  *   다 차지해서, 신작·출시 예정은 도메인마다 따로 받는다(useReleasesByDomain). 작품이 없는 도메인은
@@ -75,6 +80,9 @@ const HOME_UPCOMING_SIZE = 3;
 /** 슬라이드 하나가 머무는 시간 · 섹션끼리 동시에 넘어가지 않게 엇갈리는 간격 */
 const ROTATE_MS = 7000;
 const ROTATE_STAGGER_MS = 2300;
+
+/** 홈 추천 릴 플래그 - 빌드 때 박힌다(Vercel 환경변수 VITE_HOME_REC). */
+const HOME_REC_ENABLED = import.meta.env.VITE_HOME_REC === "1";
 
 const domainLabel = (domain?: string) =>
   DOMAIN_LABEL_MAP[domain ?? ""] ?? domain ?? "";
@@ -342,7 +350,9 @@ export default function HomePage() {
       <h1 className="sr-only">홈</h1>
 
       <div className="mx-auto max-w-[1280px] px-6 pb-[72px] pt-7">
-        {/* 모바일 진입점 — 하단 탭은 늘리지 않는다 (추천 탭 설계 §3) */}
+        {/* 모바일 진입점 — 하단 탭은 늘리지 않는다 (추천 탭 설계 §3).
+            추천 릴 플래그가 켜지면 추천이 홈에 있으니 전환이 필요 없다(추천 탭은 릴의 "추천 더 보기"로 간다). */}
+        {!HOME_REC_ENABLED && (
         <div className="mb-4 lg:hidden">
           <SegmentedControl
             ariaLabel="홈·추천 전환"
@@ -357,6 +367,7 @@ export default function HomePage() {
             }}
           />
         </div>
+        )}
 
         {/* 피처드 히어로: 메인 1 + 서브 2 */}
         {heroLoading ? (
@@ -372,7 +383,7 @@ export default function HomePage() {
           </div>
         ) : heroError ? (
           <SectionError
-            message="추천 작품을 불러오지 못했어요."
+            message={HOME_REC_ENABLED ? "작품을 불러오지 못했어요." : "추천 작품을 불러오지 못했어요."}
             onRetry={() => {
               reviewed.refetch();
               releasesByDomain.forEach((r) => r.refetch());
@@ -388,7 +399,7 @@ export default function HomePage() {
           >
             <FeatureCard
               variant="main"
-              kicker={`오늘의 추천 · ${domainLabel(heroMain.domain)}`}
+              kicker={`${HOME_REC_ENABLED ? "오늘의 작품" : "오늘의 추천"} · ${domainLabel(heroMain.domain)}`}
               title={heroMain.title}
               sub={heroSub(heroMain)}
               imageUrl={heroMain.thumbnail}
@@ -421,6 +432,9 @@ export default function HomePage() {
             )}
           </div>
         ) : null}
+
+        {/* 추천 릴 - 히어로 바로 아래 (플래그) */}
+        {HOME_REC_ENABLED && <HomeRecRail />}
 
         {/* 신작 릴 - 도메인별 슬라이드 */}
         {railSlides.length > 0 ? (
@@ -455,8 +469,8 @@ export default function HomePage() {
           )
         )}
 
-        {/* 방금 올라온 리뷰 */}
-        {(reviewed.isLoading || reviewed.isError || reviewItems.length > 0) && (
+        {/* 방금 올라온 리뷰 - 추천 릴 플래그가 켜지면 그 자리를 추천이 대신한다 */}
+        {!HOME_REC_ENABLED && (reviewed.isLoading || reviewed.isError || reviewItems.length > 0) && (
           <section className="mt-14">
             <SectionHead title="방금 올라온 리뷰" />
             {reviewed.isLoading ? (
