@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { CaretRight, WarningCircle } from "@phosphor-icons/react";
 import { ExternalRanking } from "@aod/shared/api";
 import { useRecentReviewedWorks, useReleasesByDomain } from "@aod/shared/hooks";
@@ -14,29 +14,22 @@ import DomainRotator, {
 } from "../components/ui/DomainRotator";
 import FeatureCard from "../components/ui/FeatureCard";
 import RailCard from "../components/ui/RailCard";
-import ReviewQuoteCard from "../components/ui/ReviewQuoteCard";
 import RankRow from "../components/ui/RankRow";
 import UpcomingCard from "../components/ui/UpcomingCard";
 import DdayPill from "../components/ui/DdayPill";
 import SkeletonCard from "../components/ui/SkeletonCard";
-import SegmentedControl from "../components/ui/SegmentedControl";
 import HomeRecRail from "../components/home/HomeRecRail";
 
 /**
  * /home - mockups/home-light-mockup.html 이식.
- * 레이아웃: 피처드 히어로(메인 1 + 서브 2) / [추천 릴 - 플래그] / 신작 릴(가로 스크롤) /
- * 방금 올라온 리뷰(3열, 플래그가 켜지면 빠진다) / 이번 주 인기(2열 랭킹) / 출시 예정(3열 D-day 카드).
+ * 레이아웃: 피처드 히어로(메인 1 + 서브 2) / 추천 릴 / 신작 릴(가로 스크롤) /
+ * 이번 주 인기(2열 랭킹) / 출시 예정(3열 D-day 카드).
  * 컨테이너 max-w 1280. 섹션별 상태 독립 - 로딩=형태 스켈레톤, 에러=인라인,
  * 0건=섹션 숨김 (홈은 EmptyState 남발 금지).
  *
  * 목업 대비 편차 (실데이터, API 기준):
  * - 히어로 sub(한 줄 소개): 시놉시스 필드가 WorkSummary에 없어 연도·평점 메타로 대체.
  * - 신작 릴 meta: 목업대로 "도메인 · 플랫폼" (플랫폼 미수집 작품은 연도 폴백).
- * - 리뷰 카드 meta: 목업 .rv에는 메타 줄이 없으나 인용문 생략 보완으로
- *   "도메인 · 연도" 캡션 유지.
- * - 리뷰 카드: useRecentReviewedWorks가 작품 요약만 반환(리뷰 본문·닉네임 없음)
- *   -> 인용문(.rv q)·닉네임(.who) 생략, 포스터+제목+별점+메타만 렌더.
- *   목업의 "더 보기" 링크도 이동할 리뷰 목록 페이지가 없어 생략.
  * - 이번 주 인기: 크로스 도메인 집계 API가 없어 플랫폼별 외부 랭킹 상위권을
  *   도메인 순서로 교차 배치해 6개 구성 - 표시 순번은 홈 화면 임시 순번.
  *   contentId 없는 항목(상세 미보유)은 제외. 델타 필드 없음 -> DeltaBadge 생략.
@@ -44,10 +37,10 @@ import HomeRecRail from "../components/home/HomeRecRail";
  * - 출시 예정: D-day는 releaseDate로 클라 계산 (당일=D-DAY, 날짜 없음=미정 tba).
  *   이미 지난 날짜 항목은 섹션 성격상 제외.
  * - 히어로에 쓰인 작품은 중복 노출 방지 - 리뷰 섹션은 메인, 신작 릴은 서브 2건 제외.
- * - **추천 릴 플래그**(VITE_HOME_REC=1, 홈 설계 2026-09-25): 히어로 아래에 추천 한 줄(HomeRecRail)을 넣고
- *   "방금 올라온 리뷰" 섹션·모바일 홈/추천 전환을 뺀다. 히어로 머리말은 "오늘의 작품" - 개인화가 아닌
- *   목록에 "추천"을 쓰면 바로 아래 진짜 추천과 뜻이 겹친다. 리뷰 쿼리는 히어로 메인이 쓰므로 남긴다.
- *   플래그가 꺼지면 지금 홈 그대로다(추천·좋아요 요청도 나가지 않는다 - 훅은 HomeRecRail 안에만 있다).
+ * - **추천 릴**(홈 설계 2026-09-25): 히어로 아래에 추천 한 줄(HomeRecRail)을 둔다. 예전 "방금 올라온 리뷰"
+ *   섹션·모바일 홈/추천 전환은 뺐다(추천 탭은 릴의 "추천 더 보기"로 간다). 히어로 머리말은 "오늘의 작품" -
+ *   개인화가 아닌 목록에 "추천"을 쓰면 바로 아래 진짜 추천과 뜻이 겹친다. 리뷰 쿼리는 히어로 메인이 쓰므로 남긴다.
+ *   처음엔 빌드 플래그(VITE_HOME_REC) 뒤에 두었다가 2026-09-26 플래그 없이 항상 켜기로 했다.
  * - 새로 나온 작품 · 이번 주 인기 · 출시 예정은 **도메인별 슬라이드**(DomainRotator)다 - 시간이 지나면
  *   다음 도메인이 밀고 들어온다. 전 도메인 한 번 조회로는 매일 올라오는 도메인(웹소설·웹툰)이 목록을
  *   다 차지해서, 신작·출시 예정은 도메인마다 따로 받는다(useReleasesByDomain). 작품이 없는 도메인은
@@ -81,17 +74,8 @@ const HOME_UPCOMING_SIZE = 3;
 const ROTATE_MS = 7000;
 const ROTATE_STAGGER_MS = 2300;
 
-/** 홈 추천 릴 플래그 - 빌드 때 박힌다(Vercel 환경변수 VITE_HOME_REC). */
-const HOME_REC_ENABLED = import.meta.env.VITE_HOME_REC === "1";
-
 const domainLabel = (domain?: string) =>
   DOMAIN_LABEL_MAP[domain ?? ""] ?? domain ?? "";
-
-/** "도메인 · 연도" 메타 ("yyyy-MM-dd" 문자열에서 직접 연도 추출 - 타임존 문제 회피) */
-const workMeta = (work: WorkSummary) => {
-  const year = work.releaseDate?.slice(0, 4);
-  return [domainLabel(work.domain), year].filter(Boolean).join(" · ");
-};
 
 /**
  * 신작 릴 meta - "게임 · 스팀" (목업 .rail-card .m: 도메인 · 플랫폼).
@@ -197,7 +181,6 @@ const reviewGridClass =
   "mt-4 grid grid-cols-1 gap-4 min-[768px]:grid-cols-2 min-[1024px]:grid-cols-3";
 
 export default function HomePage() {
-  const navigate = useNavigate();
   const reviewed = useRecentReviewedWorks({ size: 6 });
   // 신작은 도메인마다 따로 받는다 - 릴의 도메인별 슬라이드와 히어로 서브 2건이 같이 쓴다
   // (전 도메인 조회를 따로 한 번 더 하지 않는다 - 서버는 같은 3개월치를 두 번 읽게 된다)
@@ -222,11 +205,8 @@ export default function HomePage() {
   /** 서브 칸 - 신작이 아직 오는 중이면 자리(스켈레톤)를 잡아 둔다 */
   const heroSidesPending = !releasesSettled;
 
-  // 히어로 중복 노출 방지 - 릴은 히어로 서브 2건(+reviewed 실패 폴백 시 메인), 리뷰 섹션은 히어로 메인 제외
+  // 히어로 중복 노출 방지 - 릴은 히어로 서브 2건(+reviewed 실패 폴백 시 메인) 제외
   const heroSideIds = new Set(heroSides.map((w) => w.id));
-  const reviewItems = (reviewed.data?.content ?? [])
-    .filter((w) => w.id !== heroMain?.id)
-    .slice(0, 3);
 
   // 새로 나온 작품 - 도메인마다 한 슬라이드 (작품이 없는 도메인은 빠진다)
   const railSlides: RotatorSlide[] = (
@@ -350,25 +330,6 @@ export default function HomePage() {
       <h1 className="sr-only">홈</h1>
 
       <div className="mx-auto max-w-[1280px] px-6 pb-[72px] pt-7">
-        {/* 모바일 진입점 — 하단 탭은 늘리지 않는다 (추천 탭 설계 §3).
-            추천 릴 플래그가 켜지면 추천이 홈에 있으니 전환이 필요 없다(추천 탭은 릴의 "추천 더 보기"로 간다). */}
-        {!HOME_REC_ENABLED && (
-        <div className="mb-4 lg:hidden">
-          <SegmentedControl
-            ariaLabel="홈·추천 전환"
-            size="sm"
-            value="home"
-            options={[
-              { value: "home", label: "홈" },
-              { value: "for-you", label: "추천" },
-            ]}
-            onChange={(value) => {
-              if (value === "for-you") navigate("/for-you");
-            }}
-          />
-        </div>
-        )}
-
         {/* 피처드 히어로: 메인 1 + 서브 2 */}
         {heroLoading ? (
           <div
@@ -383,7 +344,7 @@ export default function HomePage() {
           </div>
         ) : heroError ? (
           <SectionError
-            message={HOME_REC_ENABLED ? "작품을 불러오지 못했어요." : "추천 작품을 불러오지 못했어요."}
+            message="작품을 불러오지 못했어요."
             onRetry={() => {
               reviewed.refetch();
               releasesByDomain.forEach((r) => r.refetch());
@@ -399,7 +360,7 @@ export default function HomePage() {
           >
             <FeatureCard
               variant="main"
-              kicker={`${HOME_REC_ENABLED ? "오늘의 작품" : "오늘의 추천"} · ${domainLabel(heroMain.domain)}`}
+              kicker={`오늘의 작품 · ${domainLabel(heroMain.domain)}`}
               title={heroMain.title}
               sub={heroSub(heroMain)}
               imageUrl={heroMain.thumbnail}
@@ -433,8 +394,8 @@ export default function HomePage() {
           </div>
         ) : null}
 
-        {/* 추천 릴 - 히어로 바로 아래 (플래그) */}
-        {HOME_REC_ENABLED && <HomeRecRail />}
+        {/* 추천 릴 - 히어로 바로 아래 */}
+        <HomeRecRail />
 
         {/* 신작 릴 - 도메인별 슬라이드 */}
         {railSlides.length > 0 ? (
@@ -467,41 +428,6 @@ export default function HomePage() {
               )}
             </section>
           )
-        )}
-
-        {/* 방금 올라온 리뷰 - 추천 릴 플래그가 켜지면 그 자리를 추천이 대신한다 */}
-        {!HOME_REC_ENABLED && (reviewed.isLoading || reviewed.isError || reviewItems.length > 0) && (
-          <section className="mt-14">
-            <SectionHead title="방금 올라온 리뷰" />
-            {reviewed.isLoading ? (
-              <div aria-hidden="true" className={reviewGridClass}>
-                {Array.from({ length: 3 }, (_, i) => (
-                  <RowCardSkeleton key={i} thumbWidth="w-16" />
-                ))}
-              </div>
-            ) : reviewed.isError ? (
-              <SectionError
-                message="최근 리뷰 작품을 불러오지 못했어요."
-                onRetry={() => reviewed.refetch()}
-              />
-            ) : (
-              <div className={reviewGridClass}>
-                {reviewItems.map((work) => (
-                  <ReviewQuoteCard
-                    key={work.id}
-                    title={work.title}
-                    score={work.score > 0 ? work.score : undefined}
-                    caption={workMeta(work)}
-                    imageUrl={work.thumbnail}
-                    fallbackIconUrl={
-                      thumbnailFallbackMap[categoryOf(work.domain)]
-                    }
-                    to={`/work/${work.id}`}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
         )}
 
         {/* 이번 주 인기 - 플랫폼(도메인)별 슬라이드 */}
