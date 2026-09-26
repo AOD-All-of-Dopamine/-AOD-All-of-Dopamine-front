@@ -26,6 +26,10 @@ export interface WorkSummary {
   steamPositivePct?: number | null;
   /** 영화/TV TMDB 평점 (예: 7.4) */
   externalRating?: number | null;
+  /** 영화/TV TMDB 투표 수 — 적으면 별점을 숨긴다 (수집 시점 값, 없을 수 있음) */
+  externalVoteCount?: number | null;
+  /** 게임 Steam 리뷰 수 — 적으면 긍정 %를 숨긴다 */
+  steamReviewCount?: number | null;
 }
 
 export interface WorkDetail {

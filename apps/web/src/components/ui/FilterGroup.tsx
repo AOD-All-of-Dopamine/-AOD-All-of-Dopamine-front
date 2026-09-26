@@ -70,13 +70,17 @@ const FilterGroup = (props: FilterGroupProps) => {
                 checked={checked}
                 disabled={option.disabled}
                 onChange={() => handleChange(option.value)}
-                className="h-[15px] w-[15px] accent-accent"
+                className="h-[15px] w-[15px] flex-none accent-accent"
               />
-              <span className={checked ? "font-semibold text-ink" : ""}>
+              {/* 좁은 레일(216px)에서 긴 라벨이 줄바꿈되지 않게 — 전체는 title 로 */}
+              <span
+                title={option.label}
+                className={`min-w-0 truncate ${checked ? "font-semibold text-ink" : ""}`}
+              >
                 {option.label}
               </span>
               {option.count !== undefined && (
-                <span className="text-xs tabular-nums text-ink-3">
+                <span className="flex-none text-xs tabular-nums text-ink-3">
                   {option.count.toLocaleString()}
                 </span>
               )}

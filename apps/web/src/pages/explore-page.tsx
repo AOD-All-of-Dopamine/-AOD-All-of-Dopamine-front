@@ -16,12 +16,7 @@ import {
 import { useGenresWithCount, usePlatforms, useWorks } from "@aod/shared/hooks";
 import { DOMAIN_FILTERS, DOMAIN_LABEL_MAP } from "@aod/shared/constants";
 import { COLLECTION_SOURCES, platformLabel } from "../constants/platforms";
-import WorkCard from "../components/ui/WorkCard";
-import {
-  workCardFooter,
-  workCardMeta,
-  workCardTags,
-} from "../components/ui/workCardInfo";
+import WorkLiteCard from "../components/ui/WorkLiteCard";
 import Chip from "../components/ui/Chip";
 import DomainChip from "../components/ui/DomainChip";
 import FilterGroup from "../components/ui/FilterGroup";
@@ -33,7 +28,7 @@ import ToggleSwitch from "../components/ui/ToggleSwitch";
 
 /**
  * /explore - mockups/explore-light-mockup.html 이식.
- * 레이아웃: 도메인 탭 행 / 좌 256px sticky 필터 레일(lg 이상 전용) /
+ * 레이아웃: 도메인 탭 행 / 좌 216px sticky 필터 레일(lg 이상 전용 — 가벼운 카드 설계로 256 → 216) /
  * 툴바(h1+결과수) / 활성 필터 칩 행 / 카드 그리드 / 페이지네이션.
  * <lg(mobile-light-mockup 프레임 2·3): 레일 대신 [필터 버튼 + 활성 칩 가로
  * 스크롤] 툴바와 필터 바텀시트. 시트도 즉시 적용(URL replace 단일 출처
@@ -73,7 +68,11 @@ import ToggleSwitch from "../components/ui/ToggleSwitch";
  *   도메인 카드 잔상 방지를 우선하고 페이지 전환 스켈레톤은 수용한다.
  */
 
-const PAGE_SIZE = 20;
+/**
+ * 한 쪽 30 — 가벼운 카드 그리드의 2 · 3 · 5 · 6열에서 마지막 줄이 꽉 찬다(4열 구간은 2칸 빈다 — 설계 열린 결정 4).
+ * 기존 `?page=N` 링크는 다른 작품을 가리키게 된다(20 → 30) — 받아들인다.
+ */
+const PAGE_SIZE = 30;
 
 /** 탐색 도메인 탭 - 전체 탭 제거 (혼합 목록은 검색 페이지 전용) */
 const EXPLORE_DOMAINS = DOMAIN_FILTERS.filter((d) => d.id !== "ALL");
@@ -151,8 +150,9 @@ const WEEKDAY_VALUES = WEEKDAY_OPTIONS.map((o) => o.value);
  */
 const AGE_OPTIONS = ["전체이용가", "12세이용가", "15세이용가", "19세이용가"];
 
-/** 장르 접기 기본 노출 개수 - 웹툰 장르(네이버 태그 원천)가 수십 개라 접기 필요 */
-const GENRE_COLLAPSE_LIMIT = 12;
+/** 장르 접기 기본 노출 개수 - 웹툰 장르(네이버 태그 원천)가 수십 개라 접기 필요. 좁아진 레일(216px)은 6개, 모바일 시트는 12개 */
+const GENRE_COLLAPSE_LIMIT_RAIL = 6;
+const GENRE_COLLAPSE_LIMIT_SHEET = 12;
 
 const eraLabel = (value: string) =>
   ERA_OPTIONS.find((o) => o.value === value)?.label ?? value;
@@ -451,10 +451,10 @@ const UpcomingToggle = ({
   </>
 );
 
-/** 게임 리뷰 수 그룹 제목 - 목업 h3 "리뷰 수 (Steam)" (보조 표기는 연한 색) */
+/** 게임 평가 수 그룹 제목 - "평가 수 (Steam)" (카드 · 상세와 용어를 "평가"로 맞춤, 보조 표기는 연한 색) */
 const reviewMinTitle = (
   <>
-    리뷰 수 <span className="font-medium text-ink-3">(Steam)</span>
+    평가 수 <span className="font-medium text-ink-3">(Steam)</span>
   </>
 );
 
@@ -601,12 +601,14 @@ export default function ExplorePage() {
 
   // 접힘 상태에서는 상위 N개만 노출하되, 접힌 영역의 체크된 항목은 유지한다
   // (칩에는 있는데 레일에는 안 보이는 혼란 방지)
-  const visibleGenres = genresExpanded
-    ? genreNames
-    : genreNames.filter(
-        (g, i) => i < GENRE_COLLAPSE_LIMIT || genres.includes(g),
-      );
+  const visibleGenresFor = (limit: number) =>
+    genresExpanded
+      ? genreNames
+      : genreNames.filter((g, i) => i < limit || genres.includes(g));
+  const visibleGenres = visibleGenresFor(GENRE_COLLAPSE_LIMIT_RAIL);
   const hiddenGenreCount = genreNames.length - visibleGenres.length;
+  const sheetGenres = visibleGenresFor(GENRE_COLLAPSE_LIMIT_SHEET);
+  const hiddenSheetGenreCount = genreNames.length - sheetGenres.length;
 
   const items = data?.content ?? [];
   const totalElements = data?.totalElements ?? 0;
@@ -725,10 +727,15 @@ export default function ExplorePage() {
     (label) => !apiPlatformLabels.includes(label),
   );
 
-  // 모바일 2열 기본(목업 프레임 2 .grid2), 이후 목업 반응형 그대로 -
-  // 5/4/3/2열 (1200/1023/767px). 카드 크기는 도메인과 무관하게 같다 (WorkThumb)
-  const gridClass =
-    "mt-[22px] grid grid-cols-2 gap-y-3.5 gap-x-3 min-[768px]:grid-cols-3 min-[768px]:gap-y-5 min-[768px]:gap-x-[18px] min-[1024px]:grid-cols-4 min-[1201px]:grid-cols-5";
+  // 가벼운 카드 그리드 (설계 2026-09-26-explore-light-card) — 열 수는 뷰포트가 아니라 **본문 폭**(컨테이너 쿼리)으로 정한다.
+  // 뷰포트 기준이면 레일이 나타나는 1024px 에서 카드가 313 → 131px 로 갑자기 줄었다. 카드 최소 폭: 가로 약 170px · 세로 약 140px.
+  // 게임(가로): 767px 이하 목록형 1열(카드가 CSS 로 바뀐다) → 3(768px~) → 4(본문 760px~) → 5(본문 1000px~)열 — 가장 긴 판정 줄("압도적으로 긍정적 · 2023  97%" 약 186px)이 잘리지 않는 폭.
+  //   4열 경계를 760 으로 둔다 — 700 이면 767px 이하(목록형)에서도 켜지고, 768 · 1024px 에서 카드가 166px 로 좁아 신호 줄이 잘렸다(구현 검수).
+  // 그 밖(세로 2:3): 2 → 3 → 4 → 5 → 6열 — 모바일은 2열(3열이면 카드 101px 이라 OTT 가 사라진다)
+  const isLandscapeGrid = domainId === "game";
+  const gridClass = isLandscapeGrid
+    ? "mt-[22px] grid grid-cols-1 gap-y-3 min-[768px]:grid-cols-3 min-[768px]:gap-x-4 min-[768px]:gap-y-6 @min-[760px]:grid-cols-4 @min-[1000px]:grid-cols-5"
+    : "mt-[22px] grid grid-cols-2 gap-x-3.5 gap-y-6 @min-[440px]:grid-cols-3 @min-[600px]:grid-cols-4 @min-[760px]:grid-cols-5 @min-[920px]:grid-cols-6";
 
   // <lg 필터 바텀시트 - ConfirmDialog와 같은 네이티브 dialog.showModal() 기반.
   // top-layer + 배경 inert(포커스 트랩) + Escape(cancel)를 브라우저가 제공하고,
@@ -814,7 +821,7 @@ export default function ExplorePage() {
       </div>
 
       {/* 좌 필터 레일 + 본문 */}
-      <div className="mx-auto grid max-w-[1440px] items-start gap-4 px-6 pb-[72px] pt-5 lg:grid-cols-[256px_1fr] lg:gap-8">
+      <div className="mx-auto grid max-w-[1440px] items-start gap-4 px-6 pb-[72px] pt-5 lg:grid-cols-[216px_minmax(0,1fr)] lg:gap-8">
         {/* 좌 필터 레일 - lg 이상 전용 (<lg는 필터 바텀시트가 대체) */}
         <div className="hidden lg:sticky lg:top-[84px] lg:block lg:max-h-[calc(100vh-100px)] lg:overflow-y-auto">
           <div className="flex items-baseline justify-between px-0.5 pb-3.5 pt-1">
@@ -949,7 +956,7 @@ export default function ExplorePage() {
           )}
         </div>
 
-        <main>
+        <main className="@container min-w-0">
           {/* <lg 필터 툴바 - 시트 트리거 + 활성 필터 칩 가로 스크롤 (목업 .toolbar) */}
           <div className="mb-4 flex items-center gap-1.5 lg:hidden">
             <button
@@ -984,7 +991,7 @@ export default function ExplorePage() {
 
           {/* 툴바: 제목 + 결과 수 + 정렬 표시 */}
           <div className="flex flex-wrap items-center gap-3.5">
-            <h1 className="text-[26px] font-extrabold tracking-[-0.03em] text-ink">
+            <h1 className="text-[20px] font-bold tracking-[-0.02em] text-ink">
               {title}
             </h1>
             {!isLoading && !isError && (
@@ -1020,7 +1027,7 @@ export default function ExplorePage() {
           {isLoading ? (
             <div className={gridClass} aria-hidden="true">
               {Array.from({ length: PAGE_SIZE }, (_, i) => (
-                <SkeletonCard key={i} variant="portrait" />
+                <SkeletonCard key={i} variant={isLandscapeGrid ? "lite-landscape" : "lite-portrait"} />
               ))}
             </div>
           ) : isError ? (
@@ -1056,17 +1063,8 @@ export default function ExplorePage() {
             <>
               <div className={gridClass}>
                 {items.map((work) => (
-                  // 목업 카드 구성 그대로 - meta(연도·제작자)/장르 태그/도메인별 foot
-                  <WorkCard
-                    key={work.id}
-                    title={work.title}
-                    meta={workCardMeta(work)}
-                    tags={workCardTags(work)}
-                    imageUrl={work.thumbnail}
-                    domain={work.domain}
-                    to={`/work/${work.id}`}
-                    footer={workCardFooter(work)}
-                  />
+                  // 가벼운 카드 — 그림 + 제목 + 신호 한 줄 (장르 · 제작자는 필터 · 상세에)
+                  <WorkLiteCard key={work.id} work={work} to={`/work/${work.id}`} />
                 ))}
               </div>
               {totalPages > 1 && (
@@ -1147,7 +1145,7 @@ export default function ExplorePage() {
               genreNames.length > 0 && (
                 <SheetGroup title="장르">
                   <div className="flex flex-wrap gap-[7px]">
-                    {visibleGenres.map((g) => (
+                    {sheetGenres.map((g) => (
                       <SheetOptionPill
                         key={g}
                         label={g}
@@ -1156,12 +1154,12 @@ export default function ExplorePage() {
                         onClick={() => toggleGenre(g)}
                       />
                     ))}
-                    {(genresExpanded || hiddenGenreCount > 0) && (
+                    {(genresExpanded || hiddenSheetGenreCount > 0) && (
                       <SheetOptionPill
                         label={
                           genresExpanded
                             ? "접기"
-                            : `더보기 +${hiddenGenreCount}`
+                            : `더보기 +${hiddenSheetGenreCount}`
                         }
                         onClick={() => setGenresExpanded((v) => !v)}
                       />

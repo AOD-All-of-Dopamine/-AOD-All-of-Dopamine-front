@@ -45,7 +45,8 @@ import {
 } from '@aod/shared/hooks';
 import {
   DOMAIN_LABEL_MAP,
-  STEAM_REVIEW_DESC_KO,
+  isSteamVerdict,
+  steamReviewDescKo,
   formatFieldValue,
   getFieldLabel,
   getPlatformLabel,
@@ -330,9 +331,16 @@ export default function WorkDetailScreen() {
       return null;
     }
     const desc = raw.review_score_desc;
-    const label =
-      typeof desc === 'string' ? (STEAM_REVIEW_DESC_KO[desc] ?? desc) : '긍정적';
-    return { label, percent: Math.round((positive / total) * 100), total };
+    // 웹과 같은 규칙 — 9개 판정일 때만 % · 평가 수. 판정 전이면 "평가 N개" 한 번만(같은 수 두 번 · 적은 표본 % 방지)
+    if (typeof desc !== 'string' || !isSteamVerdict(desc)) {
+      const label = typeof desc === 'string' ? steamReviewDescKo(desc) : `평가 ${total.toLocaleString()}개`;
+      return { label, percent: undefined as number | undefined, total: undefined as number | undefined };
+    }
+    return {
+      label: steamReviewDescKo(desc),
+      percent: Math.round((positive / total) * 100) as number | undefined,
+      total: total as number | undefined,
+    };
   })();
 
   // 영화/TV 통계 패널: platformInfo의 TMDB rating이 있을 때만 (웹 미러)
@@ -469,12 +477,16 @@ export default function WorkDetailScreen() {
             <ThemedText style={styles.statValue}>
               {steamSummary.label}
             </ThemedText>
-            <ThemedText style={styles.statPercent}>
-              {steamSummary.percent}%
-            </ThemedText>
-            <ThemedText style={styles.statSource}>
-              Steam 리뷰 {steamSummary.total.toLocaleString()}개
-            </ThemedText>
+            {steamSummary.percent !== undefined && (
+              <ThemedText style={styles.statPercent}>
+                {steamSummary.percent}%
+              </ThemedText>
+            )}
+            {steamSummary.total !== undefined && (
+              <ThemedText style={styles.statSource}>
+                Steam 평가 {steamSummary.total.toLocaleString()}개
+              </ThemedText>
+            )}
           </View>
         )}
         {tmdbStat && (
