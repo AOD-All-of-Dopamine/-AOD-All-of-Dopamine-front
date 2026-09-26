@@ -14,6 +14,8 @@ export interface RecThumbsProps {
  * **항상 보인다** — 호버에만 띄우면 터치·키보드 사용자는 누를 수 없다(§2-4 가 상시 노출로 확정).
  * 버튼 36px, 사이 8px — 엄지로 누를 때 옆 버튼을 잘못 누르지 않게.
  * 👍 는 켜고 끄는 토글이라 aria-pressed 로 상태를 알리고, 👎 는 누르면 카드가 가려지는 동작이라 상태가 없다.
+ * 👍 의 이름은 "좋아요"로 **고정**한다 — 이름까지 "좋아요 취소"로 바꾸면 눌림 상태와 겹쳐 "좋아요 취소, 눌림"처럼
+ * 읽힌다(OnboardingWorkTile 과 같은 관례, 홈 설계 열린 결정 0).
  */
 const RecThumbs = ({ title, liked, onLike, onDislike, className = "" }: RecThumbsProps) => (
   <div className={`flex gap-2 ${className}`}>
@@ -21,7 +23,7 @@ const RecThumbs = ({ title, liked, onLike, onDislike, className = "" }: RecThumb
       type="button"
       onClick={onLike}
       aria-pressed={liked}
-      aria-label={liked ? `${title} 좋아요 취소` : `${title} 좋아요`}
+      aria-label={`${title} 좋아요`}
       className={`grid h-9 w-9 place-items-center rounded-full border shadow-card transition-colors ${
         liked
           ? "border-accent bg-accent text-surface"
