@@ -1,6 +1,6 @@
 import type { WorkSummary } from "./index";
 
-/** 추천 탭 칩. 백엔드 RecommendService.TABS 와 같아야 한다. */
+/** 추천 분야 칩(홈). 백엔드 RecommendService.TABS 와 같아야 한다. */
 export const REC_TABS = ["all", "movie", "tv", "game", "webtoon", "webnovel"] as const;
 
 export type RecTab = (typeof REC_TABS)[number];

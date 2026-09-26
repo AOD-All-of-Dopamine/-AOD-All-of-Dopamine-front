@@ -6,7 +6,7 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { createApiClients, createApis } from "../src/api";
 import { ApiProvider, useRecommendations, useSetNotInterested, useSetReaction } from "../src/hooks";
-import { mergeRecPages } from "../src/rec";
+import { mergeRecPages, RecContinuationFallbackError } from "../src/rec";
 
 const BASE = "http://test.local";
 
@@ -117,6 +117,51 @@ describe("useRecommendations", () => {
     );
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(listCalls).toHaveLength(1);
+  });
+
+  it("다음 쪽이 대체 응답이면 오류로 던지고 받은 쪽은 그대로 둔다", async () => {
+    server.use(
+      http.get(`${BASE}/api/recommendations`, ({ request }) => {
+        const chainId = new URL(request.url).searchParams.get("chainId");
+        if (chainId === "chain-1") {
+          return HttpResponse.json({
+            requestId: "req-f", chainId: "unsaved", pageDepth: 0,
+            fallback: true, fallbackReason: "timeout", items: [item(9)], hasMore: false,
+          });
+        }
+        return HttpResponse.json({
+          requestId: "req-1", chainId: "chain-1", pageDepth: 0,
+          fallback: false, fallbackReason: null, items: [item(1), item(2)], hasMore: true,
+        });
+      }),
+    );
+    const { wrapper } = wrapperOf();
+    const { result } = renderHook(() => useRecommendations("all", "nonce-7"), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    await result.current.fetchNextPage();
+    await waitFor(() => expect(result.current.isFetchNextPageError).toBe(true));
+    expect(result.current.error).toBeInstanceOf(RecContinuationFallbackError);
+    expect(result.current.data?.pages).toHaveLength(1);
+    expect(result.current.data?.pages[0]?.fallback).toBe(false);
+  });
+
+  it("저장된 체인으로 시작한 첫 요청의 대체는 정상 응답이다", async () => {
+    server.use(
+      http.get(`${BASE}/api/recommendations`, () =>
+        HttpResponse.json({
+          requestId: "req-f", chainId: "unsaved", pageDepth: 0,
+          fallback: true, fallbackReason: "no_seed_platform", items: [item(9)], hasMore: false,
+        }),
+      ),
+    );
+    const { wrapper } = wrapperOf();
+    const { result } = renderHook(
+      () => useRecommendations("all", "nonce-8", { initialChainId: "chain-1" }),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data?.pages[0]?.fallback).toBe(true);
   });
 
   it("enabled=false 면 아무것도 부르지 않는다", async () => {

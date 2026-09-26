@@ -10,7 +10,6 @@ import { useAuth } from "../../contexts/AuthContext";
  */
 const NAV_ITEMS = [
   { to: "/home", label: "홈" },
-  { to: "/for-you", label: "추천" },
   { to: "/explore", label: "탐색" },
   { to: "/ranking", label: "랭킹" },
   { to: "/new", label: "신작" },

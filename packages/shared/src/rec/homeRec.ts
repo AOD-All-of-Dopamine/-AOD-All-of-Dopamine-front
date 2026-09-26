@@ -1,3 +1,4 @@
+import type { RecTab } from "../types";
 import { recErrorStatus } from "./chainStore";
 
 /**
@@ -20,7 +21,6 @@ export interface HomeRecModeInput {
 
 /**
  * 응답·오류·로그인 여부 → 모드. 판정할 것이 없으면(로딩) null.
- * 추천 탭의 recNotice 는 쓰지 않는다 — no_seed_platform 을 탐색으로 보내는 등 추천 탭 전용 분기다.
  * 모르는 사유는 popular 다: 백엔드가 사유를 늘려도 화면이 개인화처럼 보이지 않게.
  */
 export function homeRecMode({ view, error, isAuthenticated }: HomeRecModeInput): HomeRecMode | null {
@@ -56,7 +56,7 @@ export function homeRecTitle(mode: HomeRecMode | null, isAuthenticated: boolean)
   }
 }
 
-/** 카드에 👍/👎 를 붙일지. 비로그인은 저장되지 않으므로 없다 (추천 탭 recFeedbackEnabled 와 같은 규칙). */
+/** 카드에 👍/👎 를 붙일지. 비로그인은 저장되지 않으므로 없다. */
 export function homeRecFeedbackEnabled(mode: HomeRecMode | null): boolean {
   return mode === "personal" || mode === "popular";
 }
@@ -74,4 +74,32 @@ export function homeLikesCaption(totalLiked: number, shown: number): string | nu
   if (!Number.isFinite(totalLiked) || totalLiked <= 0) return null;
   const rest = Math.floor(totalLiked) - Math.max(0, Math.floor(shown));
   return rest > 0 ? `좋아요한 작품 외 ${rest}개` : "좋아요한 작품";
+}
+
+/**
+ * "새 추천 받기"를 보일지 — 개인 추천이고 서버가 더 줄 수 있을 때만.
+ * 대체 목록은 늘 같은 인기 목록이라 "새로" 받을 게 없다(설계 "모드").
+ */
+export function homeRecCanRefresh(mode: HomeRecMode | null, hasNextPage: boolean): boolean {
+  return mode === "personal" && hasNextPage;
+}
+
+/**
+ * 대체(인기) 목록에서 👍 를 눌렀으면 "내 취향으로 다시 받기"를 보인다 — 대체 목록은 다음 쪽이 없고
+ * 캐시는 무한이라, 👍 가 시드가 됐어도 다시 요청할 길이 없었다(설계 검수 B7).
+ */
+export function homeRecCanRestart(mode: HomeRecMode | null, likedCount: number): boolean {
+  return mode === "popular" && likedCount > 0;
+}
+
+/** 이 분야에 시드가 없을 때(no_seed_platform) 부제. 전체 칩이면 웹툰만 좋아한 사용자다 — tab=all 은 웹툰을 부르지 않는다. */
+export function noSeedPlatformHint(tab: RecTab): { text: string; switchTo: RecTab | null } {
+  if (tab === "all") return { text: "좋아요한 웹툰으로 추천을 볼 수 있어요", switchTo: "webtoon" };
+  return { text: "이 분야에서 좋아요한 작품이 아직 없어요", switchTo: null };
+}
+
+/** 새로 받은 묶음 표시 — 서버 pageDepth(0부터) 기준. 첫 묶음은 표시하지 않는다. */
+export function homeRecSetLabel(pageDepth: number): string | null {
+  if (!Number.isFinite(pageDepth) || pageDepth <= 0) return null;
+  return `새로 고른 추천 · ${Math.floor(pageDepth) + 1}번째`;
 }

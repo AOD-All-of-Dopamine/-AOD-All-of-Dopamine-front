@@ -18,7 +18,7 @@ function impressionKey(fields: RecEventFields | null): string | null {
  * 카드 노출 계측 (REC_TAB_DESIGN §5-4): 50% 이상 보인 누적 1초에 1회 + 최종값 1회 → impression_viewed.
  * 돌려주는 값은 **콜백 ref** 다 — 요소가 effect 뒤에 붙거나 다른 노드로 바뀌어도 다시 관찰한다.
  * ```tsx
- * const setImpressionRef = useImpressionTracker(recCardFields(card));
+ * const setImpressionRef = useImpressionTracker(recCardFields(card, HOME_REC_SURFACE));
  * return <article ref={setImpressionRef}>…</article>;
  * ```
  * fields 가 null 이거나 impressionId·contentId 가 둘 다 없으면 재지 않는다.

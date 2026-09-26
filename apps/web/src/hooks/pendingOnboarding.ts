@@ -6,7 +6,7 @@
  * 같은 탭에서 그 아이디로 로그인에 성공할 때 한 번만 꺼내 쓴다.
  *
  * sessionStorage 를 쓴다 — 탭을 닫으면 사라지고 다른 탭으로 새지 않는다.
- * 표시를 잃어도 손해는 없다: /for-you 의 시드 0 안내 카드가 같은 자리로 데려간다.
+ * 표시를 잃어도 손해는 없다: 홈 추천의 취향 고르기(시드 0 · pick 모드)가 같은 일을 한다.
  * 컴포넌트 파일이 아니라 훅 디렉터리에 둔다(웹 ESLint react-refresh/only-export-components).
  */
 const PENDING_ONBOARDING_KEY = "aod.pendingOnboarding";

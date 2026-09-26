@@ -63,6 +63,27 @@ export function mergeRecPages(
   };
 }
 
+/**
+ * 이어 받은 쪽(chainId 를 실은 요청)이 대체 응답이면 참 — 받은 것으로 치지 않는다.
+ * 킬 스위치 · 라우터 실패 · 카드 0장(empty) 등으로 이어 받는 요청도 200 대체로 끝날 수 있다.
+ * 그대로 붙이면 마지막 묶음만 보여 주는 홈에서 개인 추천 줄이 인기 목록으로 바뀌고 체인도 버려진다
+ * (설계 2026-09-26-home-rec-only "묶음과 체인"). 첫 요청(chainId 없음)의 대체는 정상 응답이다.
+ * 저장된 체인으로 시작한 **첫** 요청도 정상 응답으로 다뤄야 한다 — 그 판정(이미 받은 쪽이 있는지)은 훅이 한다.
+ */
+export function isFallbackContinuation(pageParam: string | null | undefined, page: RecResponse): boolean {
+  return typeof pageParam === "string" && pageParam.length > 0 && page.fallback === true;
+}
+
+/** 이어 받은 쪽이 대체라 버렸다 — 이전 묶음을 그대로 두고 알린다. */
+export class RecContinuationFallbackError extends Error {
+  readonly fallbackReason: string | null;
+  constructor(fallbackReason: string | null) {
+    super(`이어 받은 추천이 대체 응답이다: ${fallbackReason ?? "unknown"}`);
+    this.name = "RecContinuationFallbackError";
+    this.fallbackReason = fallbackReason;
+  }
+}
+
 /** useInfiniteQuery 의 getNextPageParam. 대체 응답의 chainId 는 저장된 값이 아니라 보내면 404 다. */
 export function nextChainParam(lastPage: RecResponse): string | undefined {
   if (!lastPage.hasMore || lastPage.fallback) return undefined;
@@ -83,7 +104,7 @@ export interface RecHiddenEntry {
   previousState: ReactionState;
   /**
    * true 면 목록에서 빼지 않고 **그 자리에 흐리게 남긴다**(홈 추천 릴). 자리를 닫으면(collapse) false.
-   * 없으면 지금처럼 곧바로 목록에서 빠진다(추천 탭) — 선택 필드라 기존 동작은 그대로다.
+   * 없으면 곧바로 목록에서 빠진다.
    */
   slotVisible?: boolean;
 }
@@ -119,13 +140,9 @@ export function recHiddenReducer(
   }
 }
 
-export function hiddenIds(state: readonly RecHiddenEntry[]): Set<number> {
-  return new Set(state.map((e) => e.contentId));
-}
-
 /**
  * 목록에서 뺄 id — 자리를 유지하는 항목(slotVisible)은 빼지 않는다. mergeRecPages 에 넘긴다.
- * slotVisible 이 없는 항목(추천 탭)은 hiddenIds 와 같다.
+ * slotVisible 이 없는 항목은 숨기자마자 목록에서 빠진다.
  */
 export function collapsedIds(state: readonly RecHiddenEntry[]): Set<number> {
   return new Set(state.filter((e) => e.slotVisible !== true).map((e) => e.contentId));
