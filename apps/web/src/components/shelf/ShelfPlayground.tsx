@@ -63,6 +63,8 @@ const toItem = (work: WorkSummary, itemId: number): CollectionItem => ({
   steamReviewDesc: work.steamReviewDesc ?? null,
   steamPositivePct: work.steamPositivePct ?? null,
   externalRating: work.externalRating ?? null,
+  externalVoteCount: work.externalVoteCount ?? null,
+  steamReviewCount: work.steamReviewCount ?? null,
 });
 
 const emptyDetail = (domain: string): CollectionDetail => ({

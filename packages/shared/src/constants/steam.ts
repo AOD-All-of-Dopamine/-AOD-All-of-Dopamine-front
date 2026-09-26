@@ -14,6 +14,25 @@ export const STEAM_REVIEW_DESC_KO: Record<string, string> = {
   "Overwhelmingly Negative": "압도적으로 부정적",
 };
 
-/** 미등록 desc는 영문 원문 그대로 노출 */
-export const steamReviewDescKo = (desc: string) =>
-  STEAM_REVIEW_DESC_KO[desc] ?? desc;
+/**
+ * Steam 평가 문구 한글. 9개 판정은 표대로, 판정 전 문구도 옮긴다(탐색 가벼운 카드 2026-09-26):
+ * "No user reviews" → "평가 없음", "N user review(s)" → "평가 N개". 그 밖의 모르는 값은 원문 그대로.
+ * 웹 · 모바일 모든 소비처가 이 함수를 쓴다(표를 직접 읽지 않는다).
+ */
+export const steamReviewDescKo = (desc: string) => {
+  const verdict = STEAM_REVIEW_DESC_KO[desc];
+  if (verdict) return verdict;
+  const trimmed = desc.trim();
+  if (/^no user reviews?$/i.test(trimmed)) return "평가 없음";
+  const count = /^(\d[\d,]*) user reviews?$/i.exec(trimmed);
+  if (count) return `평가 ${Number(count[1].replace(/,/g, "")).toLocaleString("ko-KR")}개`;
+  return desc;
+};
+
+/** 9개 판정 중 하나인지 — 판정 전("평가 N개")에는 긍정 %를 믿기 어렵다. */
+export const isSteamVerdict = (desc?: string | null): boolean =>
+  !!desc && Object.prototype.hasOwnProperty.call(STEAM_REVIEW_DESC_KO, desc);
+
+/** 긍정 판정인지 (가벼운 카드에서 판정 글자를 굵게 · 진하게 — 색은 쓰지 않는다). */
+export const isPositiveSteamVerdict = (desc?: string | null): boolean =>
+  isSteamVerdict(desc) && /Positive$/.test(desc as string);

@@ -84,6 +84,10 @@ export interface CollectionItem {
   steamPositivePct: number | null;
   /** 영화/TV TMDB 평점 */
   externalRating: number | null;
+  /** 영화/TV TMDB 투표 수 (옛 응답에는 없다) */
+  externalVoteCount?: number | null;
+  /** 게임 Steam 리뷰 수 (옛 응답에는 없다) */
+  steamReviewCount?: number | null;
 }
 
 /** 상세 - CollectionDetailDTO (목록 필드 + owner/updatedAt/items) */

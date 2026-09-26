@@ -5,7 +5,9 @@ import {
 } from "../../constants/thumbnail";
 
 /**
- * 모든 그리드 카드가 공유하는 2:3 썸네일 틀.
+ * 모든 그리드 카드가 공유하는 썸네일 틀 — 기본 2:3(portrait).
+ * `shape="landscape"` 는 스팀 배너 비율(460:215) 틀이다 — 탐색 게임 탭의 가벼운 카드가 쓴다
+ * (탐색은 탭마다 한 분야라 2:3 통일을 탐색에 한해 되돌렸다 — 설계 2026-09-26-explore-light-card). 원본과 비율이 같아 cover 로 잘림이 없다.
  * 카드 크기는 도메인과 무관하게 같고, 틀 안의 이미지만 도메인에 맞춘다(thumbFitMap):
  * - cover: 한 장으로 틀을 채운다 (영화·시리즈 - 원본이 2:3).
  * - contain: 원본 비율 그대로 가운데에 넣고, 같은 URL의 블러 배경이 남는 자리를 채운다
@@ -21,6 +23,8 @@ export interface WorkThumbProps {
   alt?: string;
   /** 틀에 덧붙일 클래스 (라운드 등) */
   className?: string;
+  /** 틀 모양 — 기본 2:3. landscape 는 460:215 + cover. */
+  shape?: "portrait" | "landscape";
 }
 
 const WorkThumb = ({
@@ -28,12 +32,14 @@ const WorkThumb = ({
   domain,
   alt = "",
   className = "",
+  shape = "portrait",
 }: WorkThumbProps) => {
   const category = categoryOf(domain);
+  const fit = shape === "landscape" ? "cover" : thumbFitMap[category];
 
   return (
     <div
-      className={`relative aspect-[2/3] overflow-hidden bg-canvas ${className}`}
+      className={`relative ${shape === "landscape" ? "aspect-[460/215]" : "aspect-[2/3]"} overflow-hidden bg-canvas ${className}`}
     >
       {!imageUrl ? (
         <div className="grid h-full w-full place-items-center">
@@ -44,7 +50,7 @@ const WorkThumb = ({
             className="w-[clamp(32px,30%,64px)] opacity-80"
           />
         </div>
-      ) : thumbFitMap[category] === "cover" ? (
+      ) : fit === "cover" ? (
         <img
           src={imageUrl}
           alt={alt}

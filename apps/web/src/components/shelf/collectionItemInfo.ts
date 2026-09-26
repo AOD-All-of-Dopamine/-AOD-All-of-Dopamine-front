@@ -19,6 +19,9 @@ export const toWorkSummary = (item: CollectionItem): WorkSummary => ({
   steamReviewDesc: item.steamReviewDesc,
   steamPositivePct: item.steamPositivePct,
   externalRating: item.externalRating,
+  // 적은 표본 점수 숨김(showExternalRating · showSteamPct)에 쓰인다 — 빠뜨리면 컬렉션 별점 · %가 모두 숨는다
+  externalVoteCount: item.externalVoteCount,
+  steamReviewCount: item.steamReviewCount,
 });
 
 /** 목업 item-meta - "연도 · 제작자 · 장르 상위 2" (workCardMeta/Tags 재사용) */

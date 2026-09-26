@@ -1,9 +1,15 @@
 import { ReactNode } from "react";
 import { Star } from "@phosphor-icons/react";
 import { WorkSummary } from "@aod/shared/types";
-import { DOMAIN_LABEL_MAP, WEEKDAY_KO } from "@aod/shared/constants";
+import {
+  DOMAIN_LABEL_MAP,
+  WEEKDAY_KO,
+  ageLabel,
+  showExternalRating,
+  showSteamPct,
+  steamReviewDescKo,
+} from "@aod/shared/constants";
 import { watchPlatformLabels } from "../../constants/platforms";
-import { steamReviewDescKo } from "@aod/shared/constants";
 
 /**
  * WorkCard에 채울 도메인별 표시 정보(meta/tags/footer)를 WorkSummary에서 파생.
@@ -22,15 +28,7 @@ const MAX_OTT_LABELS = 2;
 // WEEKDAY_KO는 shared로 승격 - 기존 소비처(work-detail-page) 호환용 재수출
 export { WEEKDAY_KO };
 
-/**
- * "12세이용가" -> "12세". 전체이용가는 표기 생략(undefined).
- * 웹소설 실데이터는 "15세 이용가"처럼 공백 포함형이라 비교 전에 공백을 흡수한다.
- */
-const ageLabel = (ageRating?: string | null) => {
-  const normalized = ageRating?.replace(/\s+/g, "");
-  if (!normalized || normalized === "전체이용가") return undefined;
-  return normalized.replace(/이용가$/, "");
-};
+// ageLabel 은 shared(constants/workSignal)로 옮겼다 — 가벼운 카드와 규칙 원천을 하나로.
 
 /** 우측 정렬 강조 값 (목업 .review-pct / .star-score) */
 // 이 파일은 컴포넌트 모듈이 아니라 카드 표시 정보를 파생하는 헬퍼 모듈이다(내보내는 것은 전부 함수·상수).
@@ -62,7 +60,8 @@ export const workCardMeta = (
 
 /**
  * 게임 Steam 평가 파생 - desc(한글 매핑)와 긍정 %. 값이 없는 축은 undefined.
- * 포스터 카드 foot(workCardFooter)이 쓴다.
+ * 포스터 카드 foot(workCardFooter)이 쓴다. 긍정 %는 **판정이 있고 리뷰 10개 이상**일 때만(showSteamPct) —
+ * 리뷰 1개로 100% 가 뜨지 않게(탐색 가벼운 카드와 같은 규칙, 모든 카드 공통).
  */
 export const steamRating = (
   work: WorkSummary,
@@ -70,10 +69,7 @@ export const steamRating = (
   desc: work.steamReviewDesc
     ? steamReviewDescKo(work.steamReviewDesc)
     : undefined,
-  pct:
-    typeof work.steamPositivePct === "number"
-      ? work.steamPositivePct
-      : undefined,
+  pct: showSteamPct(work) ? (work.steamPositivePct as number) : undefined,
 });
 
 /**
@@ -136,11 +132,11 @@ export const workCardFooter = (work: WorkSummary): ReactNode => {
               ? ` 외 ${otts.length - MAX_OTT_LABELS}`
               : "")
           : undefined;
-      // null·0은 미평가 - 0.0 렌더 금지 (표시 자체를 생략)
-      const rating =
-        typeof work.externalRating === "number" && work.externalRating > 0
-          ? work.externalRating.toFixed(1)
-          : undefined;
+      // null·0은 미평가 - 0.0 렌더 금지. 투표 20개 미만 · 투표 수를 모르면 숨긴다(showExternalRating —
+      // 투표 1개로 ★10.0 이 뜨지 않게, 모든 카드 공통)
+      const rating = showExternalRating(work)
+        ? (work.externalRating as number).toFixed(1)
+        : undefined;
       if (!ottText && !rating) return undefined;
       return (
         <>

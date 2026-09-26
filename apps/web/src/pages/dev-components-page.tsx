@@ -1,6 +1,7 @@
 import { ReactNode, useState } from "react";
 import { Star, ThumbsUp, BookmarkSimple } from "@phosphor-icons/react";
 import WorkCard from "../components/ui/WorkCard";
+import WorkLiteCard from "../components/ui/WorkLiteCard";
 import RailCard from "../components/ui/RailCard";
 import FeatureCard from "../components/ui/FeatureCard";
 import RankRow from "../components/ui/RankRow";
@@ -173,6 +174,23 @@ export default function DevComponentsPage() {
               </>
             }
           />
+        </div>
+      </Section>
+
+      <Section title="WorkLiteCard · 탐색 가벼운 카드 (분야 5 × 모양)">
+        <p className="mb-3 text-[13px] text-ink-2">
+          게임은 가로(767px 이하 목록형), 그 밖은 세로. 별점은 투표 20개 · 긍정 %는 리뷰 10개부터.
+        </p>
+        <div className="grid grid-cols-1 gap-y-3 min-[768px]:grid-cols-3 min-[768px]:gap-x-4 min-[768px]:gap-y-6">
+          <WorkLiteCard to="/work/1" work={{ id: 1, domain: "GAME", title: "엘든 링", thumbnail: ELDEN_RING, score: 0, releaseDate: "2022-02-25", steamReviewDesc: "Very Positive", steamPositivePct: 92, steamReviewCount: 700000 }} />
+          <WorkLiteCard to="/work/2" work={{ id: 2, domain: "GAME", title: "검은 신화: 오공", thumbnail: BLACK_MYTH, score: 0, releaseDate: "2024-08-20", steamReviewDesc: "Mixed", steamPositivePct: 64, steamReviewCount: 5 }} />
+          <WorkLiteCard to="/work/3" work={{ id: 3, domain: "GAME", title: "발라트로 (판정 전)", thumbnail: BALATRO, score: 0, releaseDate: "2026-09-25", steamReviewDesc: "No user reviews", steamReviewCount: 0 }} />
+        </div>
+        <div className="mt-6 grid grid-cols-2 gap-x-3.5 gap-y-6 sm:grid-cols-4">
+          <WorkLiteCard to="/work/4" work={{ id: 4, domain: "MOVIE", title: "기생충", thumbnail: PARASITE, score: 0, releaseDate: "2019-05-30", platforms: ["TMDB_MOVIE", "Netflix", "Watcha"], externalRating: 8.5, externalVoteCount: 18000 }} />
+          <WorkLiteCard to="/work/5" work={{ id: 5, domain: "TV", title: "서울의 봄 (투표 적음)", thumbnail: SEOUL, score: 0, releaseDate: "2026-09-22", platforms: ["TMDB_TV", "Netflix"], externalRating: 10, externalVoteCount: 1 }} />
+          <WorkLiteCard to="/work/6" work={{ id: 6, domain: "WEBTOON", title: "화산귀환", thumbnail: HWASAN, score: 0, creator: "LICO", status: "연재중", weekday: "wed", ageRating: "15세이용가" }} />
+          <WorkLiteCard to="/work/7" work={{ id: 7, domain: "WEBNOVEL", title: "전지적 독자 시점", thumbnail: ORV, score: 0, creator: "싱숑", ageRating: "15세 이용가" }} />
         </div>
       </Section>
 

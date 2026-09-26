@@ -30,7 +30,7 @@ import {
 } from "@aod/shared/hooks";
 import { DOMAIN_LABEL_MAP } from "@aod/shared/constants";
 import { PLATFORM_META } from "../constants/platforms";
-import { STEAM_REVIEW_DESC_KO } from "@aod/shared/constants";
+import { isSteamVerdict, steamReviewDescKo } from "@aod/shared/constants";
 import { thumbnailFallbackMap, type Category } from "../constants/thumbnail";
 import {
   formatFieldValue,
@@ -473,11 +473,18 @@ export default function WorkDetailPage() {
       return null;
     }
     const desc = raw.review_score_desc;
-    const label =
-      typeof desc === "string"
-        ? (STEAM_REVIEW_DESC_KO[desc] ?? desc)
-        : "긍정적";
-    return { label, percent: Math.round((positive / total) * 100), total };
+    // 9개 판정이면 판정 + % + 평가 수. 판정 전("N user reviews")이면 "평가 N개" 한 번만 — 예전에는
+    // "평가 5개 100% · Steam 리뷰 5개"처럼 같은 수가 두 번 나오고 적은 표본의 % 가 떴다(탐색 가벼운 카드 설계).
+    // 판정 문구가 없으면(null) 판정 전과 같게 "평가 N개" 한 번만 — 예전의 "긍정적" 고정 · 적은 표본 % 를 없앤다.
+    if (typeof desc !== "string" || !isSteamVerdict(desc)) {
+      const label = typeof desc === "string" ? steamReviewDescKo(desc) : `평가 ${total.toLocaleString()}개`;
+      return { label, percent: undefined, total: undefined };
+    }
+    return {
+      label: steamReviewDescKo(desc),
+      percent: Math.round((positive / total) * 100),
+      total,
+    };
   })();
 
   // <lg 통계 패널(영화/TV): platformInfo의 TMDB rating이 있을 때만 (목업 d-stat)
@@ -652,10 +659,14 @@ export default function WorkDetailPage() {
                 aria-hidden="true"
               />
               <span className="font-extrabold">{steamSummary.label}</span>
-              <span className="tabular-nums">{steamSummary.percent}%</span>
-              <span className="ml-auto text-xs text-ink-3">
-                Steam 리뷰 {steamSummary.total.toLocaleString()}개
-              </span>
+              {steamSummary.percent !== undefined && (
+                <span className="tabular-nums">{steamSummary.percent}%</span>
+              )}
+              {steamSummary.total !== undefined && (
+                <span className="ml-auto text-xs text-ink-3">
+                  Steam 평가 {steamSummary.total.toLocaleString()}개
+                </span>
+              )}
             </div>
           )}
           {tmdbStat && (
@@ -737,7 +748,8 @@ export default function WorkDetailPage() {
               <div className="mt-[18px] flex flex-wrap gap-2.5">
                 {steamSummary && (
                   <StatPill icon={<ThumbsUp size={14} className="text-star" />}>
-                    {steamSummary.label} {steamSummary.percent}%
+                    {steamSummary.label}
+                    {steamSummary.percent !== undefined && ` ${steamSummary.percent}%`}
                     <small className="font-medium text-ink-2">Steam</small>
                   </StatPill>
                 )}
