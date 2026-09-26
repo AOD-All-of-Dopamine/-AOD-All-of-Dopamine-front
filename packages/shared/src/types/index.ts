@@ -63,6 +63,30 @@ export interface PageResponse<T> {
   last: boolean;
 }
 
+/** 홈 "오늘의 작품" 근거 — 뽑을 때의 값(그날 안에서 바뀌지 않는다). */
+export interface FeaturedReason {
+  /** "Steam" | "TMDB_MOVIE" | "TMDB_TV" */
+  platform: string;
+  /** 그날 랭킹 순위 */
+  ranking: number;
+  /** "steam" | "tmdb" */
+  basis: string;
+  /** 게임: 긍정 비율(0~1, 반올림 전) · 영화/시리즈: TMDB 평점 */
+  ratingScore?: number | null;
+  /** 게임: 리뷰 수 · 영화/시리즈: 투표 수 */
+  ratingCount?: number | null;
+  /** 게임: Steam 판정 영문 (예: "Very Positive") */
+  ratingLabel?: string | null;
+}
+
+/** GET /api/works/featured-today (200). 204 는 null 로 받는다. */
+export interface FeaturedWork {
+  /** yyyy-MM-dd — 05:00 KST 에 바뀐다 */
+  date: string;
+  work: WorkSummary;
+  reason: FeaturedReason;
+}
+
 export interface ApiError {
   message: string;
   status: number;

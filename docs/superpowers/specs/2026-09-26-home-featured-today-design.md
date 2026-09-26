@@ -134,7 +134,7 @@ Cache-Control: public, max-age={다음 05:00 KST 까지 초}   (200 일 때)
   - (문턱을 넘은 작품만 오므로 적은 표본 분기는 도달하지 않는다 — 데이터가 빠진 경우만. 테스트는 둔다.)
 - **서브 2장** = 지금대로. **"이번 주 인기"(웹 `rankSlides`)에서 오늘의 작품을 뺀다**(같은 화면 중복 — 약 20% 날).
 - **로딩** = 지금과 같은 방식: `featured.isLoading || (!featured.data && !releasesSettled)` — 오늘의 작품이 오면 신작을 기다리지 않는다. **오류** = 오늘의 작품 · 신작 모두 실패일 때만.
-- **요청 규칙**: 4xx 재시도 없음, 그 밖 1회(조사 13 — 배포 전 400 · 실패 때 스켈레톤이 오래 남지 않게). 204 는 `null`(axios 는 `data === ""` — `status === 204 || !data` 로 판정; react-query 에 undefined 를 돌려주지 않는다).
+- **요청 규칙**: react-query 재시도 없음 — axios 가 5xx · 네트워크 오류를 이미 2번 다시 보내고(모두 3번 ≈ 1.5초) 4xx 는 보내지 않는다(조사 13 — 배포 전 400 · 실패 때 스켈레톤이 오래 남지 않게). 구현 때 확인: react-query 1회를 더하면 5xx 에 6번 요청했다. 204 는 `null`(axios 는 `data === ""` — `status === 204 || !data` 로 판정; react-query 에 undefined 를 돌려주지 않는다).
   `staleTime` = 응답 `date` 기준 **다음 05:00 KST 까지**(최대 30분 · 탭을 열어 둔 채 날이 바뀌면 다음 조회에서 바뀐다).
 - **추적**: 히어로 메인 클릭을 `card_clicked`(`surface: "home_hero"`, payload `date` · `platform` · `ranking`)로 — 백엔드는 surface 를 자유 문자열로 받는다. 전후 비교용.
 

@@ -30,4 +30,19 @@ describe("createWorkApi", () => {
     expect(lastUrl!.searchParams.get("sortBy")).toBe("masterTitle");
     expect(lastUrl!.searchParams.get("sortDirection")).toBe("asc");
   });
+
+  it("getFeaturedToday: 200 이면 본문, 204 면 null", async () => {
+    const { publicApi } = createApiClients({ baseURL: BASE, getToken: () => null });
+    const workApi = createWorkApi(publicApi);
+    const body = {
+      date: "2026-09-27",
+      work: { id: 42, domain: "GAME", title: "Hades II", thumbnail: null, score: 0 },
+      reason: { platform: "Steam", ranking: 8, basis: "steam", ratingScore: 0.94, ratingCount: 61889, ratingLabel: "Very Positive" },
+    };
+    server.use(http.get(`${BASE}/api/works/featured-today`, () => HttpResponse.json(body)));
+    expect(await workApi.getFeaturedToday()).toEqual(body);
+
+    server.use(http.get(`${BASE}/api/works/featured-today`, () => new HttpResponse(null, { status: 204 })));
+    expect(await workApi.getFeaturedToday()).toBeNull();
+  });
 });

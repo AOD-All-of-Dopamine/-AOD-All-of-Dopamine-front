@@ -1,5 +1,5 @@
 import type { AxiosInstance } from "axios";
-import type { PageResponse, WorkSummary, WorkDetail } from "../types";
+import type { FeaturedWork, PageResponse, WorkSummary, WorkDetail } from "../types";
 
 export interface WorksQueryParams {
   domain?: string;
@@ -68,6 +68,15 @@ export function createWorkApi(publicApi: AxiosInstance) {
     getWorkDetail: async (id: number): Promise<WorkDetail> => {
       const { data } = await publicApi.get<WorkDetail>(`/api/works/${id}`);
       return data;
+    },
+
+    /**
+     * 홈 "오늘의 작품" — 보여 줄 작품이 없으면(204) null.
+     * axios 는 204 본문을 "" 로 준다 — react-query 에 undefined 를 돌려주지 않게 null 로 맞춘다.
+     */
+    getFeaturedToday: async (): Promise<FeaturedWork | null> => {
+      const res = await publicApi.get<FeaturedWork | "">("/api/works/featured-today");
+      return res.status === 204 || !res.data ? null : res.data;
     },
 
     /**
