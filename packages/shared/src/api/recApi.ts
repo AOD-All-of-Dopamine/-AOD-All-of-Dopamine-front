@@ -16,6 +16,11 @@ export interface RecListParams {
   chainId?: string | null;
   /** 기본 20 (백엔드 상한). */
   size?: number;
+  /**
+   * 요청을 보낸 화면(백엔드 rec_request.surface). 없으면 보내지 않는다 — 서버가 추천 탭으로 적는다.
+   * 허용 값은 서버가 거른다({rec_tab, home_rec}).
+   */
+  surface?: string;
 }
 
 /**
@@ -25,10 +30,11 @@ export interface RecListParams {
  */
 export function createRecApi(privateApi: AxiosInstance) {
   return {
-    list: async ({ tab, chainId, size = REC_PAGE_SIZE }: RecListParams): Promise<RecResponse> => {
-      const { data } = await privateApi.get<RecResponse>("/api/recommendations", {
-        params: chainId ? { tab, size, chainId } : { tab, size },
-      });
+    list: async ({ tab, chainId, size = REC_PAGE_SIZE, surface }: RecListParams): Promise<RecResponse> => {
+      const params: Record<string, string | number> = { tab, size };
+      if (chainId) params.chainId = chainId;
+      if (surface) params.surface = surface;
+      const { data } = await privateApi.get<RecResponse>("/api/recommendations", { params });
       return data;
     },
 

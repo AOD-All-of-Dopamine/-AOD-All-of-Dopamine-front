@@ -15,3 +15,12 @@ export const REC_PAGE_SIZE = 20;
 
 /** 이벤트·헤더의 출처 값 (RecommendService.SURFACE). */
 export const REC_SURFACE = "rec_tab";
+
+/** 홈 추천 릴의 출처 값 (RecommendService.HOME_SURFACE) — 요청·이벤트·반응을 추천 탭과 갈라 적는다. */
+export const HOME_REC_SURFACE = "home_rec";
+
+/** 홈에서 바로 고른 좋아요의 출처 — 온보딩 페이지("onboarding")와 로그에서 구분한다. 시드 규칙은 같다. */
+export const HOME_PICK_SOURCE = "home_pick";
+
+/** 홈 추천 릴 카드 수 (홈 설계 2026-09-25). */
+export const HOME_REC_SIZE = 12;

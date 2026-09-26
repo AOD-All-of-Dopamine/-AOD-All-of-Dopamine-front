@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { hiddenIds, mergeRecPages, nextChainParam, recHiddenReducer } from "../src/rec";
+import { collapsedIds, hiddenIds, mergeRecPages, nextChainParam, recHiddenReducer } from "../src/rec";
 import type { RecHiddenEntry } from "../src/rec";
 import type { RecResponse } from "../src/types";
 
@@ -115,5 +115,52 @@ describe("recHiddenReducer", () => {
     const state = recHiddenReducer([], { type: "hide", entry });
     expect([...hiddenIds(state)]).toEqual([7]);
     expect(hiddenIds([]).size).toBe(0);
+  });
+});
+
+describe("자리 유지 가려짐 (slotVisible · collapse · collapsedIds)", () => {
+  const entry = (contentId: number, slotVisible?: boolean): RecHiddenEntry => ({
+    contentId, kind: "dislike", title: `작품 ${contentId}`,
+    requestId: "req-1", impressionId: `imp-${contentId}`, previousState: "NONE",
+    ...(slotVisible === undefined ? {} : { slotVisible }),
+  });
+
+  it("slotVisible 없는 항목(추천 탭)은 collapsedIds 가 hiddenIds 와 같다 — 추천 탭 동작 불변", () => {
+    const state = recHiddenReducer(recHiddenReducer([], { type: "hide", entry: entry(7) }), {
+      type: "hide", entry: entry(8),
+    });
+    expect([...collapsedIds(state)]).toEqual([...hiddenIds(state)]);
+    const view = mergeRecPages([page({ ids: [7, 8, 9] })], collapsedIds(state));
+    expect(view.cards.map((c) => c.work.id)).toEqual([9]);
+  });
+
+  it("자리를 유지하는 항목은 목록에 남는다 (컴포넌트가 흐린 자리로 그린다)", () => {
+    const state = recHiddenReducer([], { type: "hide", entry: entry(8, true) });
+    expect(collapsedIds(state).size).toBe(0);
+    expect([...hiddenIds(state)]).toEqual([8]);
+    const view = mergeRecPages([page({ ids: [7, 8, 9] })], collapsedIds(state));
+    expect(view.cards.map((c) => c.work.id)).toEqual([7, 8, 9]);
+  });
+
+  it("collapse 하면 자리가 닫히고 그 작품은 목록에서 빠진다 (화면을 다시 열 때)", () => {
+    const state = recHiddenReducer([], { type: "hide", entry: entry(8, true) });
+    const collapsed = recHiddenReducer(state, { type: "collapse" });
+    expect(collapsed[0].slotVisible).toBe(false);
+    expect([...collapsedIds(collapsed)]).toEqual([8]);
+    const view = mergeRecPages([page({ ids: [7, 8, 9] })], collapsedIds(collapsed));
+    expect(view.cards.map((c) => c.work.id)).toEqual([7, 9]);
+  });
+
+  it("닫을 자리가 없으면 collapse 는 같은 상태를 돌려준다 (불필요한 다시 그리기 없음)", () => {
+    const state = recHiddenReducer([], { type: "hide", entry: entry(7) });
+    expect(recHiddenReducer(state, { type: "collapse" })).toBe(state);
+    expect(recHiddenReducer([], { type: "collapse" })).toEqual([]);
+  });
+
+  it("자리에서 되돌리면 항목이 사라지고, 좋아요였던 작품은 confirm 받은 previousState 로 되돌린다", () => {
+    const hidden = recHiddenReducer([], { type: "hide", entry: entry(8, true) });
+    const confirmed = recHiddenReducer(hidden, { type: "confirm", contentId: 8, previousState: "LIKE" });
+    expect(confirmed[0]).toMatchObject({ slotVisible: true, previousState: "LIKE" });
+    expect(recHiddenReducer(confirmed, { type: "restore", contentId: 8 })).toEqual([]);
   });
 });

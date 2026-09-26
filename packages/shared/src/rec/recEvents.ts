@@ -3,18 +3,18 @@ import type { RecEventFields, RecRequestContext } from "../tracking/types";
 import type { RecCard, RecTab } from "../types";
 
 /** 카드 1장의 이벤트 식별자 (impression_viewed · card_clicked 공용). */
-export function recCardFields(card: RecCard): RecEventFields {
+export function recCardFields(card: RecCard, surface: string = REC_SURFACE): RecEventFields {
   return {
     contentId: card.work.id,
     requestId: card.requestId,
     impressionId: card.impressionId,
-    surface: REC_SURFACE,
+    surface,
   };
 }
 
 /** 반응·관심 없음·북마크 요청에 실을 맥락 (X-Rec-* 헤더가 된다). */
-export function recCardContext(card: RecCard): RecRequestContext {
-  return { source: REC_SURFACE, requestId: card.requestId, impressionId: card.impressionId };
+export function recCardContext(card: RecCard, surface: string = REC_SURFACE): RecRequestContext {
+  return { source: surface, requestId: card.requestId, impressionId: card.impressionId };
 }
 
 export function recLoadedMoreFields(args: {
