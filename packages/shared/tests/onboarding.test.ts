@@ -140,20 +140,20 @@ describe("pendingPicks · savedPicks", () => {
 });
 
 describe("onboardingLandingPath", () => {
-  it("전체 칩이 읽어 주는 분야가 하나라도 있으면 /for-you 다", () => {
-    expect(onboardingLandingPath(["WEBTOON", "MOVIE"])).toBe("/for-you");
-    expect(onboardingLandingPath(["GAME"])).toBe("/for-you");
-    expect(onboardingLandingPath(["WEBNOVEL", "WEBTOON"])).toBe("/for-you");
+  it("전체 칩이 읽어 주는 분야가 하나라도 있으면 /home 이다", () => {
+    expect(onboardingLandingPath(["WEBTOON", "MOVIE"])).toBe("/home");
+    expect(onboardingLandingPath(["GAME"])).toBe("/home");
+    expect(onboardingLandingPath(["WEBNOVEL", "WEBTOON"])).toBe("/home");
   });
 
   it("웹툰만 골랐으면 웹툰 칩으로 보낸다 (전체 칩은 웹툰을 섞지 않는다)", () => {
-    expect(onboardingLandingPath(["WEBTOON"])).toBe("/for-you?tab=webtoon");
-    expect(onboardingLandingPath(["WEBTOON", "WEBTOON"])).toBe("/for-you?tab=webtoon");
+    expect(onboardingLandingPath(["WEBTOON"])).toBe("/home?rec=webtoon");
+    expect(onboardingLandingPath(["WEBTOON", "WEBTOON"])).toBe("/home?rec=webtoon");
   });
 
   it("고른 것이 없거나 모르는 분야면 기본값으로 둔다", () => {
-    expect(onboardingLandingPath([])).toBe("/for-you");
-    expect(onboardingLandingPath(["WEBTOON", "모르는도메인"])).toBe("/for-you");
+    expect(onboardingLandingPath([])).toBe("/home");
+    expect(onboardingLandingPath(["WEBTOON", "모르는도메인"])).toBe("/home");
   });
 });
 

@@ -54,7 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.removeItem(TOKEN_KEY);
     setToken(null);
     setUser(null);
-    // 다른 사용자의 추천 목록·체인이 남지 않게 한다 (추천 탭 설계 §4).
+    // 다른 사용자의 추천 목록·체인이 남지 않게 한다 (추천 설계 §4).
     // 좋아요 목록도 — 사용자 구분 없는 키라, 남기면 다음 계정의 홈·프로필에 이전 계정의 좋아요가 보인다.
     queryClient.removeQueries({ queryKey: recKeys.root() });
     queryClient.removeQueries({ queryKey: myKeys.likesRoot() });
@@ -163,7 +163,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         needsOnboarding: response.needsOnboarding === true,
       };
       // 가입은 로그인을 시키지 않는다(응답에 토큰이 없다) — 다음 로그인 때 온보딩으로
-      // 보내려고 아이디를 표시해 둔다 (추천 탭 설계 §2-5·§6-3).
+      // 보내려고 아이디를 표시해 둔다 (추천 설계 §2-5·§6-3).
       if (result.needsOnboarding) markPendingOnboarding(result.username);
       else clearPendingOnboarding();
       return result;

@@ -2,6 +2,7 @@ import { useCallback, useReducer, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { recKeys } from "@aod/shared/queries";
 import {
+  chainIdForFirstRequest,
   createRecChainStore,
   shouldRestartChain,
   type KeyValueStorage,
@@ -43,7 +44,7 @@ export interface RecChain {
   initialChainId: string | null;
   /** 서버가 준 chainId 를 기억한다 — 대체 응답은 null 을 넘겨 지운다. */
   remember: (chainId: string | null) => void;
-  /** "새로 보기" — 새 체인. */
+  /** 처음부터 다시 받기 — 새 체인. */
   restart: () => void;
   /** 404 면 같은 nonce 에서 딱 한 번 새 체인으로 바꾼다. 바꿨으면 true. */
   restartOnChainExpired: (error: unknown) => boolean;
@@ -55,6 +56,14 @@ function openNewChain(tab: RecTab, nonce: string): void {
   chainStore().reset(tab);
 }
 
+export interface UseRecChainOptions {
+  /**
+   * 캐시가 없어도(새로고침 · gcTime 만료) 저장된 체인을 이어 받는다 — 마지막 묶음만 보이는 홈 추천용.
+   * 쪽을 합쳐 보이는 화면은 끄고 둔다(앞쪽이 사라진 이어 보기는 말이 안 된다).
+   */
+  continueWithoutCache?: boolean;
+}
+
 /**
  * 체인 수명 = 브라우저 세션 × 칩 (설계 §4). 저장소는 웹이 갖고, 판정은 shared 가 한다.
  *
@@ -62,19 +71,23 @@ function openNewChain(tab: RecTab, nonce: string): void {
  * 두 번 돌려도(StrictMode) 두 번째부터는 저장된 값을 그대로 주므로 체인이 갈리지 않는다.
  * 체인을 바꾸는 쓰기는 전부 이벤트·effect 에서만 한다.
  */
-export function useRecChain(tab: RecTab): RecChain {
+export function useRecChain(tab: RecTab, options: UseRecChainOptions = {}): RecChain {
+  const { continueWithoutCache = false } = options;
   const [, rereadChain] = useReducer((n: number) => n + 1, 0);
   const queryClient = useQueryClient();
   const restartedRef = useRef<Set<string>>(new Set());
 
   const entry = chainStore().get(tab);
 
-  // 캐시가 비어 있으면(새로고침·gcTime 만료) 저장된 chainId 를 싣지 않는다 —
-  // 서버는 그 체인의 "다음" 쪽을 주지 1쪽을 다시 주지 않으므로, 앞쪽이 화면에서 사라진
-  // 이어 보기는 말이 안 된다. 저장소는 건드리지 않는다(렌더는 부작용을 남기지 않는다) —
-  // 첫 응답의 chainId 가 곧 덮어쓴다.
+  // 캐시가 비어 있으면(새로고침·gcTime 만료) 서버는 그 체인의 "다음" 쪽을 준다 — 쪽을 합쳐 보이는
+  // 화면이면 앞쪽이 사라지므로 싣지 않고, 마지막 묶음만 보이는 홈은 다음 묶음을 받는 편이 낫다(chainIdForFirstRequest).
+  // 저장소는 건드리지 않는다(렌더는 부작용을 남기지 않는다) — 첫 응답의 chainId 가 곧 덮어쓴다.
   const hasCachedPages = queryClient.getQueryData(recKeys.list(tab, entry.nonce)) !== undefined;
-  const initialChainId = hasCachedPages ? entry.chainId : null;
+  const initialChainId = chainIdForFirstRequest({
+    storedChainId: entry.chainId,
+    hasCachedPages,
+    continueWithoutCache,
+  });
 
   const remember = useCallback(
     (next: string | null) => {

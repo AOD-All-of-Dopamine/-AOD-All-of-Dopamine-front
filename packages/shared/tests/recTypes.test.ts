@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { REC_TABS, REC_FALLBACK_REASONS } from "../src/types";
-import { REC_TAB_LABELS, REC_PAGE_SIZE, REC_SURFACE } from "../src/constants";
+import { HOME_REC_SET_SIZE, REC_TAB_LABELS, REC_PAGE_SIZE, REC_SURFACE } from "../src/constants";
 import { recKeys } from "../src/queries";
 
 describe("추천 탭 타입·상수", () => {
@@ -20,8 +20,9 @@ describe("추천 탭 타입·상수", () => {
     );
   });
 
-  it("한 쪽 크기는 백엔드 상한 20 이고 surface 는 rec_tab 이다", () => {
+  it("한 쪽 기본 크기 20 · 홈 묶음 30(백엔드 상한) · 옛 추천 탭 surface 는 rec_tab 이다", () => {
     expect(REC_PAGE_SIZE).toBe(20);
+    expect(HOME_REC_SET_SIZE).toBe(30);
     expect(REC_SURFACE).toBe("rec_tab");
   });
 

@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { collapsedIds, hiddenIds, mergeRecPages, nextChainParam, recHiddenReducer } from "../src/rec";
+import {
+  collapsedIds,
+  isFallbackContinuation,
+  mergeRecPages,
+  nextChainParam,
+  RecContinuationFallbackError,
+  recHiddenReducer,
+} from "../src/rec";
 import type { RecHiddenEntry } from "../src/rec";
 import type { RecResponse } from "../src/types";
 
@@ -110,12 +117,6 @@ describe("recHiddenReducer", () => {
     expect(recHiddenReducer(state, { type: "restore", contentId: 7 })).toEqual([]);
     expect(recHiddenReducer(state, { type: "clear" })).toEqual([]);
   });
-
-  it("hiddenIds 는 숨긴 작품 id 집합이다", () => {
-    const state = recHiddenReducer([], { type: "hide", entry });
-    expect([...hiddenIds(state)]).toEqual([7]);
-    expect(hiddenIds([]).size).toBe(0);
-  });
 });
 
 describe("자리 유지 가려짐 (slotVisible · collapse · collapsedIds)", () => {
@@ -125,11 +126,11 @@ describe("자리 유지 가려짐 (slotVisible · collapse · collapsedIds)", ()
     ...(slotVisible === undefined ? {} : { slotVisible }),
   });
 
-  it("slotVisible 없는 항목(추천 탭)은 collapsedIds 가 hiddenIds 와 같다 — 추천 탭 동작 불변", () => {
+  it("slotVisible 없는 항목은 숨기자마자 목록에서 빠진다", () => {
     const state = recHiddenReducer(recHiddenReducer([], { type: "hide", entry: entry(7) }), {
       type: "hide", entry: entry(8),
     });
-    expect([...collapsedIds(state)]).toEqual([...hiddenIds(state)]);
+    expect([...collapsedIds(state)].sort()).toEqual([7, 8]);
     const view = mergeRecPages([page({ ids: [7, 8, 9] })], collapsedIds(state));
     expect(view.cards.map((c) => c.work.id)).toEqual([9]);
   });
@@ -137,7 +138,7 @@ describe("자리 유지 가려짐 (slotVisible · collapse · collapsedIds)", ()
   it("자리를 유지하는 항목은 목록에 남는다 (컴포넌트가 흐린 자리로 그린다)", () => {
     const state = recHiddenReducer([], { type: "hide", entry: entry(8, true) });
     expect(collapsedIds(state).size).toBe(0);
-    expect([...hiddenIds(state)]).toEqual([8]);
+    expect(state.map((e) => e.contentId)).toEqual([8]);
     const view = mergeRecPages([page({ ids: [7, 8, 9] })], collapsedIds(state));
     expect(view.cards.map((c) => c.work.id)).toEqual([7, 8, 9]);
   });
@@ -162,5 +163,27 @@ describe("자리 유지 가려짐 (slotVisible · collapse · collapsedIds)", ()
     const confirmed = recHiddenReducer(hidden, { type: "confirm", contentId: 8, previousState: "LIKE" });
     expect(confirmed[0]).toMatchObject({ slotVisible: true, previousState: "LIKE" });
     expect(recHiddenReducer(confirmed, { type: "restore", contentId: 8 })).toEqual([]);
+  });
+});
+
+describe("isFallbackContinuation — 이어 받은 쪽의 대체 응답", () => {
+  it("첫 요청(chainId 없음)의 대체는 정상 응답이다", () => {
+    expect(isFallbackContinuation(null, page({ ids: [1], fallback: true }))).toBe(false);
+    expect(isFallbackContinuation(undefined, page({ ids: [1], fallback: true }))).toBe(false);
+    expect(isFallbackContinuation("", page({ ids: [1], fallback: true }))).toBe(false);
+  });
+
+  it("이어 받은 쪽이 대체면 버린다", () => {
+    expect(isFallbackContinuation("chain-1", page({ ids: [1], fallback: true }))).toBe(true);
+  });
+
+  it("이어 받은 쪽이 개인화면 받는다", () => {
+    expect(isFallbackContinuation("chain-1", page({ ids: [1], fallback: false }))).toBe(false);
+  });
+
+  it("오류는 대체 사유를 담는다", () => {
+    const error = new RecContinuationFallbackError("timeout");
+    expect(error).toBeInstanceOf(Error);
+    expect(error.fallbackReason).toBe("timeout");
   });
 });

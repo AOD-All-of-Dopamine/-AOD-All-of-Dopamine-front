@@ -136,19 +136,19 @@ export function onboardingStatusText(state: OnboardingSelection): string {
 }
 
 /**
- * `/for-you` 전체 칩이 섞는 도메인 (백엔드 PLATFORMS_BY_TAB). **웹툰은 빠져 있다.**
+ * 홈 추천 "전체" 칩이 섞는 도메인 (백엔드 PLATFORMS_BY_TAB). **웹툰은 빠져 있다.**
  * 그래서 웹툰만 고른 사용자는 전체 칩에서 no_seed_platform 대체를 받는다.
  */
 const ALL_TAB_DOMAINS: readonly string[] = ["GAME", "MOVIE", "TV", "WEBNOVEL"];
 
 /**
- * 저장을 마친 뒤 어디로 보낼지 (설계 §2-7).
- * 전체 칩이 읽어 줄 시드가 하나라도 있으면 `/for-you`, 웹툰만 골랐으면 웹툰 칩으로 바로 보낸다 —
+ * 저장을 마친 뒤 어디로 보낼지 (설계 §2-7 · 추천 탭 제거 2026-09-26 뒤로는 홈 추천).
+ * 전체 칩이 읽어 줄 시드가 하나라도 있으면 `/home`, 웹툰만 골랐으면 웹툰 칩(`?rec=webtoon`)으로 바로 보낸다 —
  * 방금 취향을 고른 사람에게 "이 분야에는 취향이 없어요" 안내를 띄우지 않으려는 것이다.
  */
 export function onboardingLandingPath(savedDomains: readonly string[]): string {
-  if (savedDomains.length === 0) return "/for-you";
-  if (savedDomains.some((domain) => ALL_TAB_DOMAINS.includes(domain))) return "/for-you";
+  if (savedDomains.length === 0) return "/home";
+  if (savedDomains.some((domain) => ALL_TAB_DOMAINS.includes(domain))) return "/home";
   // 전부 웹툰일 때만 칩을 바꾼다 — 모르는 도메인이 섞이면 판단할 근거가 없으니 기본값으로 둔다.
-  return savedDomains.every((domain) => domain === "WEBTOON") ? "/for-you?tab=webtoon" : "/for-you";
+  return savedDomains.every((domain) => domain === "WEBTOON") ? "/home?rec=webtoon" : "/home";
 }

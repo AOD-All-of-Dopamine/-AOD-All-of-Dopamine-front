@@ -7,7 +7,7 @@ import {
 import { AuthProvider } from "./contexts/AuthContext";
 import PublicLayout from "./layouts/public-layout";
 import HomePage from "./pages/home-page";
-import ForYouPage from "./pages/for-you-page";
+import ForYouRedirect from "./pages/for-you-redirect";
 import ExplorePage from "./pages/explore-page";
 import RankingPage from "./pages/ranking-page";
 import NewReleasesPage from "./pages/new-releases-page";
@@ -34,7 +34,8 @@ const publicRoutes: RouteObject[] = [
     children: [
       { index: true, element: <Navigate to="/home" /> },
       { path: "home", element: <HomePage /> },
-      { path: "for-you", element: <ForYouPage /> },
+      // 추천 탭은 홈으로 합쳤다(2026-09-26) — 옛 주소는 홈 추천으로 넘긴다
+      { path: "for-you", element: <ForYouRedirect /> },
       { path: "login", element: <LoginPage /> },
       { path: "signup", element: <SignupPage /> },
       { path: "explore", element: <ExplorePage /> },

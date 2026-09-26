@@ -125,7 +125,7 @@ function OnboardingPicker() {
     ? searchQuery.isLoading || searchQuery.isPlaceholderData
     : listQuery.isLoading;
   // 보여 줄 것이 하나도 없을 때만 오류 화면이다 — "더 보기" 실패는 status 를 error 로 바꾸지만
-  // 이미 받은 쪽들은 data 에 그대로 있다(for-you-page 와 같은 판정).
+  // 이미 받은 쪽들은 data 에 그대로 있다.
   const showErrorPanel = (searching ? searchQuery.isError : listQuery.isError) && works.length === 0;
   const counts = picksByDomain(selection);
   const canFinish = canFinishOnboarding(selection);
@@ -160,7 +160,7 @@ function OnboardingPicker() {
 
   /**
    * 좋아요가 시드를 바꿨다 — 저장 전에 받아 둔 추천 목록은 낡았다.
-   * 추천 쿼리는 staleTime 무한 · 마운트 재조회 없음이라 버리지 않으면 /for-you 가
+   * 추천 쿼리는 staleTime 무한 · 마운트 재조회 없음이라 버리지 않으면 홈 추천이
    * 방금 고친 취향을 무시하고 옛 `no_seed` 대체 목록을 그대로 보여 준다.
    * 로그인·로그아웃이 쓰는 것과 같은 짝(캐시 제거 + 체인 초기화)을 그대로 쓴다.
    */

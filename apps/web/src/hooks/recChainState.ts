@@ -2,7 +2,7 @@ import type { RecHiddenEntry } from "@aod/shared/rec";
 import type { RecTab } from "@aod/shared/types";
 
 /**
- * 체인 1개의 화면 상태(숨긴 카드·♡). 상세에 갔다 돌아오면 목록 컴포넌트는 다시 마운트되지만
+ * 체인 1개의 화면 상태(숨긴 카드·👍·가로 위치). 상세에 갔다 돌아오면 목록 컴포넌트는 다시 마운트되지만
  * react-query 캐시는 남아 있다 — 숨긴 카드가 되살아나지 않도록 같은 수명으로 들고 있는다.
  *
  * 체인을 새로 열면(새로 보기·404 재시작·계정 전환) 그 칸을 지운다. 그래도 칩을 여러 번 오가면
@@ -11,6 +11,10 @@ import type { RecTab } from "@aod/shared/types";
 export interface RecChainState {
   hidden: readonly RecHiddenEntry[];
   liked: Record<number, boolean>;
+  /** 홈 추천 가로 줄의 스크롤 위치 — 상세에서 돌아오거나 칩을 오가도 보던 자리로. */
+  scrollLeft?: number;
+  /** 그 위치가 어느 묶음(requestId)의 것인지 — 다른 묶음이면 복원하지 않는다. */
+  scrollRequestId?: string | null;
 }
 
 const MAX_CHAINS = 12;

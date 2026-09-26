@@ -17,7 +17,7 @@ export interface RecListParams {
   /** 기본 20 (백엔드 상한). */
   size?: number;
   /**
-   * 요청을 보낸 화면(백엔드 rec_request.surface). 없으면 보내지 않는다 — 서버가 추천 탭으로 적는다.
+   * 요청을 보낸 화면(백엔드 rec_request.surface). 없으면 보내지 않는다 — 서버가 옛 추천 탭(rec_tab)으로 적는다. 홈은 늘 home_rec 을 보낸다.
    * 허용 값은 서버가 거른다({rec_tab, home_rec}).
    */
   surface?: string;

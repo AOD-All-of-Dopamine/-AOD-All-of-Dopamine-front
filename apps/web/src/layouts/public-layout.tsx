@@ -8,7 +8,6 @@ function PublicLayout() {
   const location = useLocation();
   const showNav = [
     "/home",
-    "/for-you",
     "/explore",
     "/ranking",
     "/new",
