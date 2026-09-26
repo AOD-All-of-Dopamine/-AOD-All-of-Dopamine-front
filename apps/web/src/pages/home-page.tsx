@@ -1,11 +1,16 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { CaretRight, WarningCircle } from "@phosphor-icons/react";
 import { ExternalRanking } from "@aod/shared/api";
-import { useRecentReviewedWorks, useReleasesByDomain } from "@aod/shared/hooks";
+import { useFeaturedToday, useReleasesByDomain } from "@aod/shared/hooks";
 import { useAllRankings } from "@aod/shared/hooks";
 import { WorkSummary } from "@aod/shared/types";
-import { DOMAIN_LABEL_MAP, platformLabel } from "@aod/shared/constants";
+import {
+  DOMAIN_LABEL_MAP,
+  featuredSubline,
+  platformLabel,
+  releaseSubline,
+} from "@aod/shared/constants";
 import { watchPlatformLabels } from "../constants/platforms";
 import { categoryOf, thumbnailFallbackMap } from "../constants/thumbnail";
 import { daysUntil, dDayOf, parseYmd } from "../utils/releaseDate";
@@ -19,6 +24,7 @@ import UpcomingCard from "../components/ui/UpcomingCard";
 import DdayPill from "../components/ui/DdayPill";
 import SkeletonCard from "../components/ui/SkeletonCard";
 import HomeRecRail from "../components/home/HomeRecRail";
+import { useTracker } from "../tracking/trackerContext";
 
 /**
  * /home - mockups/home-light-mockup.html 이식.
@@ -28,7 +34,11 @@ import HomeRecRail from "../components/home/HomeRecRail";
  * 0건=섹션 숨김 (홈은 EmptyState 남발 금지).
  *
  * 목업 대비 편차 (실데이터, API 기준):
- * - 히어로 sub(한 줄 소개): 시놉시스 필드가 WorkSummary에 없어 연도·평점 메타로 대체.
+ * - **히어로 메인 = 오늘의 작품**(GET /api/works/featured-today, 2026-09-26 설계
+ *   docs/superpowers/specs/2026-09-26-home-featured-today-design.md): 지금 인기 있고 평가가 좋은 작품을
+ *   서버가 하루 한 작품(05:00 KST 에 바뀜) 고른다. 부제는 고른 근거 한 줄("매우 긍정적 94% · 스팀 인기 8위").
+ *   없으면(204 · 실패) 가장 최근 출시작으로 대체하고 부제는 "{연도} 출시". 우리 리뷰 평균은 쓰지 않는다
+ *   (예전엔 최근 리뷰가 달린 작품이 메인이었다 - 리뷰 한 건이면 무엇이든 올라왔다).
  * - 신작 릴 meta: 목업대로 "도메인 · 플랫폼" (플랫폼 미수집 작품은 연도 폴백).
  * - 이번 주 인기: 크로스 도메인 집계 API가 없어 플랫폼별 외부 랭킹 상위권을
  *   도메인 순서로 교차 배치해 6개 구성 - 표시 순번은 홈 화면 임시 순번.
@@ -36,10 +46,10 @@ import HomeRecRail from "../components/home/HomeRecRail";
  *   장르 필드 없음 -> meta는 도메인 라벨만.
  * - 출시 예정: D-day는 releaseDate로 클라 계산 (당일=D-DAY, 날짜 없음=미정 tba).
  *   이미 지난 날짜 항목은 섹션 성격상 제외.
- * - 히어로에 쓰인 작품은 중복 노출 방지 - 리뷰 섹션은 메인, 신작 릴은 서브 2건 제외.
+ * - 히어로에 쓰인 작품은 중복 노출 방지 - 신작 릴은 메인 · 서브 2건, 이번 주 인기는 오늘의 작품을 뺀다.
  * - **추천 릴**(홈 설계 2026-09-25): 히어로 아래에 추천 한 줄(HomeRecRail)을 둔다. 예전 "방금 올라온 리뷰"
  *   섹션·모바일 홈/추천 전환은 뺐다(추천 탭은 2026-09-26 홈으로 합쳤다 — 칩 · 30개 한 줄 · 새 추천 받기). 히어로 머리말은 "오늘의 작품" -
- *   개인화가 아닌 목록에 "추천"을 쓰면 바로 아래 진짜 추천과 뜻이 겹친다. 리뷰 쿼리는 히어로 메인이 쓰므로 남긴다.
+ *   개인화가 아닌 목록에 "추천"을 쓰면 바로 아래 진짜 추천과 뜻이 겹친다.
  *   처음엔 빌드 플래그(VITE_HOME_REC) 뒤에 두었다가 2026-09-26 플래그 없이 항상 켜기로 했다.
  * - 새로 나온 작품 · 이번 주 인기 · 출시 예정은 **도메인별 슬라이드**(DomainRotator)다 - 시간이 지나면
  *   다음 도메인이 밀고 들어온다. 전 도메인 한 번 조회로는 매일 올라오는 도메인(웹소설·웹툰)이 목록을
@@ -89,13 +99,8 @@ const railMeta = (work: WorkSummary) => {
     .join(" · ");
 };
 
-/** 히어로 sub - 시놉시스 부재로 연도·평점 메타 (둘 다 없으면 생략) */
-const heroSub = (work: WorkSummary) => {
-  const year = work.releaseDate?.slice(0, 4);
-  const score = work.score > 0 ? `평점 ${work.score.toFixed(1)}` : undefined;
-  const parts = [year, score].filter(Boolean);
-  return parts.length > 0 ? parts.join(" · ") : undefined;
-};
+/** 히어로 메인 클릭 추적 surface (백엔드는 surface 를 자유 문자열로 받는다) */
+const HOME_HERO_SURFACE = "home_hero";
 
 /**
  * 출시 예정 meta - "게임 · 11월 19일" (다른 해면 연도 표기).
@@ -181,7 +186,8 @@ const reviewGridClass =
   "mt-4 grid grid-cols-1 gap-4 min-[768px]:grid-cols-2 min-[1024px]:grid-cols-3";
 
 export default function HomePage() {
-  const reviewed = useRecentReviewedWorks({ size: 6 });
+  const featured = useFeaturedToday();
+  const tracker = useTracker();
   // 신작은 도메인마다 따로 받는다 - 릴의 도메인별 슬라이드와 히어로 서브 2건이 같이 쓴다
   // (전 도메인 조회를 따로 한 번 더 하지 않는다 - 서버는 같은 3개월치를 두 번 읽게 된다)
   const releasesByDomain = useReleasesByDomain("recent", HOME_DOMAINS, HOME_RAIL_SIZE);
@@ -196,16 +202,39 @@ export default function HomePage() {
         .sort((x, y) => (y.releaseDate ?? "").localeCompare(x.releaseDate ?? ""))
     : [];
 
-  // TODO: 추천 엔진 연동 시 교체 - 현재는 최근 리뷰작 1건(메인) + 신작 상위 2건(서브) 임시 선정
-  const reviewedMain = reviewed.data?.content?.[0];
-  const heroMain = reviewedMain ?? newestReleases[0];
+  // 메인 = 오늘의 작품(없으면 최신 출시작), 서브 = 신작 상위 2건
+  const featuredToday = featured.data ?? null;
+  const heroMain: WorkSummary | undefined = featuredToday?.work ?? newestReleases[0];
+  const heroMainSub = featuredToday
+    ? featuredSubline(featuredToday.reason)
+    : heroMain && releaseSubline(heroMain);
   const heroSides = newestReleases.filter((w) => w.id !== heroMain?.id).slice(0, 2);
-  const heroLoading = reviewed.isLoading || (!reviewedMain && !releasesSettled);
-  const heroError = reviewed.isError && releasesByDomain.every((r) => r.isError);
+  // 오늘의 작품이 오면 신작을 기다리지 않는다 (서브 칸만 스켈레톤)
+  const heroLoading = featured.isLoading || (!featuredToday && !releasesSettled);
+  // 오류는 오늘의 작품 · 신작 모두 없을 때만 (204 도 "없음"이다)
+  const heroError =
+    !featuredToday && !featured.isLoading && releasesByDomain.every((r) => r.isError);
+  const featuredId = featuredToday?.work.id;
+
+  const onHeroMainClick = useCallback(() => {
+    if (!heroMain) return;
+    tracker.track("card_clicked", {
+      contentId: heroMain.id,
+      surface: HOME_HERO_SURFACE,
+      payload: featuredToday
+        ? {
+            source: "featured",
+            date: featuredToday.date,
+            platform: featuredToday.reason.platform,
+            ranking: featuredToday.reason.ranking,
+          }
+        : { source: "latest_release" },
+    });
+  }, [featuredToday, heroMain, tracker]);
   /** 서브 칸 - 신작이 아직 오는 중이면 자리(스켈레톤)를 잡아 둔다 */
   const heroSidesPending = !releasesSettled;
 
-  // 히어로 중복 노출 방지 - 릴은 히어로 서브 2건(+reviewed 실패 폴백 시 메인) 제외
+  // 히어로 중복 노출 방지 - 릴은 히어로 메인 · 서브 2건 제외
   const heroSideIds = new Set(heroSides.map((w) => w.id));
 
   // 새로 나온 작품 - 도메인마다 한 슬라이드 (작품이 없는 도메인은 빠진다)
@@ -250,12 +279,16 @@ export default function HomePage() {
     !railLoading &&
     releasesByDomain.every((r) => r.isError);
 
-  // 이번 주 인기 - 플랫폼(=도메인)마다 실제 순위 상위 6 (contentId 보유분만)
+  // 이번 주 인기 - 플랫폼(=도메인)마다 실제 순위 상위 6 (contentId 보유분만).
+  // 오늘의 작품도 랭킹에서 나오므로 같은 화면에 두 번 나오지 않게 뺀다(순번은 실제 순위라 빈 번호가 생길 수 있다).
   const rankSlides: RotatorSlide[] = useMemo(() => {
     const data = rankings.data ?? [];
     return HOME_RANK_PLATFORMS.flatMap((platform) => {
       const items: ExternalRanking[] = data
-        .filter((item) => item.platform === platform && item.contentId)
+        .filter(
+          (item) =>
+            item.platform === platform && item.contentId && item.contentId !== featuredId,
+        )
         .sort((x, y) => x.ranking - y.ranking)
         .slice(0, HOME_RANK_SIZE);
       if (items.length === 0) return [];
@@ -283,7 +316,7 @@ export default function HomePage() {
         },
       ];
     });
-  }, [rankings.data]);
+  }, [featuredId, rankings.data]);
 
   // 출시 예정 - 도메인마다 3건. 섹션 성격상 이미 지난 날짜는 제외 (날짜 미정은 유지)
   const upcomingSlides: RotatorSlide[] = upcomingByDomain.flatMap(({ domain, items }) => {
@@ -346,7 +379,7 @@ export default function HomePage() {
           <SectionError
             message="작품을 불러오지 못했어요."
             onRetry={() => {
-              reviewed.refetch();
+              featured.refetch();
               releasesByDomain.forEach((r) => r.refetch());
             }}
           />
@@ -362,10 +395,11 @@ export default function HomePage() {
               variant="main"
               kicker={`오늘의 작품 · ${domainLabel(heroMain.domain)}`}
               title={heroMain.title}
-              sub={heroSub(heroMain)}
+              sub={heroMainSub}
               imageUrl={heroMain.thumbnail}
               domain={heroMain.domain}
               to={`/work/${heroMain.id}`}
+              onClick={onHeroMainClick}
             />
             {heroSidesPending && (
               <div

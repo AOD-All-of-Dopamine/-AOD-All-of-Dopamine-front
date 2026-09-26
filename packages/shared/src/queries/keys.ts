@@ -13,6 +13,7 @@ export const workKeys = {
   infinite: (params: WorksQueryParams) => ["works-infinite", params] as const,
   recentReviewed: (params: ReleasesQueryParams) =>
     ["works", "recent-reviews", params] as const,
+  featuredToday: () => ["works", "featured-today"] as const,
 };
 
 export const releaseKeys = {

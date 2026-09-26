@@ -13,6 +13,7 @@ describe("query key 팩토리 — 기존 인라인 키와 동일 구조", () => 
     expect(workKeys.search("q", params)).toEqual(["works", "search", "q", params]);
     expect(workKeys.infinite(params)).toEqual(["works-infinite", params]);
     expect(workKeys.recentReviewed(params)).toEqual(["works", "recent-reviews", params]);
+    expect(workKeys.featuredToday()).toEqual(["works", "featured-today"]);
   });
 
   it("파라미터를 정규화하지 않는다 — 빈 객체는 빈 객체 그대로", () => {

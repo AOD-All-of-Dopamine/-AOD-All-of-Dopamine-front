@@ -26,7 +26,7 @@ import { cardLift } from "./cardStyles";
  */
 export interface FeatureCardProps {
   variant?: "main" | "side";
-  /** 상단 소제목 (예: "오늘의 추천 · 게임") */
+  /** 상단 소제목 (예: "오늘의 작품 · 게임") */
   kicker: string;
   title: string;
   /** 보조 한 줄 (main 전용 목업 .sub 슬롯) */
@@ -37,6 +37,8 @@ export interface FeatureCardProps {
   /** 백엔드 도메인 문자열 - 썸네일 맞춤 방식과 폴백 아이콘을 정한다 */
   domain?: string;
   to: string;
+  /** 클릭 추적 (이동은 링크가 한다) */
+  onClick?: () => void;
 }
 
 const FeatureCard = ({
@@ -48,6 +50,7 @@ const FeatureCard = ({
   imageAlt = "",
   domain,
   to,
+  onClick,
 }: FeatureCardProps) => {
   const isMain = variant === "main";
   const withImage = !!imageUrl;
@@ -57,6 +60,7 @@ const FeatureCard = ({
   return (
     <Link
       to={to}
+      onClick={onClick}
       className={`relative block bg-canvas ${cardLift} ${
         isMain
           ? "min-h-[300px] min-[1024px]:min-h-[400px]"

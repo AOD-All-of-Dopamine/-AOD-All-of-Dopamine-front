@@ -6,9 +6,10 @@ import {
   useInfiniteQuery,
 } from "@tanstack/react-query";
 import type { WorksQueryParams, ReleasesQueryParams } from "../api/workApi";
-import type { PageResponse, WorkSummary, WorkDetail } from "../types";
+import type { FeaturedWork, PageResponse, WorkSummary, WorkDetail } from "../types";
 import { useApis } from "./ApiProvider";
 import { workKeys, releaseKeys, metaKeys } from "../queries/keys";
+import { featuredStaleTime } from "../constants/featured";
 
 /**
  * 작품 목록 조회 hook
@@ -81,6 +82,22 @@ export const useRecentReviewedWorks = (
     queryKey: workKeys.recentReviewed(params),
     queryFn: () => workApi.getRecentReviewedWorks(params),
     ...options,
+  });
+};
+
+/**
+ * 홈 "오늘의 작품" — 없으면(204) data 가 null.
+ * react-query 재시도는 끈다: axios 가 5xx · 네트워크 오류를 이미 2번 다시 보낸다(0.5 · 1초, 모두 3번 ≈ 1.5초).
+ * 4xx(배포 전 400)는 axios 도 다시 보내지 않는다 — 스켈레톤이 오래 남지 않고 곧장 최신 출시작으로 대체된다.
+ * staleTime 은 다음 05:00 KST 까지(최대 30분).
+ */
+export const useFeaturedToday = () => {
+  const { workApi } = useApis();
+  return useQuery<FeaturedWork | null>({
+    queryKey: workKeys.featuredToday(),
+    queryFn: () => workApi.getFeaturedToday(),
+    retry: false,
+    staleTime: (query) => featuredStaleTime(query.state.data?.date),
   });
 };
 

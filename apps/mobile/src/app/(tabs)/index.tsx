@@ -10,18 +10,24 @@ import { SectionError } from '@/components/ui/SectionError';
 import { SkeletonBlock, SkeletonPulse } from '@/components/ui/Skeleton';
 import { domainFallbackIcon } from '@/components/ui/WorkCard';
 import { ThemedText } from '@/components/themed-text';
-import { useRecentReleases, useRecentReviewedWorks } from '@aod/shared/hooks';
-import { DOMAIN_LABEL_MAP, watchPlatformLabels } from '@aod/shared/constants';
+import { useFeaturedToday, useRecentReleases, useRecentReviewedWorks } from '@aod/shared/hooks';
+import {
+  DOMAIN_LABEL_MAP,
+  featuredSubline,
+  releaseSubline,
+  watchPlatformLabels,
+} from '@aod/shared/constants';
 import type { WorkSummary } from '@aod/shared/types';
 import { Overlay, Palette, Radius } from '@/constants/theme';
 
 /**
- * 홈 (목업 mobile-light-mockup 프레임 1) - AppHeader + 히어로 카드(오늘의 추천) +
+ * 홈 (목업 mobile-light-mockup 프레임 1) - AppHeader + 히어로 카드(오늘의 작품) +
  * "새로 나온 작품" 가로 릴 + "방금 올라온 리뷰" 행.
  * 본문 검색창 없음 - 검색 진입은 헤더 아이콘 단일화 (목업 감사 결함 2 해결).
  *
  * 데이터·규율은 웹 home-page.tsx와 동일:
- * - 히어로: 추천 엔진 연동 전 임시 선정 - 최근 리뷰작 1건, 폴백은 신작 1건
+ * - 히어로: 오늘의 작품(GET /api/works/featured-today - 서버가 하루 한 작품, 부제는 고른 근거 한 줄),
+ *   없으면(204 · 실패) 신작 1건 + "{연도} 출시". 리뷰 쿼리는 "방금 올라온 리뷰" 섹션이 쓴다
  * - 릴 meta "도메인 · 플랫폼"(플랫폼 미수집 시 연도 폴백), 리뷰 행 meta "도메인 · 연도"
  * - 섹션별 상태 독립: 로딩=형태 스켈레톤 / 에러=인라인 SectionError / 0건=섹션 숨김
  *   (홈은 EmptyState 남발 금지)
@@ -32,14 +38,6 @@ const REVIEW_COUNT = 3;
 
 const domainLabel = (domain?: string) =>
   DOMAIN_LABEL_MAP[domain ?? ''] ?? domain ?? '';
-
-/** 히어로 meta - 시놉시스 부재로 연도·평점 (둘 다 없으면 생략, 웹 heroSub 동일) */
-const heroMeta = (work: WorkSummary) => {
-  const year = work.releaseDate?.slice(0, 4);
-  const score = work.score > 0 ? `평점 ${work.score.toFixed(1)}` : undefined;
-  const parts = [year, score].filter(Boolean);
-  return parts.length > 0 ? parts.join(' · ') : undefined;
-};
 
 /** 릴 meta - "게임 · 스팀" (목업 .rail-card .m), 플랫폼 없으면 연도 폴백 */
 const railMeta = (work: WorkSummary) => {
@@ -159,13 +157,18 @@ function ReviewRow({ work }: { work: WorkSummary }) {
 }
 
 export default function HomeScreen() {
+  const featured = useFeaturedToday();
   const reviewed = useRecentReviewedWorks({ size: 6 });
   const releases = useRecentReleases({ size: 8 });
 
-  // TODO: 추천 엔진 연동 시 교체 - 최근 리뷰작 1건(폴백: 신작 1건) 임시 선정 (웹 동일)
-  const heroMain = reviewed.data?.content?.[0] ?? releases.data?.content?.[0];
-  const heroLoading = reviewed.isLoading || releases.isLoading;
-  const heroError = reviewed.isError && releases.isError;
+  // 오늘의 작품(없으면 신작 1건) - 웹과 같은 규칙
+  const featuredToday = featured.data ?? null;
+  const heroMain = featuredToday?.work ?? releases.data?.content?.[0];
+  const heroMeta = featuredToday
+    ? featuredSubline(featuredToday.reason)
+    : heroMain && releaseSubline(heroMain);
+  const heroLoading = featured.isLoading || (!featuredToday && releases.isLoading);
+  const heroError = !featuredToday && !featured.isLoading && releases.isError;
 
   // 히어로 중복 노출 방지
   const railItems = (releases.data?.content ?? []).filter(
@@ -193,9 +196,9 @@ export default function HomeScreen() {
         ) : heroError ? (
           <SectionError
             style={styles.heroError}
-            message="추천 작품을 불러오지 못했어요."
+            message="작품을 불러오지 못했어요."
             onRetry={() => {
-              reviewed.refetch();
+              featured.refetch();
               releases.refetch();
             }}
           />
@@ -221,15 +224,13 @@ export default function HomeScreen() {
             />
             <View style={styles.heroCopy}>
               <ThemedText style={styles.heroEyebrow}>
-                {`오늘의 추천 · ${domainLabel(heroMain.domain)}`}
+                {`오늘의 작품 · ${domainLabel(heroMain.domain)}`}
               </ThemedText>
               <ThemedText numberOfLines={2} style={styles.heroTitle}>
                 {heroMain.title}
               </ThemedText>
-              {heroMeta(heroMain) && (
-                <ThemedText style={styles.heroMeta}>
-                  {heroMeta(heroMain)}
-                </ThemedText>
+              {heroMeta && (
+                <ThemedText style={styles.heroMeta}>{heroMeta}</ThemedText>
               )}
             </View>
           </Pressable>
