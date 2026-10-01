@@ -4,7 +4,7 @@ import WorkThumb from "../ui/WorkThumb";
 import { cardBase } from "../ui/cardStyles";
 
 export interface HiddenCardSlotProps {
-  work: Pick<WorkSummary, "title" | "thumbnail" | "domain">;
+  work: Pick<WorkSummary, "title" | "thumbnail" | "portraitThumbnail" | "domain">;
   /** 가린 이유 한 줄 — 싫어요는 "덜 보여드릴게요". */
   message: string;
   onUndo: () => void;
@@ -40,6 +40,7 @@ const HiddenCardSlot = ({
       <div className={`relative bg-canvas ${cardBase}`}>
         <WorkThumb
           imageUrl={work.thumbnail}
+          portraitUrl={work.portraitThumbnail}
           domain={work.domain}
           className="opacity-25 grayscale"
         />

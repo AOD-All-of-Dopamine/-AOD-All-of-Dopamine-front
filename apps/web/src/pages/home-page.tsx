@@ -250,7 +250,7 @@ export default function HomePage() {
       {
         id: domain,
         label,
-        preload: works.map((w) => w.thumbnail),
+        preload: works.map((w) => w.portraitThumbnail ?? w.thumbnail),
         content: (
           <div
             role="region"
@@ -264,6 +264,7 @@ export default function HomePage() {
                 title={work.title}
                 meta={railMeta(work)}
                 imageUrl={work.thumbnail}
+                portraitUrl={work.portraitThumbnail}
                 domain={work.domain}
                 to={`/work/${work.id}`}
               />

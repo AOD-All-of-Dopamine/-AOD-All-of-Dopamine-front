@@ -686,6 +686,7 @@ function HomeRecBody({
                       card={card}
                       showReason={showReason}
                       onOpen={openCard}
+                      tab={tab}
                       autoFocus={focus?.contentId === card.work.id && focus.target === "card"}
                       feedback={
                         feedbackEnabled
@@ -774,10 +775,10 @@ function HomeRecBody({
           className="mt-1.5 inline-flex items-center gap-2 text-[13px] text-ink-2 transition-colors hover:text-ink"
         >
           <span className="flex" aria-hidden="true">
-            {likeWorks.filter((work) => work.thumbnail).map((work, index) => (
+            {likeWorks.filter((work) => work.portraitThumbnail || work.thumbnail).map((work, index) => (
               <img
                 key={work.id}
-                src={work.thumbnail ?? ""}
+                src={work.portraitThumbnail || work.thumbnail || ""}
                 alt=""
                 className={`h-[30px] w-[22px] rounded-[4px] border-2 border-canvas bg-line object-cover ${index > 0 ? "-ml-1.5" : ""}`}
               />

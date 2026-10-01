@@ -18,6 +18,7 @@ import {
 
 import { ThemedText } from '@/components/themed-text';
 import { Tag } from '@/components/ui/Tag';
+import { usePortraitSource } from './usePortraitSource';
 import { Palette, Radius } from '@/constants/theme';
 
 /**
@@ -36,6 +37,8 @@ export interface WorkCardProps {
   footer?: ReactNode;
   /** null이면 도메인별 Phosphor 폴백 아이콘을 중앙 표시 */
   imageUrl: string | null;
+  /** 게임 세로 표지 — portrait 틀에서만 우선(깨지면 imageUrl) */
+  portraitUrl?: string | null;
   /** 폴백 아이콘 선택용 도메인 (MOVIE/TV/GAME/WEBTOON/WEBNOVEL) */
   domain?: string;
   onPress?: () => void;
@@ -63,11 +66,13 @@ export function WorkCard({
   tags,
   footer,
   imageUrl,
+  portraitUrl,
   domain,
   onPress,
   style,
 }: WorkCardProps) {
   const FallbackIcon = FALLBACK_ICON[domain ?? ''] ?? FilmSlate;
+  const source = usePortraitSource(portraitUrl, imageUrl, variant === 'portrait');
 
   return (
     <Pressable
@@ -79,12 +84,13 @@ export function WorkCard({
           styles.thumbWrap,
           variant === 'landscape' ? styles.thumbLandscape : styles.thumbPortrait,
         ]}>
-        {imageUrl ? (
+        {source.uri ? (
           <Image
-            source={{ uri: imageUrl }}
+            source={{ uri: source.uri }}
             style={styles.thumb}
             contentFit="cover"
             transition={150}
+            onError={source.onError}
           />
         ) : (
           <View style={styles.fallback}>

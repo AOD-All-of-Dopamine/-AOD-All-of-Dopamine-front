@@ -147,6 +147,7 @@ const AddWorksPanel = ({
                 >
                   <WorkThumb
                     imageUrl={work.thumbnail}
+                    portraitUrl={work.portraitThumbnail}
                     domain={work.domain}
                     className="w-10 flex-none rounded-input border border-line"
                   />

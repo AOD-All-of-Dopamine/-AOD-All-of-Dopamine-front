@@ -17,6 +17,8 @@ export interface WorkCardProps {
   footer?: ReactNode;
   /** null이면 도메인 폴백 아이콘을 중앙 표시 (실데이터 썸네일 누락 대응) */
   imageUrl: string | null;
+  /** 게임 세로 표지 — 있으면 우선(깨지면 imageUrl) */
+  portraitUrl?: string | null;
   /** 제목이 인접 텍스트로 함께 렌더되므로 기본은 장식 이미지("") 취급 */
   imageAlt?: string;
   /** 백엔드 도메인 문자열 - 썸네일 맞춤 방식과 폴백 아이콘을 정한다 */
@@ -30,13 +32,14 @@ const WorkCard = ({
   tags,
   footer,
   imageUrl,
+  portraitUrl,
   imageAlt = "",
   domain,
   to,
 }: WorkCardProps) => {
   return (
     <Link to={to} className={`flex flex-col bg-surface ${cardLift}`}>
-      <WorkThumb imageUrl={imageUrl} domain={domain} alt={imageAlt} />
+      <WorkThumb imageUrl={imageUrl} portraitUrl={portraitUrl} domain={domain} alt={imageAlt} />
       <div className="flex flex-1 flex-col gap-[7px] px-[15px] pb-[14px] pt-[13px]">
         <div className="truncate text-[15.5px] font-bold tracking-[-0.01em] text-ink">
           {title}

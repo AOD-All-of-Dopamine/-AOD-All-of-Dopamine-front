@@ -18,6 +18,7 @@ import {
   watchPlatformLabels,
 } from '@aod/shared/constants';
 import type { WorkSummary } from '@aod/shared/types';
+import { usePortraitSource } from '@/components/ui/usePortraitSource';
 import { Overlay, Palette, Radius } from '@/constants/theme';
 
 /**
@@ -91,18 +92,21 @@ function ThumbFallback({ domain, size }: { domain?: string; size: number }) {
 }
 
 function RailCard({ work }: { work: WorkSummary }) {
+  // 게임은 세로 표지 우선(3:4 틀이라 위아래가 조금 잘린다) — 깨지면 기존 썸네일
+  const source = usePortraitSource(work.portraitThumbnail, work.thumbnail);
   return (
     <Pressable
       accessibilityRole="button"
       onPress={() => pushWork(work.id)}
       style={({ pressed }) => [styles.railCard, pressed && styles.pressed]}>
       <View style={styles.railThumbWrap}>
-        {work.thumbnail ? (
+        {source.uri ? (
           <Image
-            source={{ uri: work.thumbnail }}
+            source={{ uri: source.uri }}
             style={styles.fill}
             contentFit="cover"
             transition={150}
+            onError={source.onError}
           />
         ) : (
           <ThumbFallback domain={work.domain} size={28} />

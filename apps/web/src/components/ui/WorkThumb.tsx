@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   categoryOf,
   thumbFitMap,
@@ -13,6 +14,9 @@ import {
  * - contain: 원본 비율 그대로 가운데에 넣고, 같은 URL의 블러 배경이 남는 자리를 채운다
  *   (게임·웹툰·웹소설). 같은 URL이라 추가 네트워크 요청은 없다.
  * imageUrl이 없으면 도메인 폴백 아이콘을 중앙 표시한다.
+ *
+ * **세로 표지**(게임 세로 표지 설계 2026-10-01): 세로 틀에 `portraitUrl`(Steam 라이브러리 캡슐 2:3)이 오면 그 한 장을 cover 로 쓴다.
+ * 깨지면 그 주소만 실패로 기억하고(같은 컴포넌트에 다른 작품이 들어와도 새 표지가 갇히지 않게) 위 규칙으로 돌아간다.
  */
 export interface WorkThumbProps {
   /** null·빈 문자열이면 도메인 폴백 아이콘 (실데이터 썸네일 누락 대응) */
@@ -25,6 +29,8 @@ export interface WorkThumbProps {
   className?: string;
   /** 틀 모양 — 기본 2:3. landscape 는 460:215 + cover. */
   shape?: "portrait" | "landscape";
+  /** 세로 표지 — 세로 틀에서만 쓴다. 없거나 깨지면 imageUrl 규칙으로. */
+  portraitUrl?: string | null;
 }
 
 const WorkThumb = ({
@@ -33,15 +39,26 @@ const WorkThumb = ({
   alt = "",
   className = "",
   shape = "portrait",
+  portraitUrl,
 }: WorkThumbProps) => {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const category = categoryOf(domain);
   const fit = shape === "landscape" ? "cover" : thumbFitMap[category];
+  const portrait = shape === "portrait" && portraitUrl && portraitUrl !== failedSrc ? portraitUrl : null;
 
   return (
     <div
       className={`relative ${shape === "landscape" ? "aspect-[460/215]" : "aspect-[2/3]"} overflow-hidden bg-canvas ${className}`}
     >
-      {!imageUrl ? (
+      {portrait ? (
+        <img
+          src={portrait}
+          alt={alt}
+          loading="lazy"
+          onError={() => setFailedSrc(portrait)}
+          className="h-full w-full object-cover"
+        />
+      ) : !imageUrl ? (
         <div className="grid h-full w-full place-items-center">
           <img
             src={thumbnailFallbackMap[category]}
