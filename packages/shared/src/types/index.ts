@@ -4,6 +4,8 @@ export interface WorkSummary {
   domain: string;
   title: string;
   thumbnail: string | null;
+  /** 게임 세로 표지(Steam 라이브러리 캡슐 600×900) — 세로 카드 틀용, 없으면 null. 가로 틀은 thumbnail (2026-10-01) */
+  portraitThumbnail?: string | null;
   score: number;
   rank?: number;
   rankChange?: string;

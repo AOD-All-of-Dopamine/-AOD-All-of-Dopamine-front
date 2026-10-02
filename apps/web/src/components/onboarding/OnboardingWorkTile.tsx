@@ -45,7 +45,7 @@ const OnboardingWorkTile = ({
         selected ? "border-accent-ink ring-2 ring-accent-ink" : "hover:border-line-strong"
       }`}
     >
-      <WorkThumb imageUrl={work.thumbnail} domain={work.domain} />
+      <WorkThumb imageUrl={work.thumbnail} portraitUrl={work.portraitThumbnail} domain={work.domain} />
 
       {selected && (
         <span className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-surface text-accent-ink shadow-card">

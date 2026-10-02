@@ -199,6 +199,7 @@ export default function SearchScreen() {
                       tags={workCardTags(work)}
                       footer={workCardFooter(work)}
                       imageUrl={work.thumbnail}
+                      portraitUrl={work.portraitThumbnail}
                       domain={work.domain}
                       onPress={() =>
                         router.push({

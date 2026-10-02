@@ -76,6 +76,7 @@ export default function MyLikesPage() {
                 meta={workCardMeta(work, { withDomain: true })}
                 tags={workCardTags(work)}
                 imageUrl={work.thumbnail || null}
+                portraitUrl={work.portraitThumbnail}
                 domain={work.domain}
                 to={`/work/${work.id}`}
                 footer={workCardFooter(work)}

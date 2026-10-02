@@ -29,6 +29,7 @@ interface RailWorkItem {
   id: number | string;
   title: string;
   thumbnail: string | null;
+  portraitThumbnail?: string | null;
   domain?: string;
   releaseDate?: string;
 }
@@ -87,6 +88,7 @@ function WorkRailSection({
                 title={item.title}
                 meta={meta || undefined}
                 imageUrl={item.thumbnail}
+                portraitUrl={item.portraitThumbnail}
                 domain={item.domain}
                 to={`/work/${item.id}`}
               />

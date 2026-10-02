@@ -19,6 +19,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { useMyBookmarks, useMyLikes, useMyReviews } from '@aod/shared/hooks';
 import { DOMAIN_LABEL_MAP } from '@aod/shared/constants';
 import type { WorkSummary } from '@aod/shared/types';
+import { usePortraitSource } from '@/components/ui/usePortraitSource';
 import { Palette, Radius } from '@/constants/theme';
 
 /**
@@ -45,6 +46,8 @@ const pushWork = (id: number) =>
   router.push({ pathname: '/work/[id]', params: { id: String(id) } });
 
 function RailCard({ work }: { work: WorkSummary }) {
+  // 게임은 세로 표지 우선(3:4 틀이라 위아래가 조금 잘린다) — 깨지면 기존 썸네일
+  const source = usePortraitSource(work.portraitThumbnail, work.thumbnail);
   const FallbackIcon = domainFallbackIcon(work.domain);
   return (
     <Pressable
@@ -52,12 +55,13 @@ function RailCard({ work }: { work: WorkSummary }) {
       onPress={() => pushWork(work.id)}
       style={({ pressed }) => [styles.railCard, pressed && styles.pressed]}>
       <View style={styles.railThumbWrap}>
-        {work.thumbnail ? (
+        {source.uri ? (
           <Image
-            source={{ uri: work.thumbnail }}
+            source={{ uri: source.uri }}
             style={styles.fill}
             contentFit="cover"
             transition={150}
+            onError={source.onError}
           />
         ) : (
           <View style={styles.railFallback}>

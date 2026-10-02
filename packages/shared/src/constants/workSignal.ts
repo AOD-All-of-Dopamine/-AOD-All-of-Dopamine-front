@@ -85,6 +85,9 @@ function isUpcoming(work: Pick<WorkSummary, "releaseDate">, today: Date): boolea
   return !Number.isNaN(release.getTime()) && release.getTime() > today.getTime();
 }
 
+/** 다른 카드 규칙(홈 추천 아래 줄 등)이 같은 판정을 쓰게 내보낸다. */
+export { year as releaseYear, isUpcoming as isUpcomingRelease };
+
 /**
  * 분야별 한 줄 신호 (설계 "신호 줄 규칙"):
  * - 게임: 판정이 있으면 [판정(긍정이면 strong), 연도] + 긍정 %(리뷰 10개 이상) · 없으면 [연도] · 출시 예정이면 ["출시 예정", 연도]

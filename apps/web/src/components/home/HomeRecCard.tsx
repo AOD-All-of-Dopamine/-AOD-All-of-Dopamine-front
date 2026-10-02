@@ -1,8 +1,8 @@
-import { useEffect, useRef } from "react";
+import { Fragment, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { HOME_REC_SURFACE } from "@aod/shared/constants";
+import { HOME_REC_SURFACE, recCardMeta } from "@aod/shared/constants";
 import { recCardFields, recWorkPath } from "@aod/shared/rec";
-import type { RecCard } from "@aod/shared/types";
+import type { RecCard, RecTab } from "@aod/shared/types";
 import { useImpressionTracker } from "../../tracking/useImpressionTracker";
 import RecThumbs from "../rec/RecThumbs";
 import WorkThumb from "../ui/WorkThumb";
@@ -16,6 +16,8 @@ export interface HomeRecCardProps {
   /** 👍/👎. 비로그인이면 null(저장되지 않는다). */
   feedback: { liked: boolean; onLike: () => void; onDislike: () => void } | null;
   onOpen: (card: RecCard) => void;
+  /** 지금 칩 — 게임 카드 아래 줄이 탭에 따라 달라진다(전체 탭은 "게임 ·" 을 붙이고 연도를 뺀다) */
+  tab: RecTab;
   /** 가린 자리에서 되돌려 이 카드가 다시 생겼으면 카드(링크)로 포커스를 옮긴다. */
   autoFocus?: boolean;
 }
@@ -27,7 +29,7 @@ export interface HomeRecCardProps {
  * 카드 폭이 고정이라 포스터 오른쪽 아래에 정확히 앉는다.
  * 카드 전체가 노출 계측 대상이다(홈 surface). 대체 목록 카드도 impressionId 가 있어 똑같이 잰다(분모).
  */
-const HomeRecCard = ({ card, showReason, feedback, onOpen, autoFocus = false }: HomeRecCardProps) => {
+const HomeRecCard = ({ card, showReason, feedback, onOpen, tab, autoFocus = false }: HomeRecCardProps) => {
   const setImpressionRef = useImpressionTracker(recCardFields(card, HOME_REC_SURFACE));
   const linkRef = useRef<HTMLAnchorElement>(null);
   useEffect(() => {
@@ -36,7 +38,9 @@ const HomeRecCard = ({ card, showReason, feedback, onOpen, autoFocus = false }: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const work = card.work;
-  const meta = workCardMeta(work, { withDomain: true });
+  // 게임은 Steam 평가 줄(게임 세로 표지 설계 2026-10-01), 그 밖은 지금 규칙
+  const gameMeta = recCardMeta(work, tab);
+  const meta = gameMeta ? undefined : workCardMeta(work, { withDomain: true });
 
   return (
     <article ref={setImpressionRef} className="group relative w-[168px] flex-none snap-start">
@@ -44,11 +48,27 @@ const HomeRecCard = ({ card, showReason, feedback, onOpen, autoFocus = false }: 
         <div
           className={`bg-canvas ${cardLift} group-hover:-translate-y-[3px] group-hover:shadow-lift motion-reduce:group-hover:translate-y-0`}
         >
-          <WorkThumb imageUrl={work.thumbnail} domain={work.domain} />
+          <WorkThumb imageUrl={work.thumbnail} portraitUrl={work.portraitThumbnail} domain={work.domain} />
         </div>
         <div className="mt-[9px] truncate text-sm font-bold text-ink">{work.title}</div>
         {showReason && card.reason && (
           <div className="mt-0.5 truncate text-[12.5px] font-semibold text-accent-ink">{card.reason.text}</div>
+        )}
+        {gameMeta && (
+          <div className="mt-0.5 truncate text-[12.5px] text-ink-2">
+            {gameMeta.map((group, gi) => (
+              <Fragment key={gi}>
+                {gi > 0 && " · "}
+                {group.map((part, pi) => (
+                  <Fragment key={pi}>
+                    {pi > 0 && " "}
+                    {part.srPrefix && <span className="sr-only">{part.srPrefix}</span>}
+                    {part.strong ? <strong className="font-bold text-ink">{part.text}</strong> : part.text}
+                  </Fragment>
+                ))}
+              </Fragment>
+            ))}
+          </div>
         )}
         {meta && <div className="mt-0.5 truncate text-[12.5px] text-ink-2">{meta}</div>}
       </Link>
