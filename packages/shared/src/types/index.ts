@@ -81,12 +81,45 @@ export interface FeaturedReason {
   ratingLabel?: string | null;
 }
 
-/** GET /api/works/featured-today (200). 204 는 null 로 받는다. */
+/** 히어로 그림 (2026-10-03) — 값이 null 일 수 있다. */
+export interface FeaturedMedia {
+  /** 넓은 배경 (Steam library_hero · TMDB backdrop) */
+  backdropUrl?: string | null;
+  /** 투명 로고 (PNG) */
+  logoUrl?: string | null;
+  /** "ko" | "other" */
+  logoLang?: string | null;
+}
+
+/** 리뷰 한 줄 — 우리 사이트(OURS) 또는 Steam. */
+export interface FeaturedQuote {
+  source: "OURS" | "STEAM" | string;
+  text: string;
+  /** STEAM: 작성자 이름(없으면 null) */
+  author?: string | null;
+  /** STEAM: 도움이 됨 수 */
+  votes?: number | null;
+  /** STEAM: 리뷰 당시 플레이 시간(시간) */
+  hours?: number | null;
+  /** OURS: 별점 0~5 */
+  rating?: number | null;
+  /** STEAM: 원문 주소 */
+  url?: string | null;
+}
+
+/**
+ * GET /api/works/featured-today (200). 204 는 null 로 받는다.
+ * 히어로 칸(synopsis · facts · media · quote)은 모두 선택 — 옛 캐시 응답에는 없다.
+ */
 export interface FeaturedWork {
   /** yyyy-MM-dd — 05:00 KST 에 바뀐다 */
   date: string;
   work: WorkSummary;
   reason: FeaturedReason;
+  synopsis?: string | null;
+  facts?: { seasons?: number | null; runtimeMinutes?: number | null } | null;
+  media?: FeaturedMedia | null;
+  quote?: FeaturedQuote | null;
 }
 
 export interface ApiError {

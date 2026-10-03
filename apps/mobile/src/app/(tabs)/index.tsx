@@ -1,4 +1,4 @@
-import { FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { FlatList, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
@@ -14,6 +14,7 @@ import { useFeaturedToday, useRecentReleases, useRecentReviewedWorks } from '@ao
 import {
   DOMAIN_LABEL_MAP,
   featuredSubline,
+  heroTitle,
   releaseSubline,
   watchPlatformLabels,
 } from '@aod/shared/constants';
@@ -171,6 +172,10 @@ export default function HomeScreen() {
   const heroMeta = featuredToday
     ? featuredSubline(featuredToday.reason)
     : heroMain && releaseSubline(heroMain);
+  // 히어로(2026-10-03): 넓은 배경이 있으면 그것, 리뷰 한 줄(없으면 줄거리 2줄)
+  const heroImage = featuredToday?.media?.backdropUrl || heroMain?.portraitThumbnail || heroMain?.thumbnail || null;
+  const heroQuote = featuredToday?.quote ?? null;
+  const heroSynopsis = heroQuote ? null : featuredToday?.synopsis ?? null;
   const heroLoading = featured.isLoading || (!featuredToday && releases.isLoading);
   const heroError = !featuredToday && !featured.isLoading && releases.isError;
 
@@ -211,31 +216,62 @@ export default function HomeScreen() {
             accessibilityRole="button"
             onPress={() => pushWork(heroMain.id)}
             style={({ pressed }) => [styles.hero, pressed && styles.pressed]}>
-            {heroMain.thumbnail ? (
-              <Image
-                source={{ uri: heroMain.thumbnail }}
-                style={styles.fill}
-                contentFit="cover"
-                transition={200}
+            <View style={styles.heroArt}>
+              {heroImage ? (
+                <Image source={{ uri: heroImage }} style={styles.fill} contentFit="cover" transition={200} />
+              ) : (
+                <ThumbFallback domain={heroMain.domain} size={44} />
+              )}
+              <LinearGradient
+                colors={['transparent', Overlay.heroGrad, Palette.ink]}
+                locations={[0.35, 0.8, 1]}
+                style={StyleSheet.absoluteFill}
               />
-            ) : (
-              <ThumbFallback domain={heroMain.domain} size={44} />
-            )}
-            <LinearGradient
-              colors={['transparent', Overlay.heroGrad]}
-              locations={[0.42, 1]}
-              style={StyleSheet.absoluteFill}
-            />
+            </View>
             <View style={styles.heroCopy}>
               <ThemedText style={styles.heroEyebrow}>
-                {`오늘의 작품 · ${domainLabel(heroMain.domain)}`}
+                {featuredToday ? `오늘의 작품 · ${domainLabel(heroMain.domain)}` : `새로 나온 ${domainLabel(heroMain.domain)}`}
               </ThemedText>
               <ThemedText numberOfLines={2} style={styles.heroTitle}>
-                {heroMain.title}
+                {heroTitle(heroMain.title)}
               </ThemedText>
               {heroMeta && (
                 <ThemedText style={styles.heroMeta}>{heroMeta}</ThemedText>
               )}
+              {heroQuote ? (
+                <View style={styles.heroQuote}>
+                  <ThemedText numberOfLines={4} style={styles.heroQuoteText}>
+                    {`“${heroQuote.text}”`}
+                  </ThemedText>
+                  {heroQuote.source === 'STEAM' ? (
+                    <Pressable
+                      accessibilityRole="link"
+                      accessibilityLabel="리뷰 원문 열기"
+                      disabled={!heroQuote.url}
+                      onPress={() => heroQuote.url && Linking.openURL(heroQuote.url)}
+                      hitSlop={6}>
+                      <ThemedText style={styles.heroQuoteSrc}>
+                        {[
+                          heroQuote.author || 'Steam 사용자',
+                          'Steam 한국어 리뷰',
+                          typeof heroQuote.votes === 'number' ? `👍 ${heroQuote.votes.toLocaleString('ko-KR')}` : null,
+                          heroQuote.url ? '원문 ↗' : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </ThemedText>
+                    </Pressable>
+                  ) : (
+                    <ThemedText style={styles.heroQuoteSrc}>
+                      {`AOD 사용자 리뷰${typeof heroQuote.rating === 'number' ? ` · ★ ${heroQuote.rating.toFixed(1)}` : ''}`}
+                    </ThemedText>
+                  )}
+                </View>
+              ) : heroSynopsis ? (
+                <ThemedText numberOfLines={2} style={styles.heroSynopsis}>
+                  {heroSynopsis}
+                </ThemedText>
+              ) : null}
             </View>
           </Pressable>
         ) : null}
@@ -354,10 +390,9 @@ const styles = StyleSheet.create({
   hero: {
     marginTop: 14,
     marginHorizontal: 16,
-    aspectRatio: 16 / 10,
     borderRadius: Radius.panel,
     overflow: 'hidden',
-    backgroundColor: Palette.line,
+    backgroundColor: Palette.ink,
     // 목업 shadow-card 근사
     shadowColor: Palette.shadowInk,
     shadowOffset: { width: 0, height: 2 },
@@ -373,11 +408,42 @@ const styles = StyleSheet.create({
     marginTop: 14,
     marginHorizontal: 16,
   },
+  heroArt: {
+    aspectRatio: 16 / 9,
+    backgroundColor: Palette.ink,
+  },
+  /* 머리말 · 제목이 그림 아래쪽에 겹친다 (웹 히어로 모바일과 같은 모양) */
   heroCopy: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    bottom: 14,
+    marginTop: -56,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    gap: 2,
+  },
+  heroQuote: {
+    marginTop: 10,
+    paddingLeft: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: Palette.accent,
+    gap: 6,
+  },
+  heroQuoteText: {
+    fontSize: 15,
+    lineHeight: 23,
+    fontWeight: 600,
+    color: Palette.surface,
+  },
+  heroQuoteSrc: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: Palette.surface,
+    opacity: 0.65,
+  },
+  heroSynopsis: {
+    marginTop: 8,
+    fontSize: 13.5,
+    lineHeight: 20,
+    color: Palette.surface,
+    opacity: 0.8,
   },
   heroEyebrow: {
     fontSize: 12,

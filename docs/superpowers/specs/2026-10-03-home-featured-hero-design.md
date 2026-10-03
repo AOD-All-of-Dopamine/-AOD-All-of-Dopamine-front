@@ -203,3 +203,33 @@ ALTER TABLE IF EXISTS featured_pick
 | 16 | 사소 | facts · synopsis 조회 위치 | `toDto` 에서 1회 조회 명시 |
 
 **빠진 것 (9)** — 테스트 목록 · 관측(채움 로그 · 고른 인용 로그) · 스위치 · 차단 · `quote_review_id` · 출처 표시 · 안 쓰는 코드 정리(`FeatureCard` 는 남김 · 주석 · `heroSideIds`) · 모바일 추적(범위 밖으로 명시) · CSP(불필요 명시) · "상세 리뷰" 문구 정리 · 첫 2주 아침 미리 보기 → 모두 반영.
+
+### 구현 (2026-10-03)
+
+**백엔드** (`feature/featured-hero` — `a9cc066`, `2f53689`)
+- V12 · `ExternalRanking` 9칸 + transient `backdropChecked` · `logoChecked` · `quoteChecked`(설계의 `mediaChecked` 를 배경 · 로고로 나눴다 — 배경은 성공했는데 로고만 실패한 날 배경을 버리지 않게).
+- shared `FeaturedGates` · `ReviewQuotes` · `quote-blocklist.txt`. API 의 문턱 상수는 shared 를 가리킨다(값 그대로).
+- crawler `SteamPortraitClient.fetchAssets` · `SteamHeroClient`(로고 HEAD · 리뷰 · 작성자) · `SteamHeroEnricher` · TMDB `backdrop_path` · `fetchLogo` · `RankingUpsertHelper.copyHeroFields`.
+- api `FeaturedPickStore`(Hero · 우리 리뷰 · 시즌/러닝타임) · `FeaturedWorkService`(복사 · 우리 리뷰 → Steam · 스위치 · 차단) · DTO · 캐시 600초 · REST Docs.
+- **설계와 달라진 점**
+  1. "작성자 가입 14일" → **"작성자의 첫 리뷰가 14일 이상 전"** — `users` 에 가입일 열이 없다(대체 지표).
+  2. 크롤러의 로고 · 인용 대상에서 "연결된 행만" 조건을 뺐다 — 연결(content 매핑)은 저장(`RankingUpsertHelper`) 때 일어나 저장 전에는 알 수 없다. 문턱 통과 · 30위 이내면 받는다(하루 몇 호출 차이).
+  3. 우리 리뷰 후보 쿼리를 이 작품 작성자만 세도록(LATERAL) 고쳤다(자체 검토 1).
+- 테스트: api 351 · crawler 79 통과(새: ReviewQuotes 8 · 서비스 4 · 히어로 보강 3 · 복사 2 · TMDB 로고 3 · fetchAssets 1 · REST Docs 갱신). V12 는 로컬 Postgres 에 두 번 적용(멱등), 우리 리뷰 쿼리 · 대상 SQL 손으로 확인.
+- **실측(실제 Steam)**: 8개 인기작 중 6개에서 인용 — 「발더스 게이트 3」 "내 인생 마지막 소원이 있다면 이 게임을 4인 멀티로 끝까지 해보는 것이오." · 「스타듀 밸리」 "1년에 한 번 갑자기 문득 스듀가 하고 싶을 때가…" 등. Hades · 다크 소울 III 은 없음(365일 · 거름). 엘든 링 인용에 보스 이름이 들어 있어 스포일러 낱말 목록을 지켜볼 대상으로 남긴다. 로고: 한국어판 2 · 그 밖 6.
+
+**프론트** (`feature/featured-hero`)
+- shared: `FeaturedWork` 선택 칸(media · quote · synopsis · facts) · `featuredReasonParts` · `featuredFactsLine` · `compactCount` · `heroTitle` + 테스트(266 통과).
+- web: `components/home/FeaturedHero.tsx`(배너 · 뼈대 · 대체 · 관심 등록 · 추적), `home-page.tsx`(히어로 교체 · 옆 두 장 · `heroSides` · 머리 주석 정리), `thumbnail.ts` 주석. `FeatureCard` 는 개발용 화면이 써서 남겼다.
+- mobile: `(tabs)/index.tsx` 히어로 — 배경(16:9) · 겹친 머리말 · 제목 · 근거 · 리뷰(출처 줄 누르면 원문) 또는 줄거리.
+- 확인: 웹 · 모바일 타입 · eslint, 모바일 jest 7, **브라우저 19/19**(게임 인용 · 시리즈 로고+한국어 제목 · 배경 없음 · 긴 제목 · 옛 캐시 응답 · 204 · 비로그인 관심 등록 · 배너 빈 곳 클릭 → 상세 · 원문 새 창 · 모바일 넘침).
+
+### 구현 자체 검토 (2026-10-03)
+
+| # | 본 것 | 판단 · 조치 |
+|---|---|---|
+| 1 | 우리 리뷰 쿼리가 요청마다 `reviews` 전체를 GROUP BY | 고침 — LATERAL 로 이 작품 작성자만 |
+| 2 | `featured-today` 는 서버 캐시가 없어 요청마다 우리 리뷰 · 시즌 쿼리 1~2개 | 받아들임 — 브라우저 캐시(10분~다음 05:00) · 작은 쿼리. 트래픽이 늘면 서버 캐시 |
+| 3 | 오늘(배포 전) 이미 고른 날은 새 칸이 비어 있다 | 의도 — 대체(포스터 흐린 배경 · 글자 제목 · 줄거리)로 보인다(브라우저 "옛 캐시 응답" 확인) |
+| 4 | 배경이 해시 경로(Steam)라 바뀌면 옛 주소가 깨질 수 있다 | 다음 크롤에서 갱신(확인한 칸은 덮는다). 깨진 날은 검은 배경 + 글 — 받아들임 |
+| 5 | 모바일 원문 링크(`Linking.openURL`)는 카드 누르기 안에 겹친 Pressable | RN 은 안쪽이 먼저 받는다 — 문제없음 |
