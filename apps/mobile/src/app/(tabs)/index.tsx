@@ -200,7 +200,7 @@ export default function HomeScreen() {
         {/* 히어로 카드 (목업 .hero-card) */}
         {heroLoading ? (
           <SkeletonPulse style={styles.heroSkeleton}>
-            <SkeletonBlock aspectRatio={16 / 10} radius={Radius.panel} />
+            <SkeletonBlock aspectRatio={0.95} radius={Radius.panel} />
           </SkeletonPulse>
         ) : heroError ? (
           <SectionError
@@ -214,6 +214,12 @@ export default function HomeScreen() {
         ) : heroMain ? (
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel={`오늘의 작품 ${heroTitle(heroMain.title)}${heroQuote ? ` — 리뷰: ${heroQuote.text}` : ''}`}
+            // 스크린리더는 카드를 한 요소로 읽는다 — 안쪽 원문 링크는 동작으로 따로 연다
+            accessibilityActions={heroQuote?.url ? [{ name: 'openReview', label: '리뷰 원문 열기' }] : undefined}
+            onAccessibilityAction={(e) => {
+              if (e.nativeEvent.actionName === 'openReview' && heroQuote?.url) Linking.openURL(heroQuote.url);
+            }}
             onPress={() => pushWork(heroMain.id)}
             style={({ pressed }) => [styles.hero, pressed && styles.pressed]}>
             <View style={styles.heroArt}>
@@ -246,7 +252,7 @@ export default function HomeScreen() {
                   {heroQuote.source === 'STEAM' ? (
                     <Pressable
                       accessibilityRole="link"
-                      accessibilityLabel="리뷰 원문 열기"
+                      accessibilityHint="리뷰 원문을 엽니다"
                       disabled={!heroQuote.url}
                       onPress={() => heroQuote.url && Linking.openURL(heroQuote.url)}
                       hitSlop={6}>

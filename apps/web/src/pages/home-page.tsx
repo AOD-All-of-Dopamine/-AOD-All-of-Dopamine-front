@@ -182,7 +182,7 @@ const reviewGridClass =
 
 export default function HomePage() {
   const featured = useFeaturedToday();
-  // 신작은 도메인마다 따로 받는다 - 릴의 도메인별 슬라이드와 히어로 서브 2건이 같이 쓴다
+  // 신작은 도메인마다 따로 받는다 - 릴의 도메인별 슬라이드와 히어로 대체(오늘의 작품이 없을 때 최신 출시작)가 같이 쓴다
   // (전 도메인 조회를 따로 한 번 더 하지 않는다 - 서버는 같은 3개월치를 두 번 읽게 된다)
   const releasesByDomain = useReleasesByDomain("recent", HOME_DOMAINS, HOME_RAIL_SIZE);
   const upcomingByDomain = useReleasesByDomain("upcoming", HOME_DOMAINS, HOME_UPCOMING_SIZE);

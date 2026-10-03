@@ -133,7 +133,9 @@ export default function FeaturedHero({ featured, fallback, loading, error, onRet
             {...HIGH_PRIORITY}
             className="relative -z-20 h-full w-full scale-125 object-cover opacity-70 blur-2xl min-[768px]:absolute min-[768px]:inset-0 max-[767px]:aspect-video"
           />
-        ) : null}
+        ) : (
+          <div aria-hidden="true" className="relative -z-20 aspect-video w-full min-[768px]:hidden" />
+        )}
         {/* 글자 대비 — 어떤 그림이어도 읽히게 왼쪽 · 아래를 어둡게 */}
         <div
           aria-hidden="true"
@@ -149,7 +151,7 @@ export default function FeaturedHero({ featured, fallback, loading, error, onRet
           to={`/work/${work.id}`}
           onClick={trackOpen}
           aria-label={`${title} 자세히 보기`}
-          className="absolute inset-0 z-[1] rounded-[inherit] focus-visible:outline focus-visible:outline-[3px] focus-visible:-outline-offset-[3px] focus-visible:outline-accent"
+          className="absolute inset-0 z-[1] rounded-[inherit] focus-visible:outline-[3px]! focus-visible:-outline-offset-[3px]! focus-visible:outline-accent!"
         />
 
         <div className="pointer-events-none relative z-[2] mt-auto flex w-full max-w-[580px] flex-col gap-3 px-11 py-9 max-[767px]:-mt-[92px] max-[767px]:max-w-none max-[767px]:gap-2.5 max-[767px]:px-[18px] max-[767px]:pb-5 max-[767px]:pt-0">
