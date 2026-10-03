@@ -32,7 +32,7 @@ export const thumbFitMap: Record<Category, ThumbFit> = {
 };
 
 /**
- * 썸네일 원본의 모양 - 가로로 긴 틀(홈 히어로 FeatureCard)에 넣을 때 쓴다.
+ * 썸네일 원본의 모양 - 가로로 긴 틀(FeatureCard — 지금은 개발용 화면만 쓴다. 홈 히어로는 2026-10-03 부터 FeaturedHero)에 넣을 때 쓴다.
  * landscape 는 틀을 그대로 채우고, portrait 는 자르지 않고 세워 둔다.
  * (thumbFitMap 은 세로 2:3 틀 기준이라 축이 다르다 - 영화 포스터는 2:3 틀은 채우지만 가로 틀은 못 채운다.)
  */

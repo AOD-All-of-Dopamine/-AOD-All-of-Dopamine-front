@@ -72,3 +72,32 @@ describe("msUntilNextFeaturedSwitch — 다음 05:00 KST 까지", () => {
     expect(featuredStaleTime(undefined)).toBe(FEATURED_MAX_STALE_MS);
   });
 });
+
+import { compactCount, featuredFactsLine, featuredReasonParts, heroTitle } from "../src/constants";
+
+describe("히어로 근거 · 정보 줄 (2026-10-03)", () => {
+  it("근거 조각 — 굵게 쓰는 1줄", () => {
+    expect(featuredReasonParts(steam())).toEqual(["매우 긍정적 94%", "스팀 인기 8위"]);
+    expect(featuredReasonParts(tmdb())).toEqual(["★ 8.4", "이번 주 인기 3위"]);
+    expect(featuredSubline(steam())).toBe("매우 긍정적 94% · 스팀 인기 8위"); // 기존 한 줄은 그대로
+  });
+
+  it("정보 줄 — 연도 · 시즌/러닝타임 · 장르 2개 · 평가 수", () => {
+    expect(featuredFactsLine({ releaseDate: "2005-03-24", genres: ["코미디"] }, tmdb({ platform: "TMDB_TV", ratingCount: 5389 }), { seasons: 9 }))
+      .toBe("2005 · 시즌 9 · 코미디 · 5,389명 평가");
+    expect(featuredFactsLine({ releaseDate: "2014-11-06", genres: ["모험", "드라마", "SF"] }, tmdb({ ratingCount: 41213 }), { runtimeMinutes: 169 }))
+      .toBe("2014 · 2시간 49분 · 모험 · 드라마 · 4.1만명 평가");
+    expect(featuredFactsLine({ releaseDate: "2020-12-10", genres: ["RPG"] }, steam({ ratingCount: 973066 }), null))
+      .toBe("2020 · RPG · 리뷰 97만개");
+    expect(featuredFactsLine({ releaseDate: undefined, genres: null }, steam({ ratingCount: null }))).toBe("");
+  });
+
+  it("큰 수 · 제목 괄호 부제", () => {
+    expect(compactCount(5389)).toBe("5,389");
+    expect(compactCount(41213)).toBe("4.1만");
+    expect(compactCount(973066)).toBe("97만");
+    expect(heroTitle("에이스 컴뱃 8: 시브의 날개 (ACE COMBAT 8: WINGS OF THEVE)")).toBe("에이스 컴뱃 8: 시브의 날개");
+    expect(heroTitle("인터스텔라")).toBe("인터스텔라");
+    expect(heroTitle("(제목 전부 괄호)")).toBe("(제목 전부 괄호)");
+  });
+});
