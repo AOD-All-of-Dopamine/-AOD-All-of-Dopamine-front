@@ -263,4 +263,8 @@ ALTER TABLE IF EXISTS featured_pick
 
 ### 병합
 
-- 백엔드 #131 → 배포(main 푸시 자동) → 프론트 #60(검사 통과 뒤). 결과는 아래에 이어 적는다.
+- 백엔드 #131 → 배포(main 푸시 자동) → 프론트 #60(검사 통과 뒤).
+- **백엔드 #131** 병합 `cfde770`. 첫 CI 는 **실패** — 코드가 아니라 Docker 이미지 빌드 중 러너가 `archive.ubuntu.com` 이름을 못 찾았다(`Could not resolve`, 일시적 네트워크). 실패한 작업만 다시 돌려 build · deploy-api · deploy-crawler 모두 성공.
+  운영 확인: `GET /api/works/featured-today` 200 — `synopsis` · `facts{seasons: 9}` · `media`(모두 null) · `quote: null`. 오늘(10-03) 작품은 배포 전에 골라 그림 · 인용 칸이 비어 있다(의도 — 다음 날 04:00 크롤부터 찬다).
+- **프론트 #60** 병합 `88305de`(build-and-test · Vercel 통과 뒤). 운영 웹 번들에 새 코드 확인, 운영 홈(1440 · 390): 새 배너 · 대체 모습(포스터 흐린 배경 · 글자 제목 · 줄거리) · 높이 414 · 가로 넘침 없음 · 페이지 오류 없음.
+- 남은 확인: 다음 날 05:05 이후 배경 · 로고 · (게임 날) 인용이 차는지, 첫 2주 아침 인용 미리 보기(설계 "확인" 2).
