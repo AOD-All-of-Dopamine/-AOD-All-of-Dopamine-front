@@ -1,5 +1,4 @@
 import {
-  CalendarBlank,
   Compass,
   House,
   Stack,
@@ -18,17 +17,18 @@ import { useLocation, useNavigate, matchPath } from "react-router-dom";
 const TABS: { path: string; label: string; Icon: Icon }[] = [
   { path: "/home", label: "홈", Icon: House },
   { path: "/explore", label: "탐색", Icon: Compass },
+  { path: "/trend", label: "트렌드", Icon: Trophy },
   { path: "/collections", label: "컬렉션", Icon: Stack },
-  { path: "/ranking", label: "랭킹", Icon: Trophy },
-  { path: "/new", label: "신작", Icon: CalendarBlank },
   { path: "/profile", label: "프로필", Icon: User },
 ];
 
 const NavigationBar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  // 내 보관함(/library)은 프로필에서 들어가므로 프로필 탭을 켠다
   const isActive = (path: string) =>
-    !!matchPath({ path: `${path}/*`, end: false }, location.pathname);
+    !!matchPath({ path: `${path}/*`, end: false }, location.pathname) ||
+    (path === "/profile" && location.pathname.startsWith("/library"));
 
   const handleNavigation = (path: string) => {
     navigate(path);

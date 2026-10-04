@@ -1,6 +1,6 @@
 import { ReactNode, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
-import { WarningCircle } from "@phosphor-icons/react";
+import { Link, useSearchParams } from "react-router-dom";
+import { CaretLeft, WarningCircle } from "@phosphor-icons/react";
 import { useRecentReleases, useUpcomingReleases } from "@aod/shared/hooks";
 import { DOMAIN_FILTERS, DOMAIN_LABEL_MAP } from "@aod/shared/constants";
 import { watchPlatformLabels } from "../constants/platforms";
@@ -14,7 +14,7 @@ import DdayPill from "../components/ui/DdayPill";
 import EmptyState from "../components/ui/EmptyState";
 
 /**
- * /new - mockups/new-releases-mockup.html 이식.
+ * /trend/new(옛 /new) - mockups/new-releases-mockup.html 이식.
  * 레이아웃: h1 신작 + 도메인 칩 / 최근 출시(날짜 그룹 타임라인) /
  * 출시 예정(월 그룹 + DdayPill). 컨테이너 max-w 1080.
  * 그룹 = 좌측 sticky 날짜 라벨(148px) + 우측 행 리스트, 모바일은 라벨 인라인.
@@ -271,8 +271,16 @@ export default function NewReleasesPage() {
 
   return (
     <div className="mx-auto max-w-[1080px] px-6 pb-20 pt-7">
-      <h1 className="text-[26px] font-extrabold tracking-[-0.03em] text-ink">
-        신작
+      {/* 트렌드 아래 "새로 나온 전체"(2026-10-04) — 옛 /new 는 여기로 넘어온다 */}
+      <Link
+        to="/trend#new"
+        className="-ml-1 inline-flex items-center gap-1 text-sm font-semibold text-ink-3 transition-colors hover:text-ink"
+      >
+        <CaretLeft size={14} />
+        트렌드
+      </Link>
+      <h1 className="mt-1.5 text-[26px] font-extrabold tracking-[-0.03em] text-ink">
+        새로 나온 전체
       </h1>
 
       {/* 도메인 칩 필터 - <lg 가로 스크롤, lg 이상 기존 래핑 유지 */}

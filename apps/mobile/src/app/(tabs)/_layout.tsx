@@ -2,7 +2,6 @@ import { StyleSheet, Text } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  CalendarBlank,
   Compass,
   House,
   Stack,
@@ -54,10 +53,12 @@ export default function TabLayout() {
       }}>
       <Tabs.Screen name="index" options={tabOptions('홈', House)} />
       <Tabs.Screen name="explore" options={tabOptions('탐색', Compass)} />
+      <Tabs.Screen name="trend" options={tabOptions('트렌드', Trophy)} />
       <Tabs.Screen name="collections" options={tabOptions('컬렉션', Stack)} />
-      <Tabs.Screen name="ranking" options={tabOptions('랭킹', Trophy)} />
-      <Tabs.Screen name="new" options={tabOptions('신작', CalendarBlank)} />
       <Tabs.Screen name="profile" options={tabOptions('프로필', User)} />
+      {/* 옛 랭킹 · 신작 탭 경로 — 트렌드로 넘기는 숨은 화면(2026-10-04) */}
+      <Tabs.Screen name="ranking" options={{ href: null }} />
+      <Tabs.Screen name="new" options={{ href: null }} />
     </Tabs>
   );
 }

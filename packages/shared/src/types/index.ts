@@ -122,6 +122,26 @@ export interface FeaturedWork {
   quote?: FeaturedQuote | null;
 }
 
+/** 트렌드 "새로 나온 주목작" — GET /api/works/releases/notable (2026-10-04) */
+export interface NotableReason {
+  /** RANK(오늘 순위) · VOTES(TMDB 투표 수) · REVIEWS(Steam 리뷰 수) · LATEST(최신) */
+  type: "RANK" | "VOTES" | "REVIEWS" | "LATEST" | string;
+  value?: number | null;
+  platform?: string | null;
+  date?: string | null;
+}
+
+export interface NotableItem {
+  work: WorkSummary;
+  reason: NotableReason;
+}
+
+export interface NotableGroup {
+  /** MOVIE · TV · GAME · WEBTOON · WEBNOVEL — 늘 다섯 묶음, 빈 분야는 items 가 [] */
+  domain: string;
+  items: NotableItem[];
+}
+
 export interface ApiError {
   message: string;
   status: number;

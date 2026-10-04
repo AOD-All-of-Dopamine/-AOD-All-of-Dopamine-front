@@ -22,7 +22,8 @@ import SkeletonCard from "../components/ui/SkeletonCard";
 const gridClass =
   "mt-5 grid grid-cols-2 gap-x-3 gap-y-3.5 min-[480px]:grid-cols-3 min-[768px]:gap-x-[18px] min-[768px]:gap-y-5";
 
-export default function MyBookmarksPage() {
+/** embedded — 내 보관함(/library) 탭 안에서 쓸 때. 뒤로 가기 · 제목 · 바깥 여백을 뺀다. */
+export default function MyBookmarksPage({ embedded = false }: { embedded?: boolean }) {
   const navigate = useNavigate();
   const [page] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -32,7 +33,8 @@ export default function MyBookmarksPage() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-5 pb-20 pt-6">
+    <div className={embedded ? "" : "mx-auto w-full max-w-2xl px-5 pb-20 pt-6"}>
+      {!embedded && (<>
       <button
         type="button"
         onClick={() => navigate(-1)}
@@ -45,6 +47,7 @@ export default function MyBookmarksPage() {
       <h1 className="mt-4 text-[26px] font-extrabold tracking-[-0.03em] text-ink">
         내가 북마크한 작품
       </h1>
+      </>)}
 
       <div className="mt-4 flex h-[38px] w-full max-w-[340px] items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-ink-3 transition-colors focus-within:border-line-strong">
         <MagnifyingGlass size={16} className="flex-none" />
