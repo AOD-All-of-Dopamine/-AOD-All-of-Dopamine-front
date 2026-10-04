@@ -353,14 +353,14 @@ export default function HomePage() {
           <DomainRotator
             title="새로 나온 작품"
             moreLabel="전체 보기"
-            moreTo="/new"
+            moreTo="/trend#new"
             slides={railSlides}
             intervalMs={ROTATE_MS}
           />
         ) : (
           (railLoading || railError) && (
             <section className="mt-14">
-              <SectionHead title="새로 나온 작품" moreLabel="전체 보기" moreTo="/new" />
+              <SectionHead title="새로 나온 작품" moreLabel="전체 보기" moreTo="/trend#new" />
               {railLoading ? (
                 <div aria-hidden="true" className="mt-4 flex gap-3.5 overflow-hidden pb-1.5">
                   {Array.from({ length: 6 }, (_, i) => (
@@ -385,8 +385,8 @@ export default function HomePage() {
         {rankSlides.length > 0 ? (
           <DomainRotator
             title="이번 주 인기"
-            moreLabel="랭킹 전체"
-            moreTo="/ranking"
+            moreLabel="트렌드 전체"
+            moreTo="/trend#hot"
             slides={rankSlides}
             intervalMs={ROTATE_MS}
             startDelayMs={ROTATE_STAGGER_MS}
@@ -394,7 +394,7 @@ export default function HomePage() {
         ) : (
           (rankings.isLoading || rankings.isError) && (
             <section className="mt-14">
-              <SectionHead title="이번 주 인기" moreLabel="랭킹 전체" moreTo="/ranking" />
+              <SectionHead title="이번 주 인기" moreLabel="트렌드 전체" moreTo="/trend#hot" />
               {rankings.isLoading ? (
                 <div
                   aria-hidden="true"
@@ -419,7 +419,7 @@ export default function HomePage() {
           <DomainRotator
             title="출시 예정"
             moreLabel="전체 보기"
-            moreTo="/new"
+            moreTo="/trend#upcoming"
             slides={upcomingSlides}
             intervalMs={ROTATE_MS}
             startDelayMs={ROTATE_STAGGER_MS * 2}
@@ -427,7 +427,7 @@ export default function HomePage() {
         ) : (
           (upcomingLoading || upcomingError) && (
             <section className="mt-14">
-              <SectionHead title="출시 예정" moreLabel="전체 보기" moreTo="/new" />
+              <SectionHead title="출시 예정" moreLabel="전체 보기" moreTo="/trend#upcoming" />
               {upcomingLoading ? (
                 <div aria-hidden="true" className={reviewGridClass}>
                   {Array.from({ length: 3 }, (_, i) => (

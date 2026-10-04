@@ -9,8 +9,9 @@ function PublicLayout() {
   const showNav = [
     "/home",
     "/explore",
-    "/ranking",
-    "/new",
+    "/trend",
+    "/trend/*",
+    "/library",
     "/profile/*",
   ];
 

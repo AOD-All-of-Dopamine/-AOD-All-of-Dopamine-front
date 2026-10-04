@@ -771,7 +771,7 @@ function HomeRecBody({
 
       {mode === "personal" && likesCaption && (
         <Link
-          to="/profile/likes"
+          to="/library?tab=likes"
           className="mt-1.5 inline-flex items-center gap-2 text-[13px] text-ink-2 transition-colors hover:text-ink"
         >
           <span className="flex" aria-hidden="true">

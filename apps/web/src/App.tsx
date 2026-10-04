@@ -9,15 +9,18 @@ import PublicLayout from "./layouts/public-layout";
 import HomePage from "./pages/home-page";
 import ForYouRedirect from "./pages/for-you-redirect";
 import ExplorePage from "./pages/explore-page";
-import RankingPage from "./pages/ranking-page";
 import NewReleasesPage from "./pages/new-releases-page";
 import ProfilePage from "./pages/profile-page";
 import WorkDetailPage from "./pages/work-detail-page";
 import LoginPage from "./pages/login-page";
 import SignupPage from "./pages/signup-page";
-import MyReviewsPage from "./pages/my-reviews-page";
-import MyBookmarksPage from "./pages/my-bookmarks-page";
-import MyLikesPage from "./pages/my-likes-page";
+import TrendPage from "./pages/trend-page";
+import LibraryPage from "./pages/library-page";
+import {
+  LibraryRedirect,
+  NewRedirect,
+  RankingRedirect,
+} from "./pages/legacy-redirects";
 import InternalRankingPage from "./pages/internal-ranking-page";
 import OnboardingPage from "./pages/onboarding-page";
 import ReviewPage from "./pages/review-page";
@@ -39,13 +42,20 @@ const publicRoutes: RouteObject[] = [
       { path: "login", element: <LoginPage /> },
       { path: "signup", element: <SignupPage /> },
       { path: "explore", element: <ExplorePage /> },
-      { path: "ranking", element: <RankingPage /> },
+      // 트렌드 = 랭킹 + 신작(2026-10-04) — 옛 주소는 트렌드 · 내 보관함으로 넘긴다
+      { path: "trend", element: <TrendPage /> },
+      { path: "trend/new", element: <NewReleasesPage /> },
+      { path: "ranking", element: <RankingRedirect /> },
       { path: "internal/ranking", element: <InternalRankingPage /> },
-      { path: "new", element: <NewReleasesPage /> },
+      { path: "new", element: <NewRedirect /> },
+      { path: "library", element: <LibraryPage /> },
       { path: "profile", element: <ProfilePage /> },
-      { path: "profile/reviews", element: <MyReviewsPage /> },
-      { path: "profile/bookmarks", element: <MyBookmarksPage /> },
-      { path: "profile/likes", element: <MyLikesPage /> },
+      { path: "profile/reviews", element: <LibraryRedirect tab="reviews" /> },
+      {
+        path: "profile/bookmarks",
+        element: <LibraryRedirect tab="bookmarks" />,
+      },
+      { path: "profile/likes", element: <LibraryRedirect tab="likes" /> },
       { path: "work/:id", element: <WorkDetailPage /> },
       { path: "collections", element: <CollectionsPage /> },
       { path: "collections/new", element: <CollectionNewPage /> },

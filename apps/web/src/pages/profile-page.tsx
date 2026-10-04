@@ -214,7 +214,7 @@ export default function ProfilePage() {
           title="좋아요"
           count={likeCount}
           description="좋았던 작품을 찜해보세요"
-          viewAllTo="/profile/likes"
+          viewAllTo="/library?tab=likes"
           items={likesData?.content}
           onNavigate={navigate}
         />
@@ -223,7 +223,7 @@ export default function ProfilePage() {
           title="보고 싶은 작품"
           count={bookmarkCount}
           description="나중에 볼 작품을 등록해요"
-          viewAllTo="/profile/bookmarks"
+          viewAllTo="/library"
           items={bookmarksData?.content}
           onNavigate={navigate}
         />

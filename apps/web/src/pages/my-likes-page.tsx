@@ -22,7 +22,12 @@ import SkeletonCard from "../components/ui/SkeletonCard";
 const gridClass =
   "mt-5 grid grid-cols-2 gap-x-3 gap-y-3.5 min-[480px]:grid-cols-3 min-[768px]:gap-x-[18px] min-[768px]:gap-y-5";
 
-export default function MyLikesPage() {
+/** embedded — 내 보관함(/library) 탭 안에서 쓸 때. 뒤로 가기 · 제목 · 바깥 여백을 뺀다. */
+export default function MyLikesPage({
+  embedded = false,
+}: {
+  embedded?: boolean;
+}) {
   const navigate = useNavigate();
   const [page] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -32,19 +37,23 @@ export default function MyLikesPage() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-5 pb-20 pt-6">
-      <button
-        type="button"
-        onClick={() => navigate(-1)}
-        className="-ml-2.5 inline-flex items-center gap-1.5 rounded-input px-2.5 py-1.5 text-sm font-medium text-ink-2 transition-colors hover:bg-ink/5 hover:text-ink"
-      >
-        <ArrowLeft size={16} />
-        뒤로 가기
-      </button>
+    <div className={embedded ? "" : "mx-auto w-full max-w-2xl px-5 pb-20 pt-6"}>
+      {!embedded && (
+        <>
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="-ml-2.5 inline-flex items-center gap-1.5 rounded-input px-2.5 py-1.5 text-sm font-medium text-ink-2 transition-colors hover:bg-ink/5 hover:text-ink"
+          >
+            <ArrowLeft size={16} />
+            뒤로 가기
+          </button>
 
-      <h1 className="mt-4 text-[26px] font-extrabold tracking-[-0.03em] text-ink">
-        내가 좋아요한 작품
-      </h1>
+          <h1 className="mt-4 text-[26px] font-extrabold tracking-[-0.03em] text-ink">
+            내가 좋아요한 작품
+          </h1>
+        </>
+      )}
 
       <div className="mt-4 flex h-[38px] w-full max-w-[340px] items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-ink-3 transition-colors focus-within:border-line-strong">
         <MagnifyingGlass size={16} className="flex-none" />

@@ -185,3 +185,42 @@
 ### 검수 기록 v1 → v2 (2026-10-04, 코드 대조 + 운영 API 실측)
 사실 오류 14(정렬 무시 · reviewCount 이름 충돌 · 리뷰/투표 수가 굳음 · 웹툰 순위의 실체 · 주간 순위 없음 · 연결 안 된 행 · 캐시 만료 없음 · 순위 응답 부족 · 탐색 정규화 · 앱/웹 탭 · 내 컬렉션/리뷰 API) · 설계 문제 17(높음 6: 주목작 기준 · 리뷰 순 SQL · 웹툰 변동 · NEW/기준 없음 구분 · 기록 덮어쓰기 · 크롤러 ddl/트랜잭션) · 빠진 것 9 — 모두 위 표로 반영.
 
+
+## 구현 기록 (2026-10-04, 1 · 2단계)
+
+### 백엔드 (`feature/trend`)
+- 주목작 `GET /api/works/releases/notable` — `NotableReleaseService`(분야당 2 · 창 MOVIE/TV 60 · GAME 30 · WEBTOON 45 · WEBNOVEL 14일, KST 오늘). ① 오늘 순위 중 창 안 출시작(순위 순, `RANK`) → ② 최근 출시(리뷰 하한 통과분)로 채움: 영화 · 시리즈 `VOTES`, 게임 `REVIEWS`, 웹툰 · 웹소설 `LATEST`. `Cache-Control: public, max-age=1800`.
+- 게임 리뷰 순: `sortBy=steamReviews`(게임만) → `WorkFilters.steamReviewSort` → `WorksQueryBuilder` `LEFT JOIN game_contents` · `ORDER BY gs.review_count DESC NULLS LAST, c.content_id`. 필터 없는 게임 경로도 리뷰 순이면 빌더로.
+- 최근 출시 게임 버그: `RELEASE_GAME_REVIEW_FLOOR` 에 "오늘 Steam 순위에 있음" OR.
+- 순위 기록: V13 `external_ranking_daily`(+ 오늘 기준선 심기) · 크롤러 `RankingDailyRecorder`(커밋 뒤 · REQUIRES_NEW · 그날 · 그 플랫폼 지우고 다시 넣기 · 10행 미만 건너뜀 · 400일 정리) · API `RankingHistoryStore.baselines`(3일 안 가장 최근, 네이버웹툰은 7일 전) · `RankingResponse` 에 `portraitImageUrl` · `ratingScore` · `ratingCount` · `ratingLabel` · `previousRanking` · `rankBaseDate`.
+- 테스트: 쿼리 빌더 정렬 · 주목작 4 · 기준선 3 · 기록 2 · REST Docs(순위 새 필드 · 주목작).
+
+### 프론트 (`feature/trend`)
+- shared: 순위 타입 새 필드 · `NotableGroup` 타입 · `workApi.getNotableReleases` · `useNotableReleases`(30분) · `constants/trend.ts`(`TREND_PLATFORMS` · `rankChange` · `notableReasonText` · `rankingSignal`) + 테스트.
+- 웹: 머리 메뉴(홈 · 탐색 · 트렌드 · 컬렉션 + 로그인 시 내 보관함) · 하단 탭(홈 · 탐색 · 트렌드 · 컬렉션 · 프로필) · `/trend`(①~④) · `/trend/new`(옛 신작 화면, 제목 "새로 나온 전체" + 트렌드로 돌아가기) · `/library`(관심 작품 · 좋아요 · 내 리뷰 = 옛 목록 화면을 `embedded` 로 재사용, 내 컬렉션 → `/collections?tab=mine`) · 옛 주소 이동(`legacy-redirects.tsx`) · 로그인 `state.from` 복귀(같은 사이트 경로만) · 홈 "전체 보기" 링크 · 탐색 전체(테마 선반 4 · 목록 API 안 부름) + 게임 정렬 선택(`?sort=latest`, 기본 리뷰 많은 순).
+- 앱: 탭 랭킹 · 신작 → 트렌드(지금 뜨는 · 새로 나온 전환, `?view=new`), 옛 `ranking` · `new` 는 숨긴 리다이렉트, 홈 "더 보기" 수정. 본문은 `components/trend/RankingPane` · `NewReleasesPane` 로 옮겨 재사용.
+
+### 구현 중 정한 것
+- **지금 뜨는 기본 분야**: `?hot=` → 오늘의 작품 분야 → 게임. 오늘의 작품을 기다리는 동안 목록을 그리지 않는다(칩이 튀지 않게).
+- **게임 행 그림**: 세로 표지가 없으면 가로 그림(460:215, 높이 46px) — 2:3 틀에 넣으면 너무 작다. 1위 카드는 설계대로 흐린 배경 + 가로 그림.
+- **곧 나올**: 데이터가 있는 분야가 둘 이상이면 분야 칩, 하나면 제목 "곧 나올 {분야}". 지난 날짜는 뺀다.
+- **`/new` 이동**: 쿼리(`?domain=`)를 그대로 `/trend/new` 로 넘긴다. 날짜 목록의 기본 분야(전체)는 그대로 — 설계 v1 의 "분야별 기본"은 이번에 하지 않았다(옮겨 두기만).
+- **앱 순위 변동 표시**: 이번엔 하지 않았다(웹만). 앱은 기존 본문 재사용.
+- 옛 `ranking-page.tsx` 는 지웠다(트렌드 ②가 대신한다).
+
+### 확인 (로컬 · 운영 API 중계 + 주목작 · 변동 값은 브라우저에서 가짜 응답)
+- shared 271 · 앱 jest 7 통과, 웹 · 앱 · shared 타입 검사 · 웹 eslint 통과.
+- 브라우저: 1위 카드 5 · Top 10 → 100 펼침(`aria-expanded`) · 변동 화면 읽기 문구("변동 없음" · "1계단 하락" · "새로 진입") · 웹툰(기준 없음)은 변동 칸 비움 · 칩 `aria-pressed` · 주목작 다섯 칸 · "곧 나올 게임" · 옛 주소(`/ranking?domain=movie` → `/trend?hot=movie#hot` 이고 `#hot` 위치로 스크롤, 모르는 분야 → `/trend#hot`, `/new?domain=game` → `/trend/new?domain=game`, `/profile/likes` → `/library?tab=likes`) · 비로그인 보관함 대화상자 · 탐색 `/explore` = 전체(목록 API 0회, 선반 4) · 게임 탭 `sortBy=steamReviews` · `?sort=latest` · 모르는 분야 → `/explore` · 홈 링크 `/trend#hot|new|upcoming` · 390px 가로 넘침 0.
+
+### 구현 검수 (2026-10-04, 별도 검토 · 양쪽 저장소)
+치명 결함 없음. 확인된 것: V13 기준선 KST 날짜 · 기준일 창(어제~3일 · 웹툰 7일 전) · 커밋 뒤 기록 · 필드 이름 일치 · 훅 순서 · 옛 주소 replace · 탐색 정규화 무한 반복 없음 · 로그인 복귀는 같은 사이트 경로만(열린 리다이렉트 없음).
+
+| # | 지적 | 조치 |
+|---|---|---|
+| 1 (중) | 게임 탭 기본이 리뷰 순이 되면서 `LEFT JOIN` + `review_count DESC NULLS LAST` 를 V7 인덱스(오름차순 · 부분)가 못 받아 게임 18만 행을 매번 읽고 정렬(V7 이 없앤 그 플랜) | **V14** `idx_game_contents_review_desc (review_count DESC NULLS LAST, content_id)` + **INNER JOIN**(게임은 수집 때 `game_contents` 행이 늘 같이 생긴다 — `DomainCatalog`). 로컬 같은 규모(contents 40만 · 게임 18만) `EXPLAIN ANALYZE`: 첫 쪽 49ms → 0.25ms, 100쪽 14.6ms. count 는 이전과 같다 |
+| 2 (하) | 게임 "출시 예정 포함"을 켜도 리뷰 순이라 예정작이 맨 끝 — 화면이 안 바뀐 것처럼 보인다 | 예정 포함이면 최신 출시순으로 보내고 정렬 선택 대신 정적 라벨 |
+| 3 (하) | 트렌드 해시 스크롤이 뒤로 가기 때 다시 `#hot` 으로 끌어간다 · 오늘의 작품을 안 기다려 위치가 조금 어긋남 | 처리한 기록 항목을 세션 저장소에 남기고, 스크롤 뒤 주소의 해시를 지운다(Chrome 이 돌아올 때 해시로 끌어가는 것까지 막음). **목표 위 섹션만** 기다린다 — 실측 중 주목작 API 재시도(약 7초)가 `#hot` 스크롤을 붙잡던 것도 같이 고침 |
+| 4 (하) | 주목작 채우기가 최신 100편 안에서만 투표 · 리뷰 순 → 창 안 작품이 100을 넘으면 투표 많은 옛 작품을 못 본다 | 운영 실측 창 안 영화 49 · 시리즈 62편(게임은 리뷰 하한 통과분만) → 지금은 걸리지 않는다. **알려진 한계**로 둔다(3단계 인기 점수에서 SQL 정렬로) |
+| 덧 | `/library` 에서 하단 탭이 아무것도 안 켜짐 | 프로필 탭을 켠다 |
+
+재확인: 백엔드 테스트 446 통과, 웹 타입 · eslint · 빌드 통과, 브라우저(직접 진입 `#upcoming` · 홈에서 `#hot` 도착 위치 80px · 뒤로 가기 위치 유지 · 예정 포함 시 `sortBy=releaseDate` · `/library` 프로필 탭).

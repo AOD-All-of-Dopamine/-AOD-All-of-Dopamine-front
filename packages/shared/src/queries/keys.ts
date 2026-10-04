@@ -14,6 +14,7 @@ export const workKeys = {
   recentReviewed: (params: ReleasesQueryParams) =>
     ["works", "recent-reviews", params] as const,
   featuredToday: () => ["works", "featured-today"] as const,
+  notableReleases: () => ["works", "releases", "notable"] as const,
 };
 
 export const releaseKeys = {

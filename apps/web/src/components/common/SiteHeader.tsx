@@ -8,13 +8,15 @@ import { useAuth } from "../../contexts/AuthContext";
  * <lg(모바일 목업 .m-nav): 56px, 로고 + 검색 아이콘(/search) + 로그인/프로필
  * 아이콘만 표시(44px 터치 타깃). 메뉴는 하단 탭(NavigationBar)이 담당.
  */
+// 2026-10-04 트렌드 · 탐색 개편: 랭킹 + 신작 → 트렌드, 로그인하면 내 보관함
+// (설계 docs/superpowers/specs/2026-10-04-trend-explore-design.md)
 const NAV_ITEMS = [
   { to: "/home", label: "홈" },
   { to: "/explore", label: "탐색" },
-  { to: "/ranking", label: "랭킹" },
-  { to: "/new", label: "신작" },
+  { to: "/trend", label: "트렌드" },
   { to: "/collections", label: "컬렉션" },
 ];
+const LIBRARY_ITEM = { to: "/library", label: "내 보관함" };
 
 const SiteHeader = () => {
   const { isAuthenticated } = useAuth();
@@ -33,22 +35,24 @@ const SiteHeader = () => {
 
         <nav className="hidden lg:block">
           <ul className="flex gap-1">
-            {NAV_ITEMS.map(({ to, label }) => (
-              <li key={to}>
-                <NavLink
-                  to={to}
-                  className={({ isActive }) =>
-                    `block rounded-input px-3 py-2 font-medium transition-colors ${
-                      isActive
-                        ? "font-bold text-ink"
-                        : "text-ink-2 hover:bg-ink/5 hover:text-ink"
-                    }`
-                  }
-                >
-                  {label}
-                </NavLink>
-              </li>
-            ))}
+            {(isAuthenticated ? [...NAV_ITEMS, LIBRARY_ITEM] : NAV_ITEMS).map(
+              ({ to, label }) => (
+                <li key={to}>
+                  <NavLink
+                    to={to}
+                    className={({ isActive }) =>
+                      `block rounded-input px-3 py-2 font-medium transition-colors ${
+                        isActive
+                          ? "font-bold text-ink"
+                          : "text-ink-2 hover:bg-ink/5 hover:text-ink"
+                      }`
+                    }
+                  >
+                    {label}
+                  </NavLink>
+                </li>
+              ),
+            )}
           </ul>
         </nav>
 

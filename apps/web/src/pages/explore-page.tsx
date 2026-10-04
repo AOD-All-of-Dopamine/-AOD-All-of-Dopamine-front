@@ -25,6 +25,9 @@ import EmptyState from "../components/ui/EmptyState";
 import SkeletonCard from "../components/ui/SkeletonCard";
 import SoonBadge from "../components/ui/SoonBadge";
 import ToggleSwitch from "../components/ui/ToggleSwitch";
+import SortSelect from "../components/ui/SortSelect";
+import ExploreThemeShelves from "../components/explore/ExploreThemeShelves";
+import { exploreThemes } from "../constants/exploreThemes";
 
 /**
  * /explore - mockups/explore-light-mockup.html 이식.
@@ -36,8 +39,9 @@ import ToggleSwitch from "../components/ui/ToggleSwitch";
  *
  * URL 쿼리(?domain=&genres=&platforms=&era=&status=&weekdays=&ages=
  * &reviewMin=&upcoming=&page=)가 상태의 단일 출처. 다중 값은 콤마 직렬화.
- * 전체 탭은 제거됨 - 무파라미터·domain=all·미지 값 진입은 domain=game으로
- * URL replace 정규화 (구 공유 링크 호환, 혼합 그리드는 검색 페이지 전용).
+ * **전체(2026-10-04 트렌드·탐색 E1)**: 무파라미터·domain=all·미지 값 진입은 전체 = 테마 선반만
+ * (ExploreThemeShelves — 목록 API 를 부르지 않는다). URL 표기는 domain 생략(replace 정규화).
+ * 분야를 고르면 아래 필터 + 그리드. 혼합 그리드는 여전히 검색 페이지 전용.
  *
  * 히스토리 정책: 도메인 탭 전환과 페이지 이동은 push, 필터 조작(토글,
  * 칩 제거, 초기화)은 replace. 결과 상태가 현재와 같으면 히스토리 no-op.
@@ -59,9 +63,11 @@ import ToggleSwitch from "../components/ui/ToggleSwitch";
  * 작품 수를 표기한다 (레일·시트 공통). API 내림차순 계약을 신뢰하되 클라는
  * 동일 기준(개수 내림차순) 방어 정렬만 적용 - 별도 기준 재정렬 없음.
  *
+ * 정렬: 서버는 분야를 고르면 release_date DESC 고정이다 — 게임 탭만 예외로 `sortBy=steamReviews`
+ *   (Steam 리뷰 많은 순, 2026-10-04)를 받는다. 게임 탭은 정렬 선택(?sort=latest 면 최신 출시순, 기본 리뷰 많은 순),
+ *   다른 탭은 정적 라벨 "최신 출시순".
+ *
  * 남은 편차:
- * - 정렬: 도메인 지정 경로와 필터 경로 모두 서버가 sortBy를 무시하고
- *   release_date DESC 고정이므로 SortSelect를 생략하고 정적 라벨만 표시한다.
  * - attr(JSONB) 기반 축은 필터 금지 (가격 등은 표시 전용 - 리뷰 수는
  *   game_contents.review_count 도메인 컬럼 승격으로 필터 가능해졌다).
  * - placeholderData(keepPreviousData)는 의도적으로 미적용 - 도메인 전환 시 이전
@@ -74,8 +80,15 @@ import ToggleSwitch from "../components/ui/ToggleSwitch";
  */
 const PAGE_SIZE = 30;
 
-/** 탐색 도메인 탭 - 전체 탭 제거 (혼합 목록은 검색 페이지 전용) */
+/** 탐색 도메인 탭 - 앞에 "전체"(테마 선반)가 붙는다 */
 const EXPLORE_DOMAINS = DOMAIN_FILTERS.filter((d) => d.id !== "ALL");
+const ALL_DOMAIN = "all";
+
+/** 게임 탭 정렬 — 값 없음 = 리뷰 많은 순(기본), latest = 최신 출시순 */
+const GAME_SORT_OPTIONS = [
+  { value: "", label: "리뷰 많은 순" },
+  { value: "latest", label: "최신 출시순" },
+];
 
 const DOMAIN_IDS = EXPLORE_DOMAINS.map((d) => d.id.toLowerCase());
 
@@ -172,6 +185,7 @@ interface ParamPatch {
   ages?: string[];
   reviewMin?: string;
   upcoming?: boolean;
+  sort?: string;
   page?: number;
 }
 
@@ -196,12 +210,12 @@ const parseList = (raw: string | null) =>
 
 /**
  * URL 쿼리를 유효한 화면 상태로 정규화 (잘못된 값은 안전 폴백).
- * 도메인은 무파라미터·all·미지 값 모두 game 폴백 - 실제 URL 표기는
- * ExplorePage의 정규화 이펙트가 replace로 맞춘다.
+ * 도메인은 무파라미터·all·미지 값 모두 전체(all) - 실제 URL 표기는
+ * ExplorePage의 정규화 이펙트가 replace로 맞춘다(전체는 domain 생략).
  */
 const parseParams = (p: URLSearchParams) => {
-  const raw = (p.get("domain") ?? "game").toLowerCase();
-  const domainId = DOMAIN_IDS.includes(raw) ? raw : "game";
+  const raw = (p.get("domain") ?? ALL_DOMAIN).toLowerCase();
+  const domainId = DOMAIN_IDS.includes(raw) ? raw : ALL_DOMAIN;
   const isWebtoon = domainId === "webtoon";
   const genres = parseList(p.get("genres"));
   // 구 URL(?platform= 단수, radio 시절) 호환 - platforms 부재 시에만 이관
@@ -232,6 +246,7 @@ const parseParams = (p: URLSearchParams) => {
   // 출시 예정 토글은 era 미선택 시에만 의미 - era 선택 동안은 era 범위가
   // 우선이므로 무시(URL 값은 남겨 era 해제 시 토글 상태가 복원된다)
   const upcoming = isGame && !era && p.get("upcoming") === "1";
+  const sort = isGame && p.get("sort") === "latest" ? "latest" : "";
   const rawPage = Number.parseInt(p.get("page") ?? "1", 10);
   const page = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
   return {
@@ -246,6 +261,7 @@ const parseParams = (p: URLSearchParams) => {
     ages,
     reviewMin,
     upcoming,
+    sort,
     page,
   };
 };
@@ -263,6 +279,7 @@ const stateKey = (p: URLSearchParams) => {
     s.ages.join(","),
     s.reviewMin,
     s.upcoming ? "1" : "",
+    s.sort,
     s.page,
   ].join("|");
 };
@@ -282,7 +299,8 @@ const writeScalar = (params: URLSearchParams, key: string, value?: string) => {
 /** 부분 변경(patch)만 반영하고 나머지 파라미터(미지 포함)는 보존 */
 const buildParams = (base: URLSearchParams, patch: ParamPatch) => {
   const params = new URLSearchParams(base);
-  if (patch.domain !== undefined) params.set("domain", patch.domain);
+  if (patch.domain === ALL_DOMAIN) params.delete("domain");
+  else if (patch.domain !== undefined) params.set("domain", patch.domain);
   writeList(params, "genres", patch.genres);
   // platforms를 쓸 때 구 단수 키를 함께 제거해야 해제가 no-op으로 오판되지 않는다
   if (patch.platforms !== undefined) params.delete("platform");
@@ -296,6 +314,7 @@ const buildParams = (base: URLSearchParams, patch: ParamPatch) => {
     if (patch.upcoming) params.set("upcoming", "1");
     else params.delete("upcoming");
   }
+  writeScalar(params, "sort", patch.sort);
   if (patch.page !== undefined) {
     if (patch.page > 1) params.set("page", String(patch.page));
     else params.delete("page");
@@ -478,24 +497,29 @@ export default function ExplorePage() {
     ages,
     reviewMin,
     upcoming,
+    sort,
     page,
   } = useMemo(() => parseParams(searchParams), [searchParams]);
+  const isAll = domainId === ALL_DOMAIN;
+  const themes = useMemo(() => exploreThemes(todayStr()), []);
   const domainKey = domainId.toUpperCase();
   const isOttDomain = domainId === "movie" || domainId === "tv";
 
-  // 전체 탭 제거 후 URL 정규화 - 무파라미터·domain=all·미지 값 진입을
-  // domain=game 표기로 통일한다 (구 공유 링크 호환, replace라 히스토리 무오염)
+  // URL 정규화 - 전체(무파라미터·domain=all·미지 값)는 domain 생략, 분야는 소문자 표기로
+  // 통일한다 (구 공유 링크 호환, replace라 히스토리 무오염)
   useEffect(() => {
-    if (searchParams.get("domain") === domainId) return;
+    const current = searchParams.get("domain");
+    if (isAll ? current === null : current === domainId) return;
     setSearchParams(
       (prev) => {
         const params = new URLSearchParams(prev);
-        params.set("domain", domainId);
+        if (isAll) params.delete("domain");
+        else params.set("domain", domainId);
         return params;
       },
       { replace: true },
     );
-  }, [searchParams, domainId, setSearchParams]);
+  }, [searchParams, domainId, isAll, setSearchParams]);
 
   // 결과 상태가 현재와 같으면 히스토리를 건드리지 않고 false 반환 (no-op 가드)
   const writeParams = (patch: ParamPatch, opts?: { replace?: boolean }) => {
@@ -511,7 +535,7 @@ export default function ExplorePage() {
 
   // 도메인 전환(push) 시 필터/페이지 전부 리셋 (목업 동작과 동일)
   const handleDomainChange = (id: string) => {
-    if (writeParams({ domain: id, ...CLEAR_FILTERS })) {
+    if (writeParams({ domain: id, ...CLEAR_FILTERS, sort: "" })) {
       window.scrollTo({ top: 0 });
     }
   };
@@ -535,6 +559,8 @@ export default function ExplorePage() {
     writeParams({ ages: next, page: 1 }, { replace: true });
   const handleReviewMinChange = (next: string) =>
     writeParams({ reviewMin: next, page: 1 }, { replace: true });
+  const handleSortChange = (next: string) =>
+    writeParams({ sort: next, page: 1 }, { replace: true });
   const handleUpcomingChange = (next: boolean) =>
     writeParams({ upcoming: next, page: 1 }, { replace: true });
   const handleReset = () => writeParams(CLEAR_FILTERS, { replace: true });
@@ -552,7 +578,7 @@ export default function ExplorePage() {
     : isGame && !upcoming
       ? todayStr()
       : undefined;
-  const { data, isLoading, isError, refetch } = useWorks({
+  const { data, isLoading: worksLoading, isError, refetch } = useWorks({
     domain: domainKey,
     genres: genres.length > 0 ? genres : undefined,
     platforms: platforms.length > 0 ? platforms : undefined,
@@ -564,22 +590,25 @@ export default function ExplorePage() {
     reviewCountMin: reviewMin ? Number(reviewMin) : undefined,
     page: page - 1,
     size: PAGE_SIZE,
-    // 서버가 도메인 경로 정렬을 무시하고 release_date DESC 고정이지만,
+    // 게임 탭 기본은 Steam 리뷰 많은 순. 그 밖은 서버가 release_date DESC 고정이지만
     // 화면 라벨(최신 출시순)과 의도를 일치시키기 위해 명시해 보낸다.
-    sortBy: "releaseDate",
+    // 출시 예정 포함이면 최신 출시순 — 예정작은 리뷰가 없어 리뷰 순에서는 맨 끝으로 밀린다
+    sortBy: isGame && sort !== "latest" && !upcoming ? "steamReviews" : "releaseDate",
     sortDirection: "desc",
-  });
+  }, { enabled: !isAll });
+  // 전체는 목록을 부르지 않는다 — 꺼진 쿼리의 isLoading(false)과 맞춰 둔다
+  const isLoading = !isAll && worksLoading;
 
   const {
     data: genreCounts,
     isError: genresFailed,
     refetch: refetchGenres,
-  } = useGenresWithCount(domainKey);
+  } = useGenresWithCount(domainKey, { enabled: !isAll });
   const {
     data: platformOptions,
     isError: platformsFailed,
     refetch: refetchPlatforms,
-  } = usePlatforms(domainKey);
+  } = usePlatforms(domainKey, { enabled: !isAll });
 
   // genres-with-count는 개수 내림차순 LinkedHashMap - 키 순서가 곧 정렬이지만,
   // 순수 숫자 장르명(예: "2024")이 유입되면 JS 객체의 정수 키 승격이 순서를
@@ -803,8 +832,11 @@ export default function ExplorePage() {
 
   return (
     <>
-      {/* 도메인 탭 행 - 전체 탭 없음 (기본 게임) */}
+      {/* 도메인 탭 행 - 전체(테마 선반) + 분야 */}
       <div className="mx-auto flex max-w-[1440px] gap-1.5 overflow-x-auto px-6 pt-5 scrollbar-hide">
+        <DomainChip size="lg" active={isAll} onClick={() => handleDomainChange(ALL_DOMAIN)}>
+          전체
+        </DomainChip>
         {EXPLORE_DOMAINS.map((d) => {
           const id = d.id.toLowerCase();
           return (
@@ -820,6 +852,13 @@ export default function ExplorePage() {
         })}
       </div>
 
+      {isAll ? (
+        <div className="mx-auto max-w-[1440px] px-6 pb-[72px] pt-2">
+          <h1 className="sr-only">탐색</h1>
+          <ExploreThemeShelves themes={themes} />
+        </div>
+      ) : (
+      <>
       {/* 좌 필터 레일 + 본문 */}
       <div className="mx-auto grid max-w-[1440px] items-start gap-4 px-6 pb-[72px] pt-5 lg:grid-cols-[216px_minmax(0,1fr)] lg:gap-8">
         {/* 좌 필터 레일 - lg 이상 전용 (<lg는 필터 바텀시트가 대체) */}
@@ -1002,11 +1041,17 @@ export default function ExplorePage() {
                 {totalElements.toLocaleString()}개 작품
               </span>
             )}
-            {/* 서버 정렬이 release_date DESC 고정이라 SortSelect 대신 정적 라벨 */}
-            <span className="ml-auto inline-flex items-center gap-1.5 text-sm font-medium text-ink-2">
-              <SortDescending size={14} />
-              최신 출시순
-            </span>
+            {/* 게임만 정렬 선택(리뷰 많은 순 · 최신 출시순) — 다른 분야는 서버가 release_date DESC 고정이라 정적 라벨 */}
+            {isGame && !upcoming ? (
+              <span className="ml-auto">
+                <SortSelect value={sort} onChange={handleSortChange} options={GAME_SORT_OPTIONS} ariaLabel="게임 정렬" />
+              </span>
+            ) : (
+              <span className="ml-auto inline-flex items-center gap-1.5 text-sm font-medium text-ink-2">
+                <SortDescending size={14} />
+                최신 출시순
+              </span>
+            )}
           </div>
 
           {/* 활성 필터 칩 행(lg 이상) - 모든 축의 개별 제거를 지원한다.
@@ -1289,6 +1334,8 @@ export default function ExplorePage() {
           </div>
         </div>
       </dialog>
+      </>
+      )}
     </>
   );
 }

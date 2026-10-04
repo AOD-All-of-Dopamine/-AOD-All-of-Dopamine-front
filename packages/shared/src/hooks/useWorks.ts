@@ -6,7 +6,7 @@ import {
   useInfiniteQuery,
 } from "@tanstack/react-query";
 import type { WorksQueryParams, ReleasesQueryParams } from "../api/workApi";
-import type { FeaturedWork, PageResponse, WorkSummary, WorkDetail } from "../types";
+import type { FeaturedWork, NotableGroup, PageResponse, WorkSummary, WorkDetail } from "../types";
 import { useApis } from "./ApiProvider";
 import { workKeys, releaseKeys, metaKeys } from "../queries/keys";
 import { featuredStaleTime } from "../constants/featured";
@@ -98,6 +98,16 @@ export const useFeaturedToday = () => {
     queryFn: () => workApi.getFeaturedToday(),
     retry: false,
     staleTime: (query) => featuredStaleTime(query.state.data?.date),
+  });
+};
+
+/** 트렌드 "새로 나온 주목작" — 서버가 30분 캐시, 여기서도 30분 신선. */
+export const useNotableReleases = () => {
+  const { workApi } = useApis();
+  return useQuery<NotableGroup[]>({
+    queryKey: workKeys.notableReleases(),
+    queryFn: () => workApi.getNotableReleases(),
+    staleTime: 30 * 60 * 1000,
   });
 };
 

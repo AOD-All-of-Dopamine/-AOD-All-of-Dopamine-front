@@ -287,7 +287,7 @@ export default function HomeScreen() {
           <>
             <SectionHead
               title="새로 나온 작품"
-              onMore={() => router.push('/(tabs)/new')}
+              onMore={() => router.push({ pathname: '/(tabs)/trend', params: { view: 'new' } })}
             />
             {releases.isLoading ? (
               <SkeletonPulse style={styles.railSkeleton}>

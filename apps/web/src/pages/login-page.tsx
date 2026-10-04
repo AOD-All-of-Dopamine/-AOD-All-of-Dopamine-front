@@ -1,5 +1,5 @@
 ﻿import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { ArrowLeft } from "@phosphor-icons/react";
 import { useAuth } from "../contexts/AuthContext";
 import { takePendingOnboarding } from "../hooks/pendingOnboarding";
@@ -17,6 +17,9 @@ const inputClass =
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  // 로그인이 필요한 화면(내 보관함 등)이 넘긴 복귀 주소 — 같은 사이트 경로만 받는다
+  const from = (useLocation().state as { from?: unknown } | null)?.from;
+  const returnTo = typeof from === "string" && from.startsWith("/") && !from.startsWith("//") ? from : null;
   const [formData, setFormData] = useState({
     username: "",
     password: "",
@@ -40,7 +43,7 @@ export default function LoginPage() {
     try {
       await login(formData.username, formData.password);
       // 방금 가입한 사람만 온보딩으로 보낸다 — 기존 사용자의 로그인 흐름은 그대로다(설계 §4-3)
-      navigate(takePendingOnboarding(formData.username) ? "/onboarding" : "/profile");
+      navigate(takePendingOnboarding(formData.username) ? "/onboarding" : returnTo ?? "/profile", { replace: !!returnTo });
     } catch (err: any) {
       setError(err.message || "로그인에 실패했습니다.");
     } finally {

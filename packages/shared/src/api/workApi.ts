@@ -1,5 +1,5 @@
 import type { AxiosInstance } from "axios";
-import type { FeaturedWork, PageResponse, WorkSummary, WorkDetail } from "../types";
+import type { FeaturedWork, NotableGroup, PageResponse, WorkSummary, WorkDetail } from "../types";
 
 export interface WorksQueryParams {
   domain?: string;
@@ -77,6 +77,12 @@ export function createWorkApi(publicApi: AxiosInstance) {
     getFeaturedToday: async (): Promise<FeaturedWork | null> => {
       const res = await publicApi.get<FeaturedWork | "">("/api/works/featured-today");
       return res.status === 204 || !res.data ? null : res.data;
+    },
+
+    /** 트렌드 "새로 나온 주목작" — 분야마다 최대 2편 + 고른 이유 */
+    getNotableReleases: async (): Promise<NotableGroup[]> => {
+      const { data } = await publicApi.get<NotableGroup[]>("/api/works/releases/notable");
+      return data;
     },
 
     /**
