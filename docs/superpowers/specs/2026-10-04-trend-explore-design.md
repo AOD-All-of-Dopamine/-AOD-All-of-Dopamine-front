@@ -1,6 +1,6 @@
 # 트렌드(랭킹 + 신작 통합) · 탐색 개편 — 설계
 
-- 날짜: 2026-10-04 · 상태: v1
+- 날짜: 2026-10-04 · 상태: **v2 (검수 반영)** — 이번 구현 범위 = **1단계 + 2단계**(3 · 4단계는 다음), 기록은 맨 아래
 - 시안: 로컬 `aod-mockups/trend/` — 트렌드 **T3′ 리포트 고친안**(곧 나올 = **세로 포스터 줄**), 탐색 **E1 테마 선반**
 - 관련: 탐색 가벼운 카드(2026-09-26), 게임 세로 표지(2026-10-01), 오늘의 작품 히어로(2026-10-03)
 
@@ -147,3 +147,41 @@
 - 1단계에서 영화 · 시리즈 · 웹툰 · 웹소설 탐색은 기본 정렬이 그대로(최신 출시순)다 — 테마 선반이 첫인상을 맡는다.
 - 웹툰 · 웹소설의 "인기"는 플랫폼 순위 등장뿐이다(조회수 · 별점 미수집).
 - 순위 변동은 2단계 배포 뒤 하루가 지나야 보인다.
+
+---
+
+## v2 — 검수 반영으로 바뀐 것 (위 본문보다 이 절이 우선한다)
+
+### 정정된 사실
+- **탐색 정렬**: 분야를 고르면 `sortBy` 는 무시된다 — 필터 없으면 `findByDomainOrderByReleaseDateDesc`(`WorkApiService.java:159-162`), 필터 있으면 `WorksQueryBuilder.java:35` 의 `ORDER BY c.release_date DESC` 고정. 게임 탭은 늘 `releaseTo=오늘` 을 보내 필터 경로다. `Content.reviewCount` 는 **우리 사이트 리뷰 수**라 `sortBy=reviewCount` 는 쓰면 안 된다.
+- **게임 리뷰 수 · TMDB 투표 수는 수집 때 굳는다**(재수집 없음 / 출시 후 7일까지). 운영: 최근 2주 게임 625편 최대 리뷰 13개 → `/releases/recent` 의 게임 하한(100)에 모두 걸려 **최근 한 달 게임이 홈 · 신작에서 빠져 있다**(기존 버그). 같은 날 Steam 순위에는 최근 14일 출시작이 5편(에이스 컴뱃 8 6위 등) 있다.
+- **네이버웹툰 순위 = "오늘 요일 연재 목록 순서"**(`NaverWebtoonRankingFetcher:50`) — 어제와 비교할 수 없다. 출처 표기는 "오늘(일) 연재 인기". 네이버 시리즈는 **일간** Top 100.
+- 순위 쿼리는 연결 안 된 행을 성인 판별 없이 남긴다(운영 시리즈 18 · 웹툰 14 · 영화 15행) → 트렌드는 **연결된 행만** 보인다(홈과 같다).
+- 캐시 매니저는 만료가 없다(`CacheConfig`) → 서버 캐시 대신 `Cache-Control`.
+- 순위 응답에 세로 표지 · 신선한 평가 값이 없다 → 응답에 더한다.
+- 탐색은 `/explore` · 모르는 값을 `domain=game` 으로 정규화한다(`explore-page.tsx:39, 486-498`). 웹 하단 탭 노출 목록 `public-layout.tsx:9-15`. 내 컬렉션은 `/collections?tab=mine`, 내 리뷰 API `/api/my/reviews` 가 이미 있다. 앱 홈 `(tabs)/index.tsx:290` 이 `/(tabs)/new` 로 간다(typedRoutes).
+
+### 바뀐 결정 (구현자 결정 · 이유)
+
+| # | 주제 | 결정 |
+|---|---|---|
+| 1 | **주목작 고르기** | 분야마다 ① **오늘 순위에 오른 최근작**(창: 영화 · 시리즈 60일, 게임 30일, 웹툰 45일, 웹소설 14일)을 순위 순 → ② 모자라면 영화 · 시리즈는 최근 개봉 중 `externalVoteCount` 많은 순(메모리), 게임은 최근 출시 중 리뷰 하한(100) 통과분 리뷰 순, 웹툰 · 웹소설은 최신순. 이유 칸 `reason {type: RANK|VOTES|REVIEWS|LATEST, value, platform}`. 게임 `review_count` 만으로 고르지 않는다(굳은 값). 서버 상수(분야당 2 · 창), 공개 파라미터 없음. `Cache-Control: public, max-age=1800` |
+| 2 | **최근 출시 게임 버그** | `/releases/recent` 게임: 리뷰 하한(100) **또는 오늘 Steam 순위에 있음** — 대형 신작이 빠지지 않게 |
+| 3 | **게임 리뷰 순 정렬** | 정렬 키 `sort=steamReviews`(게임만, 그 밖 무시) — `WorksQueryBuilder` ORDER BY 를 바꿀 수 있게(`LEFT JOIN game_contents` · `review_count DESC NULLS LAST`), 필터 없는 분야 경로도 리뷰 순이면 빌더로. 탐색 게임 탭에 정렬 선택(리뷰 많은 순 · 최신 출시순), **게임 기본 = 리뷰 많은 순**. 값이 굳어 있어 대형 신작은 앞에 오지 않는다(한계) |
+| 4 | **순위 기록 표** | `external_ranking_daily(snapshot_date, platform, platform_specific_id, content_id, ranking)` V13 · `IF NOT EXISTS` · **엔티티 없이 JdbcTemplate**(크롤러 ddl-auto 와 충돌 방지). 크롤러가 순위 저장 **트랜잭션 밖**(커밋 뒤, try/catch)에서 그날 · 그 플랫폼 행을 **지우고 다시 넣는다**(재실행 · 수동 실행에도 마지막 한 벌). 10행 미만이면 기록하지 않는다. `snapshot_date` = `fetchedAt` 의 **KST 날짜**. 보관 400일(기록 직후 DELETE 한 줄). V13 이 오늘 `external_ranking` 을 기준선으로 심는다 |
+| 5 | **변동 계산** | 기준 = 오늘 이전 가장 최근 기록(**3일 안**), 네이버웹툰은 **7일 전 같은 요일**. 응답 행에 `previousRanking`(기준에 없으면 null) · `rankBaseDate`(기준이 없으면 null). 프론트: `rankBaseDate` 가 없으면 변동 칸을 비우고, 있으면 `previousRanking == null` → NEW. 한 번의 쿼리로 (플랫폼, id) 맵 |
+| 6 | **순위 응답 보강** | `RankingResponse` 에 `portraitImageUrl` · `ratingScore` · `ratingCount` · `ratingLabel` · `previousRanking` · `rankBaseDate` |
+| 7 | **트렌드 데이터** | `/api/rankings/all` 한 번으로 ① · ②, 주목작 API, 곧 나올은 데이터가 있는 분야만(지금 게임 → 제목 "곧 나올 게임"). 머리 "트렌드" · "매일 아침 갱신"(주 표기 없음 — 데이터는 일간) |
+| 8 | **탐색 "전체"** | 새 기본 `/explore` = **전체(테마 선반만)**, 분야를 고르면 지금 그리드. 정규화: 값 없음 · `all` → 전체, 모르는 값 → 전체. 전체에서는 목록 API 를 부르지 않는다. 1단계 테마 4개(리뷰 많은 게임 · 넷플릭스/왓챠 시리즈 · 완결 웹툰 · 오늘 순위 웹소설 — 마지막은 "전체 ›"가 `/trend?hot=webnovel#hot`) |
+| 9 | **옛 주소** | `/ranking`(`?domain=` 검증) → `/trend?hot=X#hot`, `/new` → `/trend/new`(지금 신작 목록을 트렌드 아래 "새로 나온 전체"로 옮겨 둔다 — 되돌리기 쉽게), `/profile/likes|bookmarks|reviews` → `/library?tab=`. 모두 replace. 해시 섹션은 데이터가 온 뒤 스크롤 · `scroll-margin-top` |
+| 10 | **내 보관함** | 탭 관심 작품 · 좋아요 · 내 리뷰(목록 본문을 컴포넌트로 빼서 재사용) · 내 컬렉션(→ `/collections?tab=mine`). 비로그인은 로그인 확인, 로그인은 `state.from` 으로 돌아온다(`login-page` 에 복귀 추가) |
+| 11 | **앱** | 탭 랭킹 · 신작 → **트렌드**(지금 뜨는 · 새로 나온 전환 — 기존 두 화면 본문 재사용), 옛 경로 `ranking` · `new` 는 숨긴 리다이렉트 화면, 홈 링크 수정. 내 보관함은 프로필 안 그대로 |
+| 12 | **접근성 · 분석** | 변동은 화면 읽기 문구("3계단 상승" · "새로 진입"), 칩 `aria-pressed`, 펼치기 `aria-expanded`. 클릭 추적 `card_clicked` surface `trend_lead` · `trend_hot` · `trend_new` · `trend_upcoming` · `explore_theme` |
+| 13 | 범위 밖 | 3단계(인기 점수) · 4단계(예정 수집) · 컬렉션 테스트 데이터 · Vercel 영구 이동 |
+
+### 테스트 (추가)
+쿼리 빌더 정렬 SQL · 주목작(분야 균형 · 순위 경로 · 빈 분야) · 기록 쓰기(재실행 교체 · KST 날짜 · 10행 미만 건너뜀) · 직전 순위(기준 없음 · NEW · 웹툰 -7일) · 최근 출시 게임(순위 포함) · REST Docs · 프론트 shared 함수 · 브라우저(옛 주소 · 빈 상태 · 섹션).
+
+### 검수 기록 v1 → v2 (2026-10-04, 코드 대조 + 운영 API 실측)
+사실 오류 14(정렬 무시 · reviewCount 이름 충돌 · 리뷰/투표 수가 굳음 · 웹툰 순위의 실체 · 주간 순위 없음 · 연결 안 된 행 · 캐시 만료 없음 · 순위 응답 부족 · 탐색 정규화 · 앱/웹 탭 · 내 컬렉션/리뷰 API) · 설계 문제 17(높음 6: 주목작 기준 · 리뷰 순 SQL · 웹툰 변동 · NEW/기준 없음 구분 · 기록 덮어쓰기 · 크롤러 ddl/트랜잭션) · 빠진 것 9 — 모두 위 표로 반영.
+
